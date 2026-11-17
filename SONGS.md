@@ -10,7 +10,6 @@ made which part, and which tools and sounds it uses.
 | Lyrics, style prompts, song structure | Claude (Opus 5.5, in Claude Code) |
 | Code tracks: every note, every sound, the mix | Claude, as Python code |
 | Sung and rapped voices in Segfault | Piper (neural text-to-speech), re-pitched by code that Claude wrote |
-| Audio of the Suno takes | Suno (v6) |
 | Research notes | Claude research agents, from cited web sources |
 | Themes | The organisers |
 | Choosing the take to hand in | A human, by listening |
@@ -50,18 +49,6 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 - **Mix:** the kick ducks the pads and the bass; a dotted-eighth ping-pong
   delay; a noise reverb; the master filter closes in the break; a glue
   compressor; a true-peak limiter.
-
-### Suno takes
-
-Prompts and lyrics in [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md).
-Lyrics and prompts by Claude; audio by Suno.
-
-| Take | Title | Tempo, key | Style |
-|---|---|---|---|
-| A (best) | Warm Boot | 120 BPM, A minor | deep house, Rhodes, M1 organ, soulful female vocal |
-| B | Packet Loss (Of Love) | 122 BPM, F minor | garage house, male and female duet, saxophone |
-| C | Low Battery Lullaby | 120 BPM, D minor | instrumental deep house, vocal chops |
-| D | Low Pass Love | 122 BPM, A minor | French house, filtered disco loop, talk box hook |
 
 ---
 
@@ -106,17 +93,6 @@ Voices, made in [code/voice.py](code/voice.py):
   the pitch lower and flatter.
 - **The robot** from `engine.py` says "signal eleven" in the break.
 
-### Suno takes
-
-Prompts and lyrics in [suno/sunday-eurodance.md](suno/sunday-eurodance.md).
-Lyrics and prompts by Claude; audio by Suno.
-
-| Take | Title | Tempo, key | Style |
-|---|---|---|---|
-| A (best) | Segfault (In My Heart) | 132 BPM, A minor | female diva chorus, male rap, supersaw riff, key change |
-| B | Blinky (The LED Song) | 132 BPM, D major | bubblegum eurodance, cute female vocal, male shouts |
-| C | The Rhythm Of The Badge | 134 BPM, E minor | darker eurodance, hoover synth, male rap |
-
 ---
 
 ## Surprise themes
@@ -124,7 +100,8 @@ Lyrics and prompts by Claude; audio by Suno.
 Not known yet. The plan is in
 [suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md), and ready
 prompts for 16 likely genres are in
-[research/surprise-genres.md](research/surprise-genres.md).
+[research/surprise-genres.md](research/surprise-genres.md). The surprise tracks
+will be code tracks too, made the same way as the two above.
 
 ---
 
@@ -138,9 +115,39 @@ prompts for 16 likely genres are in
 | pyworld (WORLD vocoder) | MIT (pyworld), modified BSD (WORLD) | no (installed with pip) |
 | Voice `en_US-hfc_female-medium` | trained on Hi-Fi-CAPTAIN (NICT): CC BY-NC-SA 4.0 | no (downloaded) |
 | Voice `en_US-ryan-high` | trained on RyanSpeech: CC BY-NC-SA 4.0 | no (downloaded) |
-| Suno audio | depends on the Suno plan (Free: non-commercial) | no |
 
 **The Segfault render is non-commercial.** The two Piper voices are trained
 on data under CC BY-NC-SA 4.0. That is fine for a private party. Do not sell
 the render. If you share it, credit the Hi-Fi-CAPTAIN corpus (NICT) and
 RyanSpeech, and share it under the same terms. Warm Boot uses no voice model.
+
+---
+
+## Other options we might try: the prompts in `suno/`
+
+Claude also wrote style prompts and lyrics for each theme in Suno's format. We
+do not use Suno, because it is a closed service. The text also works as input
+for an open song generator such as ACE-Step.
+
+### Saturday
+
+Prompts and lyrics in [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md).
+Lyrics and prompts by Claude. Not rendered: we do not use Suno.
+
+| Take | Title | Tempo, key | Style |
+|---|---|---|---|
+| A (best) | Warm Boot | 120 BPM, A minor | deep house, Rhodes, M1 organ, soulful female vocal |
+| B | Packet Loss (Of Love) | 122 BPM, F minor | garage house, male and female duet, saxophone |
+| C | Low Battery Lullaby | 120 BPM, D minor | instrumental deep house, vocal chops |
+| D | Low Pass Love | 122 BPM, A minor | French house, filtered disco loop, talk box hook |
+
+### Sunday
+
+Prompts and lyrics in [suno/sunday-eurodance.md](suno/sunday-eurodance.md).
+Lyrics and prompts by Claude. Not rendered: we do not use Suno.
+
+| Take | Title | Tempo, key | Style |
+|---|---|---|---|
+| A (best) | Segfault (In My Heart) | 132 BPM, A minor | female diva chorus, male rap, supersaw riff, key change |
+| B | Blinky (The LED Song) | 132 BPM, D major | bubblegum eurodance, cute female vocal, male shouts |
+| C | The Rhythm Of The Badge | 134 BPM, E minor | darker eurodance, hoover synth, male rap |

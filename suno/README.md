@@ -1,5 +1,9 @@
 # AI slop music compo: Suno pack
 
+> **Not used.** We only use open tools, and Suno is a closed service. These
+> prompts and lyrics stay here as an option we might try with an open song
+> generator such as ACE-Step. See the main [README](../README.md).
+
 Rules from the organisers:
 
 - Make the whole track with AI. Keep it fun.

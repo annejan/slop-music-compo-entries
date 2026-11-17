@@ -26,8 +26,8 @@ OUT_SR = 44100
 FRAME = 5.0          # WORLD frame period, ms
 FS = FRAME / 1000
 
-DIVA = "en_US-hfc_female-medium"
-RAPPER = "en_US-ryan-high"
+DIVA = os.environ.get("DIVA", "en_US-hfc_female-medium")
+RAPPER = os.environ.get("RAPPER", "en_US-ryan-high")
 
 _loaded = {}
 

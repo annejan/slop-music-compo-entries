@@ -1,8 +1,8 @@
 # slop-music-compo-entries
 
-Entries for an AI slop music compo. Every day of the party has two themes. The
-first theme of each day is known in advance. The second theme comes two hours
-before the deadline.
+Entries for an AI slop music compo at a party with friends. Every day of the
+party has two themes. The first theme of each day is known in advance. The
+second theme comes two hours before the deadline.
 
 | Day | Theme | Tempo |
 |---|---|---|
@@ -14,28 +14,23 @@ before the deadline.
 The DJ mixes the tracks live, so each track keeps one tempo from start to end,
 and starts and ends with 16 bars of drums only.
 
-There are two kinds of entry. Both are fully made by AI: the lyrics too, and
-no hand edits. [SONGS.md](SONGS.md) lists, per song, which AI made which part
-and which tools, sounds and voices it uses.
+## Our rules
 
-## 1. Suno prompts: `suno/`
+- **All AI.** Every part of every entry is made by AI: the music, the voices
+  and the lyrics. Nobody edits the audio by hand.
+- **Open tools only.** We use software and models under open terms: public
+  domain, CC (non-commercial is fine, this is a fun competition), MIT, BSD,
+  GPL. No closed music services such as Suno.
 
-Style prompts and lyrics to paste into [Suno](https://suno.com) (Custom mode).
+[SONGS.md](SONGS.md) lists, per song, which AI made which part and which tools,
+sounds and voices it uses.
 
-- [suno/README.md](suno/README.md): how to use the prompts, and tips for the DJ.
-- [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md): "Warm Boot",
-  "Packet Loss (Of Love)", "Low Battery Lullaby", "Low Pass Love" (French house).
-- [suno/sunday-eurodance.md](suno/sunday-eurodance.md): "Segfault (In My Heart)",
-  "Blinky (The LED Song)", "The Rhythm Of The Badge".
-- [suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md): a two-hour
-  plan and a tempo table for the surprise themes.
+## The tracks: `code/`
 
-## 2. Code tracks: `code/`
-
-The same two songs ("Warm Boot" and "Segfault (In My Heart)"), but written by
-Claude as Python code. Every note and every sound is in the source: there are no
-samples and no loops. The synthesis is numpy and scipy. Warm Boot sings with a
-formant robot; Segfault has an AI diva and rapper (see Voices).
+Two songs written by Claude as Python code. Every note and every sound is in
+the source: there are no samples and no loops. The synthesis is numpy and
+scipy. Warm Boot sings with a formant robot; Segfault has an AI diva and rapper
+(see Voices).
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
@@ -49,17 +44,17 @@ glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass
 
 ### Voices
 
-Segfault has a real diva and a real rapper, also made by AI.
 [code/voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
-a neural text-to-speech model that runs on the CPU, to speak each syllable.
-Then [WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
+a neural text-to-speech model that runs on the CPU, to speak each word. Then
+[WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
 (`pyworld`) re-pitches the word onto our melody notes. It stretches only the
 vowel, so the consonants stay crisp. In the chorus, extra Piper takes double the
 voice and sing a third above. The rap is spoken and fitted to the bar. The
 formant robot from `engine.py` only says "signal eleven" in the break.
 
-Both voices are trained on data under CC BY-NC-SA 4.0, so the Segfault render
-is for non-commercial use. See [SONGS.md](SONGS.md#software-and-licences).
+The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is
+`en_US-ryan-high`. Both are trained on data under CC BY-NC-SA 4.0. Set `DIVA`
+and `RAPPER` to try other voices.
 
 ### Render
 
@@ -82,13 +77,17 @@ Then render:
 ```
 
 Warm Boot renders in about 20 seconds. Segfault takes about 90 seconds the first
-time, because Piper speaks every syllable; the speech is cached in `.cache/`.
-Set `STEMS=1` to print the loudness of each bus. Set
-`CHORUS_STYLE=octave`, `doubles` or `harmony` (the default) to choose how the
-Segfault chorus is stacked. The output is a 44.1 kHz, 16-bit stereo WAV. The beat grid starts at sample 0 and the tempo is exact, so a DJ can sync it
-without beat analysis.
+time, because Piper speaks every word; the speech is cached in `.cache/`.
 
-The renders are not in the repository. Run the scripts to make them.
+| Variable | Effect |
+|---|---|
+| `STEMS=1` | print the loudness of each bus |
+| `CHORUS_STYLE=octave`, `doubles`, `harmony` | how the Segfault chorus is stacked (default `harmony`) |
+| `DIVA=<voice>`, `RAPPER=<voice>` | the Piper voices of Segfault |
+
+The output is a 44.1 kHz, 16-bit stereo WAV. The beat grid starts at sample 0
+and the tempo is exact, so a DJ can sync it without beat analysis. The renders
+are not in the repository. Run the scripts to make them.
 
 ## Research: `research/`
 
@@ -99,11 +98,27 @@ each file.
 |---|---|
 | [mellow-house-90s.md](research/mellow-house-90s.md) | tempo, chords, sounds, sub-styles and reference tracks of 90s mellow house |
 | [eurodance.md](research/eurodance.md) | the eurodance formula, tempo per year, progressions, 31 reference tracks |
-| [surprise-genres.md](research/surprise-genres.md) | 16 likely surprise genres, each with a tempo range and a ready Suno prompt |
-| [suno-tips.md](research/suno-tips.md) | Suno v6: tags, tempo, intros and outros, download limits |
+| [surprise-genres.md](research/surprise-genres.md) | 16 likely surprise genres, each with a tempo range and a ready prompt |
 | [hooks-and-humor.md](research/hooks-and-humor.md) | how dance hooks work, sing-along rules, 30 title ideas, three finished lyrics |
-| [local-and-alt-generators.md](research/local-and-alt-generators.md) | AI music and singing models that run on this laptop, and hosted options |
+| [local-and-alt-generators.md](research/local-and-alt-generators.md) | open AI music and singing models that run on this laptop |
 | [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
+| [suno-tips.md](research/suno-tips.md) | Suno v6 (not used; see below) |
+
+## Other options we might try
+
+- **ACE-Step 1.5** (MIT, open weights): an open song generator with lyrics and
+  vocals that runs on this laptop through Vulkan. See
+  [local-and-alt-generators.md](research/local-and-alt-generators.md).
+- **OpenUtau with a DiffSinger voice**: a real singing voice on our own melody.
+- **The prompts in `suno/`**: style prompts and lyrics written by Claude for
+  each theme, in Suno's format. We do not use Suno, because it is a closed
+  service. Most of the text also works as input for ACE-Step.
+  - [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md): "Warm
+    Boot", "Packet Loss (Of Love)", "Low Battery Lullaby", "Low Pass Love".
+  - [suno/sunday-eurodance.md](suno/sunday-eurodance.md): "Segfault (In My
+    Heart)", "Blinky (The LED Song)", "The Rhythm Of The Badge".
+  - [suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md): a two-hour
+    plan and a tempo table for the surprise themes.
 
 ## License
 
