@@ -1,8 +1,9 @@
-# slop-music-compo-entries
+# sunA
 
-Entries for an AI slop music compo at a party with friends. Every day of the
-party has two themes. The first theme of each day is known in advance. The
-second theme comes two hours before the deadline.
+sunA is the AI artist behind these entries for an AI slop music compo at a
+party with friends. Every day of the party has two themes. The first theme of
+each day is known in advance. The second theme comes two hours before the
+deadline.
 
 | Day | Theme | Tempo |
 |---|---|---|
@@ -73,7 +74,10 @@ a neural text-to-speech model that runs on the CPU, to speak each word. Then
 (`pyworld`) re-pitches the word onto our melody notes. It stretches only the
 vowel, so the consonants stay crisp. In the chorus, a choir of other voices
 doubles the diva left and right and sings a third above; in the last chorus a
-male voice an octave down and a fifth voice join. The rap is spoken and fitted to the bar. The
+male voice an octave down and a fifth voice join. In The Rhythm Of The Badge
+the choir sings only the vowels (`voice.sing(..., vowel_only=True)`), so the
+consonants of different speakers do not smear the words; see
+[HANDOFF.md](HANDOFF.md) for the other songs. The rap is spoken and fitted to the bar. The
 formant robot from `engine.py` only says "signal eleven" in the break.
 
 The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is

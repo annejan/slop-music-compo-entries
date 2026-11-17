@@ -153,11 +153,16 @@ def _finish(y, gain_db=0.0):
     return y * 10 ** (gain_db / 20)
 
 
-def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12, take=0, cents=0.0):
+def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12, take=0, cents=0.0,
+         vowel_only=False):
     """One syllable sung over one or more notes [(midi, seconds), ...], one after the other.
 
     Returns (lead_in seconds, mono 44.1 kHz audio): put the audio lead_in seconds before the first note's time,
     so the consonants come just before the beat and the vowel lands on it.
+
+    vowel_only: keep only the vowel, faded in and out (lead_in 0), for a choir behind a lead: every voice has
+    its own consonant lengths, so their consonants land up to 80 ms apart and smear the words; the lead
+    sings those.
     """
     x = tts(text, voice, take=take)
     f0, sp, ap, energy = analyse(x)
@@ -206,6 +211,12 @@ def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12
     y = _finish(y)
     body = y[int(pre * FS * OUT_SR):] if pre else y
     rms = np.sqrt(np.mean(body[:max(len(body), 1)] ** 2)) + 1e-9
+    if vowel_only:
+        v = body[:max(int(max(room, 1) * FS * OUT_SR), 1)].copy()
+        fi, fo = min(int(.012 * OUT_SR), len(v) // 4), min(int(.04 * OUT_SR), len(v) // 3)
+        v[:fi] *= np.linspace(0, 1, fi)
+        v[len(v) - fo:] *= np.linspace(1, 0, fo)
+        return 0.0, v * (level / rms)
     return pre * FS, y * (level / rms)
 
 

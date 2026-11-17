@@ -204,7 +204,9 @@ night club anthem about flashing firmware to a badge.
 - **Voices (Piper):** the diva is `en_US-amy-medium`; the MC is
   `en_GB-alan-medium`, pitched down; the choir is `en_GB-jenny_dioco-medium`,
   `en_US-lessac-high` and `en_GB-cori-high`, with `en_US-norman-medium` and
-  `en_US-kristin-medium` in the last chorus.
+  `en_US-kristin-medium` in the last chorus. The choir sings only the vowels,
+  in a straighter tone, about 5 dB under the diva; she sings the words (see
+  [HANDOFF.md](HANDOFF.md)).
 
 ---
 

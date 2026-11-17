@@ -38,7 +38,7 @@ if __name__ == "__main__":
         sheets = glob.glob(os.path.join(LYRICS, f"{n:02d}-*.txt"))
         words = ["-metadata", "lyrics=" + open(sheets[0], encoding="utf-8").read()] if sheets else []
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-c:a", "libmp3lame", "-b:a", "320k",
-                        "-metadata", f"title={title}", "-metadata", "artist=Claude (AI slop music compo)",
+                        "-metadata", f"title={title}", "-metadata", "artist=sunA",
                         "-metadata", f"album=slop-music-compo-entries", "-metadata", f"comment={day}",
                         "-metadata", f"genre={day.split(': ')[1]}", "-metadata", f"track={n}/{len(SONGS)}",
                         "-metadata", f"TBPM={bpm}", "-metadata", f"TKEY={key}", *words, "-id3v2_version", "3", dst],

@@ -317,11 +317,12 @@ def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo
         parts = [(CHOIR[0], notes, 8, .018, .15, .7), (CHOIR[1], notes, -8, .009, .85, .7),
                  (CHOIR[2], third, 0, .006, .45, .55)]
         if big:
-            parts += [(CHOIR[3], [(n - 12, d) for n, d in notes], 0, .012, .55, .7),
+            parts += [(CHOIR[3], [(n - 12, d) for n, d in notes], 0, .012, .55, .6),
                       (CHOIR[4], [(n - 12, d) for n, d in third], 5, .015, .7, .4)]
         for v, ns2, cents, late, p, g in parts:
-            li, y = V.sing(w, ns2, voice=v, cents=cents)
-            S.put("vox", t - li + late, y, p, amp * choir * g, wet=.2, echo=.05)
+            # vowels only, in a straighter tone: the diva sings the words (see voice.sing)
+            _, y = V.sing(w, ns2, voice=v, cents=cents, vibrato=.15, vowel_only=True)
+            S.put("vox", t + late, y, p, amp * choir * g, wet=.2, echo=.05)
 
 
 def chorus_lines(bar0, big=False):
@@ -329,7 +330,7 @@ def chorus_lines(bar0, big=False):
     "flash me"."""
     for i, (line, words) in enumerate(CHORUS):
         bar = bar0 + 2 * i
-        diva(bar, line, words, choir=.55, big=big)
+        diva(bar, line, words, choir=.45, big=big)
         for t, m, d in S.notes(bar, line, key_of(bar), bars=2):
             S.put("keys", t, pno(m, d * .9, .7), .5, .2, wet=.3, echo=.15)
         if i == 2:
