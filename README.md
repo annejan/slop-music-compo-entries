@@ -44,17 +44,39 @@ robot made from formant filters.
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
 glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass 2.0 film.
 
+### Voices
+
+Segfault has a real diva and a real rapper, also made by AI.
+[code/voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
+a neural text-to-speech model that runs on the CPU, to speak each syllable.
+Then [WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
+(`pyworld`) re-pitches the syllable onto our melody note. It stretches only the
+vowel, so the consonants stay crisp. The rap is spoken and fitted to the bar.
+The formant robot from `engine.py` only sings "signal eleven" in the break.
+
 ### Render
 
-You need Python 3 with numpy and scipy.
+Warm Boot needs Python 3 with numpy and scipy. Segfault also needs the voices.
+Set them up once:
 
 ```sh
 cd code
-python3 warm_boot.py      # writes renders/warm-boot_120bpm_Am.wav
-python3 segfault.py       # writes renders/segfault_132bpm_Am.wav
+uv venv .venv && uv pip install --python .venv/bin/python piper-tts pyworld 'setuptools<81' numpy scipy
+mkdir -p voices && cd voices
+../.venv/bin/python -m piper.download_voices en_US-hfc_female-medium en_US-ryan-high
+cd ..
 ```
 
-Each track renders in about 20 seconds. The output is a 44.1 kHz, 16-bit stereo
+Then render:
+
+```sh
+.venv/bin/python warm_boot.py      # writes renders/warm-boot_120bpm_Am.wav
+.venv/bin/python segfault.py       # writes renders/segfault_132bpm_Am.wav
+```
+
+Warm Boot renders in about 20 seconds. Segfault takes about 90 seconds the first
+time, because Piper speaks every syllable; the speech is cached in `.cache/`.
+Set `STEMS=1` to print the loudness of each bus. The output is a 44.1 kHz, 16-bit stereo
 WAV. The beat grid starts at sample 0 and the tempo is exact, so a DJ can sync it
 without beat analysis.
 

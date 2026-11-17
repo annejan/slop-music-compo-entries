@@ -4,6 +4,7 @@ Taken from qtpass-world-v2/audio.py and made free of the film: a Song has its ow
 writes a 44.1 kHz 16-bit stereo WAV that a DJ can beat-match (the tempo is exact, the grid starts at 0).
 """
 import math
+import os
 import wave
 
 import numpy as np
@@ -503,7 +504,7 @@ class Song:
         for k, amount in duck.items():
             self.bus[k] *= (1 - amount * env)[:, None].astype(np.float32)
         for k in ("pads", "keys", "lead", "vox"):     # the lows are the kick's and the bass's
-            self.bus[k] = highpass(self.bus[k], 160).astype(np.float32)
+            self.bus[k] = highpass(self.bus[k], 100 if k == "vox" else 160).astype(np.float32)   # a man raps
         # the delay: dotted eighths, ping-pong, fading
         d = int(3 * self.step * SR)
         echo = np.zeros((n, 2))
@@ -511,6 +512,11 @@ class Song:
         for k in range(1, 6):
             side = k % 2
             echo[k * d:, side] += (src[:n - k * d, 0] + src[:n - k * d, 1] * .3) * .5 ** k
+        if os.environ.get("STEMS"):   # how loud each bus is, for mixing by numbers
+            for k in BUSES:
+                x = self.bus[k].astype(np.float64) * gains.get(k, 1.0)
+                if np.abs(x).max() > 0:
+                    print(f"  {k:6s} {integrated_lufs(x):6.1f} LUFS")
         music = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in BUSES if k != "fx") + echo * echo_mix
         if cut_keys:
             ks, vs = zip(*cut_keys)

@@ -25,6 +25,7 @@ import sys
 import numpy as np
 
 import engine as e
+import voice as V
 
 e.seed(1994)
 S = e.Song(bpm=132, bars=112)
@@ -117,10 +118,27 @@ def orch(bar, amp=1.0):
 # ---------------------------------------------------------------- the chorus: a melody and its words
 CHORUS = [
     ("E5 - E5 - - - D5 - C5 - E5 - - - - -", "seg fault in my heart"),
-    ("F5 - E5 - C5 - A4 - C5 - - - - - - .", "tear ing me a part"),
+    ("F5 - E5 - C5 - A4 - C5 - - - - - - .", "tare ring me uh part"),
     ("E5 - G5 - - - E5 - D5 - C5 - - - - -", "seg fault in my heart"),
-    ("D5 - D5 - - - B4 - C5 - D5 - - - - .", "re boot from the start"),
+    ("D5 - D5 - - - B4 - C5 - D5 - - - - .", "ree boot from thuh start"),
 ]
+# the verse, a line every two bars, on eighths (the words as the voice should say them, one per note)
+VERSE = [
+    (". C5 C5 C5 B4 C5 D5 E5 - D5 C5 - - . . .", "you told me you'd be there for ev er"),
+    (". C5 C5 C5 B4 C5 D5 E5 - G5 E5 - D5 - . .", "you told me we were kum piled to geth er"),
+    (". E5 E5 E5 D5 - C5 - D5 C5 - A4 - - . .", "but now I'm reed ding mem oh ree"),
+    (". G4 A4 - C5 . C5 D5 - E5 - D5 - - - .", "that duz unt bee long to me"),
+]
+PRE = [("E5 - - - E5 - - - G5 - - - - - - -", "oh oh oh"),
+       (". . E5 D5 C5 - D5 - E5 - - - . . . .", "sum things go wing wrong")]
+RAP = ["Ess. Ee. Gee. Eff. Ay. You. Ell. Tee!",
+       "You overflowed the buffer that you gave to me.",
+       "Null pointer, no answer, the stack is on fire.",
+       "I free the same love twice, I'm a double free liar.",
+       "Check the bounds, check the bounds, but you never do.",
+       "Val grind in the morning, it was always you.",
+       "Get up, get down, get the back trace now!",
+       "Seg fault, seg fault, let me show you how!"]
 WORDS = {"seg": ("s", ["e"], "g"), "fault": ("f", ["o", "l"], "t"), "in": ("", ["i", "n"], ""),
          "my": ("", ["m", "ah", "i"], ""), "heart": ("h", ["ah", "r"], "t"), "tear": ("t", ["e", "r"], ""),
          "ing": ("", ["i", "n"], ""), "me": ("", ["m", "i"], ""), "a": ("", ["ah"], ""),
@@ -137,35 +155,40 @@ def sing_notes(notes, words, octave=-12, amp=1.0, wet=.3, echo=.2):
         S.sing(t, [(onset, vowels, m + octave, d, coda)], amp=amp, wet=wet, echo=echo)
 
 
-def sing_line(bar, line, words, octave=-12, amp=1.0, lead_amp=1.0, key=None):
+def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None):
+    """The diva sings a line: a syllable a note, the consonants before the beat; an echo on the last word.
+    double: an octave-up double, left and right, this loud."""
     key = key_of(bar) if key is None else key
-    notes = S.notes(bar, line, key)
-    sing_notes(notes, words, octave, amp, wet=.3, echo=.2)
-    for t, m, d in notes:   # a lead that sings with the robot, an octave over it, and a diva's "ah" with it
-        S.put("lead", t, e.lead(m, d * .95), amp=.35 * lead_amp, wet=.3, echo=.25)
-        S.put("vox", t, e.vox(m, d * .95, "a"), .5, .22 * lead_amp, wet=.4, echo=.2)
+    notes = S.notes(bar, line, key, bars)
+    words = words.split()
+    assert len(notes) == len(words), (line, words)
+    for i, ((t, m, d), w) in enumerate(zip(notes, words)):
+        last = i == len(notes) - 1
+        li, y = V.sing(w, [(m + octave, d * .97)])
+        S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if last else .05)
+        if double:
+            li, y = V.sing(w, [(m + octave + 12, d * .97)], formant=1.08)
+            S.put("vox", t - li, y, .25, amp * double, wet=.15, echo=.05)
+            S.put("vox", t - li + .012, y, .75, amp * double, wet=.15, echo=.05)
 
 
-def spell(bar, key=0):
-    """The rap: S-E-G-F-A-U-L-T, a letter a beat, two bars."""
-    letters = [("", ["e"], "s"), ("", ["i"], ""), ("", ["i"], ""), ("", ["e"], "f"),
-               ("", ["e", "i"], ""), ("", ["i", "u"], ""), ("", ["e", "l"], ""), ("t", ["i"], "")]
-    onsets = ["", "", "d", "", "", "", "", ""]   # "gee" sung with a soft g
-    notes = [57, 57, 60, 57, 57, 57, 55, 57]
-    syl = [(onsets[i] or on, v, notes[i] + key, B * (.9 if i % 2 else 1.1), coda) for i, (on, v, coda) in enumerate(letters)]
-    S.sing(S.at(bar), syl, amp=1.1, wet=.15, echo=.1)
+def chorus_line(bar, lead_amp=1.0):
+    line, words = CHORUS[bar % 4]
+    diva(bar, line, words, double=.55)
+    for t, m, d in S.notes(bar, line, key_of(bar)):   # the riff synth doubles the hook, under the voice
+        S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
+
+
+def rapper(bar, text, bars=1, amp=1.0):
+    """A rap line, from the downbeat, fitted to the bar (a sixteenth short, to breathe)."""
+    y = V.rap(text, bars * S.bar - STEP)
+    S.put("vox", S.at(bar), y, .5, amp, wet=.06, echo=.04)
 
 
 def signal_eleven(bar):
     line = "A4 - - - A4 - - - . . E5 - C5 - A4 - - - - - - - - - . . . . . . . ."
     words = "sig nal e lev en"
     sing_notes(S.notes(bar, line, bars=2), words, -12, 1.1, wet=.4, echo=.45)
-
-
-def oh_oh_oh(bar):
-    for k, m in enumerate((76, 76, 79)):
-        S.sing(S.at(bar, k), [("", ["o", "u"], m - 12, B * (.9 if k < 2 else 2.0), "")], amp=.9)
-        S.put("vox", S.at(bar, k), e.vox(m, B * (.9 if k < 2 else 2.0), "o"), .5, .25, wet=.5, echo=.2)
 
 
 # ---------------------------------------------------------------- the arrangement
@@ -211,18 +234,20 @@ for bar in range(112):
     if bar in (16, 24, 48, 56, 80, 88):
         orch(bar)
 
-    # the voices
-    if 32 <= bar < 40 and bar % 2 == 0:
-        spell(bar)
-    if bar in (40, 44):
-        oh_oh_oh(bar + 2)
+    # the voices: the diva's verse, the rap, the pre-chorus, the chorus; the robot in the break
+    if 24 <= bar < 32 and bar % 2 == 0:
+        diva(bar, *VERSE[(bar - 24) // 2], bars=2, amp=.9)
+    if 32 <= bar < 40:
+        rapper(bar, RAP[bar - 32])
+    if bar in (42, 46):
+        diva(bar, *PRE[0], octave=-12, double=.4)
+        diva(bar + 1, *PRE[1], octave=-12, double=.3)
     if chorus:
-        line, words = CHORUS[bar % 4]
-        sing_line(bar, line, words, lead_amp=1.2 if bar >= 80 else 1.0)
+        chorus_line(bar, 1.2 if bar >= 80 else 1.0)
     if brk and bar % 4 == 0:
         signal_eleven(bar)
-    if build and bar in (72, 74):
-        spell(bar, key=0)
+    if build and bar in (72, 73, 74, 75):
+        rapper(bar, RAP[[0, 6, 0, 7][bar - 72]], amp=1.1)
 
 snare_roll(44, 4)
 snare_roll(76, 4, 1.1)
