@@ -35,7 +35,7 @@ Fill in each line, then join the lines with commas. The result is the style prom
 | Disco, nu-disco | 110 to 124 |
 | Hi-NRG | 125 to 135 |
 | Trance | 132 to 140 |
-| Eurodance | 135 to 142 |
+| Eurodance | 128 to 136 |
 | Happy hardcore | 165 to 180 |
 | Gabber | 160 to 200 |
 | Drum and bass | 170 to 176 |

@@ -12,7 +12,7 @@ Rules from the organisers:
 |---|---|---|---|
 | Saturday | 90's mellow house | 120 BPM | [saturday-mellow-house.md](saturday-mellow-house.md) |
 | Saturday | announced 2 h before | see the recipe | [surprise-theme-recipe.md](surprise-theme-recipe.md) |
-| Sunday | eurodance | 140 BPM | [sunday-eurodance.md](sunday-eurodance.md) |
+| Sunday | eurodance | 132 BPM | [sunday-eurodance.md](sunday-eurodance.md) |
 | Sunday | announced 2 h before | see the recipe | [surprise-theme-recipe.md](surprise-theme-recipe.md) |
 
 ## How to use a prompt in Suno
@@ -42,3 +42,10 @@ Rules from the organisers:
 
 Generate a lot, download a little. Pick the best take in the browser first.
 Download only the takes that you will hand in, plus one spare per theme.
+
+## More
+
+[research/suno-tips.md](../research/suno-tips.md) has the current Suno facts:
+the v6 models, the tag syntax, the download limits per plan, and ways to get a
+stable tempo. The genre notes and reference tempos are in
+[research/](../research/).

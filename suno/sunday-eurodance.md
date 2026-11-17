@@ -1,4 +1,4 @@
-# Sunday: eurodance (140 BPM)
+# Sunday: eurodance (132 BPM)
 
 Classic eurodance has a sung female chorus, a short male rap, a stab synth riff,
 and a key change near the end. Three takes. **A is the best**: hand that one in
@@ -11,7 +11,7 @@ first.
 **Style**
 
 ```
-90s eurodance, 140 BPM, A minor, powerful female diva vocal chorus, male rap verses, stabbing supersaw synth riff, Korg M1 piano, four on the floor kick, offbeat bass, open hi-hats, orchestra hits, euphoric, energetic, 1994, key change up for the last chorus, DJ-friendly drum intro and outro
+90s eurodance, 132 BPM, A minor, powerful female diva vocal chorus, male rap verses, stabbing supersaw synth riff, Korg M1 piano, four on the floor kick, offbeat bass, open hi-hats, orchestra hits, euphoric, energetic, 1994, key change up for the last chorus, DJ-friendly drum intro and outro
 ```
 
 **Exclude**
@@ -100,7 +100,7 @@ Happy and silly, in the style of bubblegum eurodance.
 **Style**
 
 ```
-90s bubblegum eurodance, 140 BPM, D major, cute high female vocal, playful male shout-outs, bouncy synth riff, pizzicato strings, happy piano, four on the floor, offbeat bass, children's party energy, euphoric, DJ-friendly drum intro and outro
+90s bubblegum eurodance, 132 BPM, D major, cute high female vocal, playful male shout-outs, bouncy synth riff, pizzicato strings, happy piano, four on the floor, offbeat bass, children's party energy, euphoric, DJ-friendly drum intro and outro
 ```
 
 **Exclude**
@@ -155,7 +155,7 @@ Darker, more Italo-style eurodance.
 **Style**
 
 ```
-mid 90s eurodance, 138 BPM, E minor, dramatic female vocal, deep male rap, dark hoover synth, minor key piano, big reverb snare, 909 kick, rolling offbeat bass, laser effects, dramatic, night club, key change in last chorus, DJ-friendly drum intro and outro
+mid 90s eurodance, 134 BPM, E minor, dramatic female vocal, deep male rap, dark hoover synth, minor key piano, big reverb snare, 909 kick, rolling offbeat bass, laser effects, dramatic, night club, key change in last chorus, DJ-friendly drum intro and outro
 ```
 
 **Exclude**

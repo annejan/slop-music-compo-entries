@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Segfault (In My Heart): eurodance, 140 BPM, A minor (and B minor after the key change). Sunday's theme of
+"""Segfault (In My Heart): eurodance, 132 BPM, A minor (and B minor after the key change). Sunday's theme of
 the AI slop music compo.
 
-segfault.py [OUT.wav]   (default renders/segfault_140bpm_Am.wav)
+segfault.py [OUT.wav]   (default renders/segfault_132bpm_Am.wav)
 
 Every note and every sound here is written by Claude, in this file: no samples, no loops. 1994 on a Sunday: a
 supersaw riff, a rave piano, an offbeat bass, orchestra hits, a vocoder robot as the diva that sings the chorus,
@@ -27,7 +27,7 @@ import numpy as np
 import engine as e
 
 e.seed(1994)
-S = e.Song(bpm=140, bars=112)
+S = e.Song(bpm=132, bars=112)
 STEP = S.step
 B = S.beat
 
@@ -234,7 +234,7 @@ S.put("fx", S.at(96), e.downlifter(S.bar * 2, .25), .5, wet=.3)
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 2500), (S.at(72), 2500), (S.at(80) - .02, 12000),
        (S.at(80), 18000), (S.n / e.SR, 18000)]
 here = os.path.dirname(os.path.abspath(__file__))
-out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "segfault_140bpm_Am.wav")
+out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "segfault_132bpm_Am.wav")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 S.mixdown(out, {"drums": .95, "perc": .7, "bass": .85, "pads": .8, "keys": 1.0, "lead": 1.0, "vox": 1.4, "fx": .55},
           cut_keys=cut, duck={"pads": .7, "bass": .3, "keys": .3, "lead": .35}, room=.2, echo_mix=.4, rms_db=-11.5)

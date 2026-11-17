@@ -8,7 +8,7 @@ before the deadline.
 |---|---|---|
 | Saturday | 90's mellow house | 120 BPM |
 | Saturday | surprise | genre norm |
-| Sunday | eurodance | 140 BPM |
+| Sunday | eurodance | 132 BPM |
 | Sunday | surprise | genre norm |
 
 The DJ mixes the tracks live, so each track keeps one tempo from start to end,
@@ -38,7 +38,7 @@ robot made from formant filters.
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
 | [code/warm_boot.py](code/warm_boot.py) | 90's mellow house | 120 BPM, A minor | 4:02 |
-| [code/segfault.py](code/segfault.py) | eurodance | 140 BPM, A minor, then B minor | 3:14 |
+| [code/segfault.py](code/segfault.py) | eurodance | 132 BPM, A minor, then B minor | 3:26 |
 
 [code/engine.py](code/engine.py) holds the shared parts: oscillators,
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
@@ -51,7 +51,7 @@ You need Python 3 with numpy and scipy.
 ```sh
 cd code
 python3 warm_boot.py      # writes renders/warm-boot_120bpm_Am.wav
-python3 segfault.py       # writes renders/segfault_140bpm_Am.wav
+python3 segfault.py       # writes renders/segfault_132bpm_Am.wav
 ```
 
 Each track renders in about 20 seconds. The output is a 44.1 kHz, 16-bit stereo
