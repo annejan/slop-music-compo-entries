@@ -1,6 +1,6 @@
 # Saturday: 90's mellow house (120 BPM)
 
-Three takes. **A is the best**: hand that one in first.
+Four takes. **A is the best**: hand that one in first. D is the French house option.
 
 ---
 
@@ -160,6 +160,68 @@ instrumental 90s deep house, mellow, 120 BPM, D minor, dreamy Rhodes chords, war
 [Instrumental: bassline enters]
 [Break: filtered, no kick]
 [Instrumental: full groove, vocal chops]
+[Outro: drums only, 16 bars]
+[End]
+```
+
+---
+
+## D. "Low Pass Love" (French house)
+
+Late 90s French touch: a filtered disco loop that opens and closes, a pumping
+beat, and one vocal hook on repeat. The joke is the filter itself.
+
+**Style**
+
+```
+late 90s French house, mellow, 122 BPM, A minor, filtered disco loop, slow low-pass filter sweeps, phaser, sidechain pumping, funky bass guitar, Rhodes, talk box vocal hook, male disco vocal, warm and sunny, DJ-friendly drum intro and outro
+```
+
+**Exclude**
+
+```
+trap, dubstep, EDM drop, modern pop, rock guitar, tempo change, rap
+```
+
+**Lyrics**
+
+```
+[Intro: drums only, 16 bars]
+
+[Instrumental: filtered disco loop, filter closed]
+
+[Instrumental: filter slowly opens]
+
+[Hook: talk box]
+Low pass love
+Open up the filter
+Low pass love
+Let the highs come through
+
+[Instrumental: full loop, pumping]
+
+[Verse: male disco vocal]
+You cut me off at eighty hertz
+Now all I hear is bass
+Turn the knob a little, baby
+Put the treble in its place
+
+[Hook: talk box]
+Low pass love
+Open up the filter
+Low pass love
+Let the highs come through
+
+[Break: filter closes, bass only]
+(close it, close it)
+(open it up)
+
+[Hook: talk box and male vocal]
+Low pass love
+Open up the filter
+Low pass love
+Let the highs come through
+
 [Outro: drums only, 16 bars]
 [End]
 ```
