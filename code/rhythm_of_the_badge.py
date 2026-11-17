@@ -299,17 +299,33 @@ def words_on(notes, words):
     return out
 
 
+# DIVA=ds:hanami: a DiffSinger voicebank sings the diva's part (ds.py) at the written pitch, in one take; the
+# Piper choir stays below her. The words as written for it (real words; "+" holds a word over the next note)
+DS = DIVA.startswith("ds:")
+DS_GAIN = []                 # (from, to, amp) per line
+DS_TEXT = {"into + the ee lek trih sih tee": "into + the electricity + + + +"}
+if DS:
+    import ds
+    DS_PART = ds.Part(S.bpm)
+
+
 def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo_last=.35, pan=.5):
     """The diva sings a line, a word on its notes, the consonants before the beat, an echo on the last word.
     choir: how loud the other voices are (left and right doubles and a third above; with big=True also a man an
     octave down and a voice a sixth down)."""
     key = key_of(bar) if key is None else key
     pairs = words_on(S.notes(bar, line, key, bars), words)
+    if DS:
+        for w, ns in words_on(S.notes(bar, line, key, bars), DS_TEXT.get(words, words)):
+            for k, (t, m, d) in enumerate(ns):
+                DS_PART.note(t, m, d * .97, w if k == 0 else "+")
+        DS_GAIN.append((S.at(bar), S.at(bar + bars), amp))
     for i, (w, ns) in enumerate(pairs):
         last = i == len(pairs) - 1
         t = ns[0][0]
-        li, y = V.sing(w, [(m - 12, d * .97) for _, m, d in ns], voice=DIVA)
-        S.put("vox", t - li, y, pan, amp, wet=.18, echo=echo_last if last else .05)
+        if not DS:
+            li, y = V.sing(w, [(m - 12, d * .97) for _, m, d in ns], voice=DIVA)
+            S.put("vox", t - li, y, pan, amp, wet=.18, echo=echo_last if last else .05)
         if not choir:
             continue
         notes = [(m - 12, d * .95) for _, m, d in ns]
@@ -411,6 +427,13 @@ for bar in range(120):
         mc(bar, PROGRESS[(bar - 72) // 2], amp=1.05)
     if bar in (96, 100):
         diva(bar, *CHORUS[0], amp=.8, choir=.4, echo_last=.6)
+
+if DS:   # the whole diva part in one take, each line at its own level
+    y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"))
+    g = np.ones(len(y))
+    for t0, t1, a in DS_GAIN:
+        g[int(t0 * e.SR):int(t1 * e.SR)] = a
+    S.put("vox", 0.0, y * g, .5, 1.0, wet=.18, echo=.15)
 
 snare_roll(76, 4, 1.1)
 S.put("fx", S.at(76), e.riser(S.bar * 4, .4), .5, wet=.3)

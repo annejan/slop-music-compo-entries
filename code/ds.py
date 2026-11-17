@@ -13,6 +13,7 @@ The voicebank's own duration and pitch models place the consonants before the no
 the notes, so the vowel lands on the beat. The result is cached in .cache/.
 """
 import hashlib
+import json
 import os
 import subprocess
 import tempfile
@@ -27,14 +28,6 @@ HOME = os.path.expanduser("~/Projects/diffsinger")
 WARBLE = os.environ.get("WARBLE", os.path.join(HOME, "warble", ".venv", "bin", "warble"))
 BANKS = os.environ.get("WARBLE_BANKS", os.path.join(HOME, "banks"))
 SR = 44100
-NAMES = "C C# D D# E F F# G G# A A# B".split()
-
-
-def note_name(m):
-    m = int(round(m))
-    return f"{NAMES[m % 12]}{m // 12 - 1}"
-
-
 class Part:
     def __init__(self, bpm):
         self.bpm = bpm
@@ -44,34 +37,33 @@ class Part:
         self.notes.append((float(t), int(midi), float(seconds), word))
 
     def score(self, bank, voice, lang="en"):
-        """warble's plain-text score: every note and rest in milliseconds, from second 0."""
-        lines = [f"bpm {self.bpm}", "track lead", f"bank {bank}", f"lang {lang}", f"voice {voice}"]
+        """warble's JSON score: every note at its own tick (480 a beat), so a lyric can be any word (in the text
+        format, a word such as "time" is read as a directive)."""
         notes = []                            # [start, midi, seconds, word]; gaps under 30 ms join the note before
         for t, m, d, w in sorted(self.notes):
             if notes:
                 p = notes[-1]
-                gap = t - (p[0] + p[2])
-                if gap < .03:                 # a tiny gap (or an overlap): the earlier note ends where this begins
+                if t - (p[0] + p[2]) < .03:    # a tiny gap (or an overlap): the earlier note ends where this begins
                     p[2] = max(t - p[0], .01)
             notes.append([t, m, d, w])
-        now = 0.0
+        tick = self.bpm / 60 * 480
+        out = []
         for t, m, d, w in notes:
-            if t > now + .0005:
-                lines.append(f"r {(t - now) * 1000:.1f}ms")
-            lines.append(f"{w} {note_name(m)} {d * 1000:.1f}ms")
-            now = t + d
-        return "\n".join(lines) + "\n"
+            pos = int(round(t * tick))
+            out.append({"lyric": w, "tone": m, "position": pos, "duration": max(int(round((t + d) * tick)) - pos, 1)})
+        return {"bpm": self.bpm, "tracks": [{"name": "lead", "bank": find_bank(bank), "lang": lang, "voice": voice,
+                                             "notes": out}]}
 
     def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12):
         """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing)."""
-        text = self.score(bank, voice, lang)
+        text = json.dumps(self.score(bank, voice, lang), ensure_ascii=False)
         key = hashlib.sha1(f"{text}|{seed}".encode()).hexdigest()[:16]
         path = os.path.join(CACHE, f"ds{key}.npy")
         if os.path.exists(path):
             y = np.load(path)
         else:
             with tempfile.TemporaryDirectory() as tmp:
-                src, out = os.path.join(tmp, "part.txt"), os.path.join(tmp, "part.wav")
+                src, out = os.path.join(tmp, "part.json"), os.path.join(tmp, "part.wav")
                 with open(src, "w") as fh:
                     fh.write(text)
                 env = dict(os.environ, WARBLE_BANKS=BANKS)
@@ -86,6 +78,16 @@ class Part:
         sung = env > .1 * env.max()
         rms = np.sqrt(np.mean(y[sung] ** 2)) if sung.any() else 1.0
         return y * (level / (rms + 1e-9))
+
+
+def find_bank(name):
+    """A bank folder (with dsconfig.yaml) under BANKS whose path contains `name`, case-insensitive; or a path."""
+    if os.path.isdir(name):
+        return os.path.abspath(name)
+    for root, dirs, files in sorted(os.walk(BANKS)):
+        if "dsconfig.yaml" in files and "character.yaml" in files and name.lower() in root.lower():
+            return root
+    raise FileNotFoundError(f"no DiffSinger bank matching {name!r} under {BANKS}")
 
 
 def _read(path):
