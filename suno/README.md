@@ -17,8 +17,10 @@ Rules from the organisers:
 
 ## Our rule: all AI
 
-The organisers allow hand-written lyrics. We do not use that: every part of
-every entry is made by AI.
+The organisers say: "Zorg ervoor dat je nummer volledig AI is" (make sure
+your track is fully AI), and "teksten mag je beunen" (the lyrics may be rough).
+We take the first rule all the way: every part of every entry is made by AI,
+the lyrics too.
 
 - Claude writes the lyrics and the style prompts.
 - Suno makes the audio. Fix a take only with Suno's own AI tools: Extend,
