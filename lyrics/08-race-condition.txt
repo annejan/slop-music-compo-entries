@@ -1,0 +1,52 @@
+Race Condition
+Rehearsal: drum & bass · 174 BPM · F minor · 3:21
+Words by Claude. Voices: DIVA: Jenny (Dioco); CHOIR:
+Kristin, LJSpeech, Cori (+ HFC male, John at the end);
+MC: Norman; THREADSANITIZER: Lessac (on the phone)
+
+[0:00] Intro (the break, drums only)
+
+[0:22] Electric piano and pad, behind a filter; a riser
+
+[0:44] Chorus (x2)
+DIVA + CHOIR: Two threads, one lock
+DIVA + CHOIR: Who will get there first?
+DIVA + CHOIR: Race condition
+DIVA + CHOIR: I need you to wait
+
+[1:06] Rap
+MC: Thread one, thread two, who is gonna run?
+MC: Both of us inside, and the data is done.
+MC: Lock it, block it, deadlock, stop!
+MC: Heisenbug, it is gone when you look at the top.
+MC: Spin, spin, spin on the lock all night,
+MC: compare and swap, baby, hold me tight.
+MC: Volatile love, never cached in me,
+MC: atomic kisses: one, two, three!
+
+[1:28] Break (half-time)
+DIVA: You read the value as I wrote
+DIVA: Now neither of us knows what's true
+DIVA: No mutex and no semaphore
+DIVA: Just two hearts in a race
+
+[1:39] Build
+THREADSANITIZER: ThreadSanitizer. Warning: data race.
+THREADSANITIZER: Read of size four, by thread two.
+(snare roll, riser)
+
+[1:50] Chorus (x2)
+DIVA + CHOIR: Two threads, one lock
+DIVA + CHOIR: Who will get there first?
+DIVA + CHOIR: Race condition
+DIVA + CHOIR: I need you to wait
+
+[2:12] Rap (as before, with the hook on the electric piano)
+
+[2:34] Last chorus (x2), the big choir
+DIVA + CHOIR: Two threads, one lock
+DIVA + CHOIR: Who will get there first?
+DIVA + CHOIR: Race condition
+DIVA + CHOIR: I need you to wait
+
+[2:57] Outro (the break, drums only)

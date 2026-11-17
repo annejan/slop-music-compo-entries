@@ -414,16 +414,25 @@ def integrated_lufs(x):
     return -.691 + 10 * np.log10(z.mean())
 
 
+_TP_FIR = (signal.firwin(2 * 10 * 4 + 1, 1 / 4, window=("kaiser", 5.0)) * 4).astype(np.float32)   # resample_poly's own
+
+
 def true_peak(x):
-    """The peak of each sample's neighbourhood, 4 times oversampled (the peaks between the samples), both channels."""
-    up = np.abs(signal.resample_poly(x, 4, 1, axis=0)).max(1)
-    return up[:len(x) * 4].reshape(-1, 4).max(1)
+    """The peak of each sample's neighbourhood, 4 times oversampled (the peaks between the samples), both channels.
+    The same filter as resample_poly(x, 4, 1), in float32, with the maxima taken column by column (fast)."""
+    d = (len(_TP_FIR) - 1) // 2
+    up = np.abs(signal.upfirdn(_TP_FIR, np.asarray(x, np.float32), 4, axis=0)[d:d + 4 * len(x)])
+    m = np.maximum(up[:, 0], up[:, 1]).reshape(-1, 4)
+    return np.maximum(np.maximum(m[:, 0], m[:, 1]), np.maximum(m[:, 2], m[:, 3])).astype(np.float64)
 
 
 def limit(x, ceiling):
     """A look-ahead limiter on the true peak: the gain comes down 4 ms before a peak and goes back up slowly."""
     look = int(.004 * SR)
-    g = np.minimum(1.0, ceiling / np.maximum(true_peak(x), 1e-9))
+    tp = true_peak(x)
+    if tp.max() <= ceiling:
+        return x
+    g = np.minimum(1.0, ceiling / np.maximum(tp, 1e-9))
     g = minimum_filter1d(g, 2 * look + 1)
     g = np.minimum(g, one_pole(g, .002))
     return x * g[:, None]
@@ -492,7 +501,22 @@ class Song:
     def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0, ir=None,
                 tail_fade=2.0, ceiling_db=-1.2):
         """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
-        16-bit WAV of the song's length plus the reverb's tail."""
+        16-bit WAV of the song's length plus the reverb's tail.
+
+        PREVIEW=48-64 (environment): mix only bars 48 to 63, for a quick listen; the loudness is aimed at them."""
+        preview = os.environ.get("PREVIEW")
+        if preview:
+            a, b = (int(v) for v in preview.split("-"))
+            t0, t1 = self.at(a), min(self.at(b), self.length)
+            i0, i1 = int(t0 * SR), min(int((t1 + tail_fade + .5) * SR), self.n)
+            for k in BUSES:
+                self.bus[k] = self.bus[k][i0:i1]
+            self.send, self.echo = self.send[i0:i1], self.echo[i0:i1]
+            self.kicks = [t - t0 for t in self.kicks if t0 <= t < t1]
+            if cut_keys:
+                cut_keys = [(t - t0, v) for t, v in cut_keys]
+            self.n, self.length, fade_in = i1 - i0, t1 - t0, 0.0
+            self.bars = f"{b - a} (bars {a}-{b - 1})"
         n = self.n
         duck = duck or {"pads": .7, "bass": .45, "keys": .25}
         env = np.zeros(n)
@@ -561,15 +585,14 @@ class Song:
         # to the loudness target, under a true-peak ceiling: the limiter takes the loudness down a little, so
         # aim again and limit again until both hold
         ceiling = 10 ** (ceiling_db / 20)
-        dry = mix
-        for _ in range(4):
-            mix = dry * 10 ** ((lufs - integrated_lufs(dry if _ == 0 else mix)) / 20)
-            for _pass in range(3):
-                mix = limit(mix, ceiling)
-            dry = mix
-            if abs(integrated_lufs(mix) - lufs) < .1:
+        level = integrated_lufs(mix)
+        for _ in range(4):               # one limiter pass per round: the loudness settles, the last overs go below
+            mix = limit(mix * 10 ** ((lufs - level) / 20), ceiling)
+            level = integrated_lufs(mix)
+            if abs(level - lufs) < .1:
                 break
-        mix = limit(mix, ceiling)
+        for _ in range(3):               # the gain changes move a few peaks between the samples: limit again
+            mix = limit(mix, ceiling)
         # TPDF dither to 16 bits
         q = 1 / 32767
         out = np.round((mix + (rng.random(mix.shape) - rng.random(mix.shape)) * q) * 32767)

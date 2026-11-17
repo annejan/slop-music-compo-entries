@@ -27,11 +27,12 @@ sounds and voices it uses.
 
 ## The tracks: `code/`
 
-Seven songs written by Claude as Python code. Every note and every sound is in
+Eight songs written by Claude as Python code. Every note and every sound is in
 the source: there are no samples and no loops. The synthesis is numpy and
 scipy. Warm Boot sings with a formant robot; the other songs have AI singers
 and rappers (see Voices). Warm Boot and Segfault are our entries; the other
-five are the other takes from `suno/`, made as code tracks for fun.
+five are the other takes from `suno/`, made as code tracks for fun, and Race
+Condition is a rehearsal for the surprise themes.
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
@@ -42,6 +43,12 @@ five are the other takes from `suno/`, made as code tracks for fun.
 | [code/segfault.py](code/segfault.py) | eurodance | 132 BPM, A minor, then B minor | 3:26 |
 | [code/blinky.py](code/blinky.py) | eurodance | 132 BPM, D major, then E major | 3:26 |
 | [code/rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
+| [code/race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
+
+For a new song, start from [code/template.py](code/template.py): a complete
+song with the knobs at the top, built from the ready parts in
+[code/parts.py](code/parts.py) (drum grooves for many genres, basslines,
+chords, a diva with a choir, a rapper). See SONGS.md, "Surprise themes".
 
 [code/engine.py](code/engine.py) holds the shared parts: oscillators,
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
@@ -116,6 +123,7 @@ the MP3 tags.
 | `CHOIR=v1,v2,v3,v4,v5` | the choir: left double, right double, third above; in the last chorus also an octave down and a sixth down |
 | `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
 | `SOLO=vox` | render only these buses (comma separated), for auditions |
+| `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb from `engine.py` (default: `dx7`, `sim`) |
 
 `trials.py` renders Segfault with many voice pairs and cuts bars 24-58 (verse,

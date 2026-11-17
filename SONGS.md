@@ -210,11 +210,41 @@ night club anthem about flashing firmware to a badge.
 
 ## Surprise themes
 
-Not known yet. The plan is in
-[suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md), and ready
-prompts for 16 likely genres are in
-[research/surprise-genres.md](research/surprise-genres.md). The surprise tracks
-will be code tracks too, made the same way as the two above.
+Not known yet. The surprise tracks will be code tracks too. For speed there
+is a template and a set of ready parts:
+
+- [code/template.py](code/template.py): a complete song (DJ intro and outro,
+  verse, rap, chorus with a choir, break, build, last chorus with a key
+  change). The knobs are at the top: tempo, chords, scale, groove, bass, keys,
+  loudness, voices, words and melody. Copy it and change it.
+- [code/parts.py](code/parts.py): drum grooves as 16-step patterns (four on the
+  floor, house, garage, techno, eurodance, drum and bass, breakbeat, hip hop,
+  reggaeton, schlager, half-time), basslines, chord stabs, the DX7, a diva with
+  a choir of other voices, a rapper and a spoken voice.
+- `PREVIEW=48-64` renders only those bars, in about 25 seconds.
+
+Tempos and traits of 16 likely genres are in
+[research/surprise-genres.md](research/surprise-genres.md).
+
+### Rehearsal: Race Condition (code track)
+
+[code/race_condition.py](code/race_condition.py). A test run with a made-up
+theme, drum and bass: 174 BPM, F minor (Fm9, Dbmaj7, Abmaj7, Eb, two bars
+each), 144 bars, 3:21, -9 LUFS. Two threads, one lock, and neither of them
+waits. Made from the template in about 4 minutes, from the theme to the
+finished render.
+
+- **Structure:** intro (the break), electric piano and pad behind a filter,
+  drop with the chorus, the MC, a half-time break with the verse,
+  ThreadSanitizer reports a data race, drop two with a reese bass, the MC
+  again, the last chorus with the big choir, outro (the break).
+- **Sounds:** a two-step breakbeat with ghost snares and a ride, a rolling sine
+  sub with slides, a reese bass, the DX7 electric piano, a pad. A simulated
+  10 x 7 x 4 m room, RT60 2 s.
+- **Voices (Piper):** the diva is `en_GB-jenny_dioco-medium`; the choir is
+  `en_US-kristin-medium`, `en_US-ljspeech-high`, `en_GB-cori-high`, with
+  `en_US-hfc_male-medium` and `en_US-john-medium` in the last chorus; the MC is
+  `en_US-norman-medium`; ThreadSanitizer is `en_US-lessac-high` on the phone.
 
 ---
 

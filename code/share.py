@@ -24,6 +24,7 @@ SONGS = [
     ("segfault_132bpm_Am.wav", "Segfault (In My Heart)", "Sunday: eurodance", 132, "Am"),
     ("blinky_132bpm_D.wav", "Blinky (The LED Song)", "Sunday: eurodance", 132, "D"),
     ("rhythm-of-the-badge_134bpm_Em.wav", "The Rhythm Of The Badge", "Sunday: eurodance", 134, "Em"),
+    ("race-condition_174bpm_Fm.wav", "Race Condition", "Rehearsal: drum and bass", 174, "Fm"),
 ]
 
 if __name__ == "__main__":
