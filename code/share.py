@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Encode the renders for sharing in a chat app such as Signal: MP3 at 320 kbit/s with title tags, about 9 MB per
+"""Encode the renders for sharing in a chat app such as Signal: MP3 at 320 kbit/s with title tags, under 10 MB per
 song (Signal's limit is 100 MB), plays on every phone. The lyric sheets from lyrics/ go in the tags and next to them.
 
-share.py            writes renders/share/NN Title (BPM, key).mp3 for every song that is rendered,
-                    and renders/share/NN Title - lyrics.txt
+The renders are DJ versions (16 bars of drums at each end, for the compo). For sharing, each song also gets a radio
+edit: from where the music comes in (bar 16) to two bars into the outro, with a fade over the last four bars.
+
+share.py            writes renders/share/NN Title.mp3 (the radio edit) and NN Title - lyrics.txt (its times),
+                    and renders/share/dj/NN Title (BPM, key).mp3 (the DJ version) for every song that is rendered
 """
+import re
 import glob
 import os
 import shutil
@@ -15,34 +19,79 @@ RENDERS = os.path.join(HERE, "renders")
 LYRICS = os.path.join(os.path.dirname(HERE), "lyrics")
 OUT = os.path.join(RENDERS, "share")
 
-# file, title, day, BPM, key
+DJ_BARS = 16      # drums only at each end
+# file, title, day, BPM, key, bars
 SONGS = [
-    ("warm-boot_120bpm_Am.wav", "Warm Boot", "Saturday: 90's mellow house", 120, "Am"),
-    ("packet-loss_122bpm_Fm.wav", "Packet Loss (Of Love)", "Saturday: 90's mellow house", 122, "Fm"),
-    ("low-battery_120bpm_Dm.wav", "Low Battery Lullaby", "Saturday: 90's mellow house", 120, "Dm"),
-    ("low-pass-love_122bpm_Am.wav", "Low Pass Love", "Saturday: 90's mellow house", 122, "Am"),
-    ("segfault_132bpm_Am.wav", "Segfault (In My Heart)", "Sunday: eurodance", 132, "Am"),
-    ("blinky_132bpm_D.wav", "Blinky (The LED Song)", "Sunday: eurodance", 132, "D"),
-    ("rhythm-of-the-badge_134bpm_Em.wav", "The Rhythm Of The Badge", "Sunday: eurodance", 134, "Em"),
-    ("race-condition_174bpm_Fm.wav", "Race Condition", "Rehearsal: drum and bass", 174, "Fm"),
+    ("warm-boot_120bpm_Am.wav", "Warm Boot", "Saturday: 90's mellow house", 120, "Am", 120),
+    ("packet-loss_122bpm_Fm.wav", "Packet Loss (Of Love)", "Saturday: 90's mellow house", 122, "Fm", 120),
+    ("low-battery_120bpm_Dm.wav", "Low Battery Lullaby", "Saturday: 90's mellow house", 120, "Dm", 120),
+    ("low-pass-love_122bpm_Am.wav", "Low Pass Love", "Saturday: 90's mellow house", 122, "Am", 128),
+    ("segfault_132bpm_Am.wav", "Segfault (In My Heart)", "Sunday: eurodance", 132, "Am", 112),
+    ("blinky_132bpm_D.wav", "Blinky (The LED Song)", "Sunday: eurodance", 132, "D", 112),
+    ("rhythm-of-the-badge_134bpm_Em.wav", "The Rhythm Of The Badge", "Sunday: eurodance", 134, "Em", 120),
+    ("race-condition_174bpm_Fm.wav", "Race Condition", "Rehearsal: drum and bass", 174, "Fm", 144),
 ]
 
+
+def radio_window(bpm, bars):
+    """(start, length, fade) in seconds: from the end of the DJ intro to two bars into the DJ outro."""
+    bar = 240 / bpm
+    start = DJ_BARS * bar
+    end = (bars - DJ_BARS + 2) * bar
+    return start, end - start, 4 * bar
+
+
+def shift_sheet(text, start, length):
+    """The lyric sheet with its [m:ss] times moved to the radio edit; sections outside it are left out."""
+    out, keep = [], True
+    for line in text.splitlines():
+        m = re.match(r"\[(\d+):(\d\d)\](.*)", line)
+        if m:
+            t = int(m.group(1)) * 60 + int(m.group(2)) - start
+            keep = 0 <= t + .5 < length - 1
+            if keep:
+                t = max(t, 0)
+                line = f"[{int(t // 60)}:{int(t % 60):02d}]{m.group(3)}"
+        if keep or not line.strip():
+            out.append(line)
+    first = next((i for i, x in enumerate(out) if x.startswith("[")), len(out))
+    out.insert(max(first - 1, 0), f"Radio edit, {int(length // 60)}:{int(length % 60):02d}: the times below are for this edit.")
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).rstrip() + "\n"
+
+
+def encode(src, dst, tags, words, cut=None):
+    pre = []
+    af = []
+    if cut:
+        start, length, fade = cut
+        pre = ["-ss", f"{start:.4f}", "-t", f"{length:.4f}"]
+        af = ["-af", f"afade=t=in:d=0.01,afade=t=out:st={length - fade:.4f}:d={fade:.4f}"]
+    subprocess.run(["ffmpeg", "-v", "error", "-y", *pre, "-i", src, *af, "-c:a", "libmp3lame", "-b:a", "320k",
+                    *tags, *words, "-id3v2_version", "3", dst], check=True)
+    print(f"{os.path.relpath(dst, OUT)}: {os.path.getsize(dst) / 1e6:.1f} MB")
+
 if __name__ == "__main__":
-    os.makedirs(OUT, exist_ok=True)
-    for n, (wav, title, day, bpm, key) in enumerate(SONGS, 1):
+    os.makedirs(os.path.join(OUT, "dj"), exist_ok=True)
+    for old in glob.glob(os.path.join(OUT, "* BPM, *).mp3")):     # the DJ versions used to live at the top
+        os.remove(old)
+    for n, (wav, title, day, bpm, key, bars) in enumerate(SONGS, 1):
         src = os.path.join(RENDERS, wav)
         if not os.path.exists(src):
             print(f"skip {wav}: not rendered")
             continue
-        dst = os.path.join(OUT, f"{n:02d} {title} ({bpm} BPM, {key}).mp3")
         sheets = glob.glob(os.path.join(LYRICS, f"{n:02d}-*.txt"))
-        words = ["-metadata", "lyrics=" + open(sheets[0], encoding="utf-8").read()] if sheets else []
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-c:a", "libmp3lame", "-b:a", "320k",
-                        "-metadata", f"title={title}", "-metadata", "artist=sunA",
-                        "-metadata", f"album=slop-music-compo-entries", "-metadata", f"comment={day}",
-                        "-metadata", f"genre={day.split(': ')[1]}", "-metadata", f"track={n}/{len(SONGS)}",
-                        "-metadata", f"TBPM={bpm}", "-metadata", f"TKEY={key}", *words, "-id3v2_version", "3", dst],
-                       check=True)
-        print(f"{os.path.basename(dst)}: {os.path.getsize(dst) / 1e6:.1f} MB")
-        for txt in sheets:
-            shutil.copyfile(txt, os.path.join(OUT, f"{n:02d} {title} - lyrics.txt"))
+        sheet = open(sheets[0], encoding="utf-8").read() if sheets else ""
+        cut = radio_window(bpm, bars)
+        radio_sheet = shift_sheet(sheet, cut[0], cut[1]) if sheet else ""
+        tags = ["-metadata", "artist=sunA", "-metadata", "album=slop-music-compo-entries",
+                "-metadata", f"comment={day}", "-metadata", f"genre={day.split(': ')[1]}",
+                "-metadata", f"track={n}/{len(SONGS)}", "-metadata", f"TBPM={bpm}", "-metadata", f"TKEY={key}"]
+        encode(src, os.path.join(OUT, f"{n:02d} {title}.mp3"), tags + ["-metadata", f"title={title}"],
+               ["-metadata", "lyrics=" + radio_sheet] if radio_sheet else [], cut)
+        encode(src, os.path.join(OUT, "dj", f"{n:02d} {title} ({bpm} BPM, {key}).mp3"),
+               tags + ["-metadata", f"title={title} (DJ version)"], ["-metadata", "lyrics=" + sheet] if sheet else [])
+        if radio_sheet:
+            with open(os.path.join(OUT, f"{n:02d} {title} - lyrics.txt"), "w", encoding="utf-8") as fh:
+                fh.write(radio_sheet)
+        if sheet:
+            shutil.copyfile(sheets[0], os.path.join(OUT, "dj", f"{n:02d} {title} - lyrics.txt"))

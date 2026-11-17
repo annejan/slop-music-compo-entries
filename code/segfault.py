@@ -131,7 +131,7 @@ VERSE = [
 ]
 PRE = [("E5 - - - E5 - - - G5 - - - - - - -", "oh oh oh"),
        (". . E5 D5 C5 - D5 - E5 - - - . . . .", "sum things go wing wrong")]
-RAP = ["Ess. Ee. Gee. Eff. Ay. You. Ell. Tee!",
+RAP = ["S! E! G! F! A! U! L! T!",
        "You overflowed the buffer that you gave to me.",
        "Null pointer, no answer, the stack is on fire.",
        "I free the same love twice, I'm a double free liar.",
@@ -187,6 +187,23 @@ def words_on(notes, words):
     return out
 
 
+# DIVA=ds:hanami: a DiffSinger voicebank sings the diva's part (ds.py), at the written pitch, in one take. The
+# words as written for it (real words, "+" holds a word over the next note; the lines above are spelled for Piper)
+DS = V.DIVA.startswith("ds:")
+DS_PART = None
+DS_GAIN = []                 # (from, to, amp) per line
+DS_TEXT = {
+    "you told me you'd be there for ev er": "you told me you'd be there for ever +",
+    "you told me we were kum piled to geth er": "you told me we were compiled + together + +",
+    "but now I'm reed ding mem oh ree": "but now I'm reading + memory + +",
+    "that duz unt bee long to me": "that doesn't + belong + to me",
+    "sum things go wing wrong": "something's + going + wrong",
+}
+if DS:
+    import ds
+    DS_PART = ds.Part(S.bpm)
+
+
 def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, style="octave", big=False):
     """The diva sings a line: a word on its notes, the consonants before the beat; an echo on the last word.
     double: how loud the stack is. style "octave": an octave up, left and right (one take, offset); "doubles": two
@@ -195,11 +212,17 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
     an octave down and a sixth down as well."""
     key = key_of(bar) if key is None else key
     pairs = words_on(S.notes(bar, line, key, bars), words)
+    if DS:   # the lead: DiffSinger, an octave above the Piper diva (the written pitch); the choir stays below
+        for w, ns in words_on(S.notes(bar, line, key, bars), DS_TEXT.get(words, words)):
+            for k, (t, m, d) in enumerate(ns):
+                DS_PART.note(t, m + octave + 12, d * .97, w if k == 0 else "+")
+        DS_GAIN.append((S.at(bar), S.at(bar + bars), amp))
     for i, (w, ns) in enumerate(pairs):
         last = i == len(pairs) - 1
         t = ns[0][0]
-        li, y = V.sing(w, [(m + octave, d * .97) for _, m, d in ns])
-        S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if last else .05)
+        if not DS:
+            li, y = V.sing(w, [(m + octave, d * .97) for _, m, d in ns])
+            S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if last else .05)
         if not double:
             continue
         if style == "choir":
@@ -234,8 +257,21 @@ def chorus_line(bar, lead_amp=1.0):
         S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
 
 
+SPELL = ["S!", "E!", "G!", "F!", "A!", "U!", "L!", "T!"]   # one letter each, shouted: eSpeak reads them right
+SPELL_RHYTHM = [(0, 1.8), (2, 1.8), (4, 1.8), (6, 1.8), (8, .95), (9, .95), (10, 1.8), (12, 3.5)]   # sixteenths:
+# S . E . G . F . A U L . T - - -  (A-U on one beat: a chant, not the alphabet song)
+
+
 def rapper(bar, text, bars=1, amp=1.0):
-    """A rap line, from the downbeat, fitted to the bar (a sixteenth short, to breathe)."""
+    """A rap line, from the downbeat, fitted to the bar (a sixteenth short, to breathe). The spelled line goes letter
+    by letter on the SPELL_RHYTHM grid: a whole line squeezed into a bar turns to mush."""
+    if text == RAP[0]:
+        for letter, (k, n) in zip(SPELL, SPELL_RHYTHM):
+            y = V.rap(letter, STEP * n)
+            last = letter == SPELL[-1]
+            S.put("vox", S.at(bar) + k * STEP, y, .5, amp * (1.15 if k == 0 or last else 1.0), wet=.06,
+                  echo=.12 if last else .02)
+        return
     y = V.rap(text, bars * S.bar - STEP)
     S.put("vox", S.at(bar), y, .5, amp, wet=.06, echo=.04)
 
@@ -303,6 +339,13 @@ for bar in range(112):
         signal_eleven(bar)
     if build and bar in (72, 73, 74, 75):
         rapper(bar, RAP[[0, 6, 0, 7][bar - 72]], amp=1.1)
+
+if DS:   # the whole diva part in one take, each line at its own level
+    y = DS_PART.render(bank=V.DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"))
+    g = np.ones(len(y))
+    for t0, t1, a in DS_GAIN:
+        g[int(t0 * e.SR):int(t1 * e.SR)] = a
+    S.put("vox", 0.0, y * g, .5, 1.0, wet=.12, echo=.12)
 
 snare_roll(44, 4)
 snare_roll(76, 4, 1.1)

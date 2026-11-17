@@ -80,6 +80,17 @@ straighter tone, about 6 dB under the lead: every speaker has their own
 consonant lengths, so whole words from five voices smear. The rap is spoken and fitted to the bar. The
 formant robot from `engine.py` only says "signal eleven" in the break.
 
+**DiffSinger (optional).** [code/ds.py](code/ds.py) lets a DiffSinger
+voicebank sing a whole part on our notes, through
+[warble](https://github.com/erz0r/warble) (MIT, ONNX on the CPU). warble and
+the voicebanks are not in this repository: install warble in
+`~/Projects/diffsinger/warble` and put the banks in `~/Projects/diffsinger/banks`
+(or set `WARBLE` and `WARBLE_BANKS`). `DIVA=ds:hanami segfault.py` lets Hoshino
+Hanami (Lotte V; her own licence: any use with credit, vocoder CC BY-NC-SA 4.0)
+sing the diva part in her "Fragrance" (power) mode; `DS_VOICE` picks another
+mode. The key change is sung by DiffSinger itself: her terms forbid
+pitch-shifting finished renders.
+
 The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is
 `en_US-ryan-high`. Both are trained on data under CC BY-NC-SA 4.0. Set `DIVA`
 and `RAPPER` to try other voices.
@@ -112,13 +123,18 @@ minutes each and need about 3 GB of memory.
 To share the songs in a chat app such as Signal:
 
 ```sh
-.venv/bin/python share.py    # writes renders/share/NN Title (BPM, key).mp3, 320 kbit/s, about 9 MB each
+.venv/bin/python share.py    # renders/share/: radio edits; renders/share/dj/: the DJ versions
 ```
+
+The renders are DJ versions, with 16 bars of drums at each end for the compo.
+For sharing, `share.py` also makes a radio edit of each song: from where the
+music comes in to two bars into the outro, with a fade (2:29 to 3:12). Both
+are 320 kbit/s MP3, under 10 MB each.
 
 The lyric sheets are in [lyrics/](lyrics/): what each voice sings or says, with
 the time of each section. They are written from the code, so they show the
 words as rendered. `share.py` copies them next to the MP3s and puts them in
-the MP3 tags.
+the MP3 tags; for the radio edits it moves the times to the edit.
 
 | Variable | Effect |
 |---|---|

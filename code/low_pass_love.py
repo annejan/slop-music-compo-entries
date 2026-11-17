@@ -273,7 +273,7 @@ HOOK = [
     (". A4 G4 - C5 - - - B4 - A4 - G#4 - - .", "let the highs come through +"),
 ]
 VERSE = [
-    (". A3 C4 C4 C4 B3 C4 D4 E4 - - . . . . .", "you cut me off at ay tee hurts"),
+    (". A3 C4 C4 C4 B3 C4 D4 E4 - - . . . . .", "you cut me off at eigh tee hurts"),
     (". E4 - E4 D4 - C4 - D4 - - A2 - - - .", "now all I hear is bass"),
     (". C4 C4 D4 - E4 D4 C4 D4 - E4 - - - . .", "turn the knob a lit tull bay bee"),
     (". E4 E4 A4 - G4 - E4 D4 - E4 - - - - -", "put the treb bull in its place"),
