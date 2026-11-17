@@ -302,7 +302,7 @@ def words_on(notes, words):
 # DIVA=ds:hanami: a DiffSinger voicebank sings the diva's part (ds.py) at the written pitch, in one take; the
 # Piper choir stays below her. The words as written for it (real words; "+" holds a word over the next note)
 DS = DIVA.startswith("ds:")
-DS_GAIN = []                 # (from, to, amp) per line
+DS_GAIN = []                 # (from, to, amp, last word at, its echo) per line
 DS_TEXT = {"into + the ee lek trih sih tee": "into + the electricity + + + +"}
 if DS:
     import ds
@@ -316,10 +316,11 @@ def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo
     key = key_of(bar) if key is None else key
     pairs = words_on(S.notes(bar, line, key, bars), words)
     if DS:
-        for w, ns in words_on(S.notes(bar, line, key, bars), DS_TEXT.get(words, words)):
+        ds_pairs = words_on(S.notes(bar, line, key, bars), DS_TEXT.get(words, words))
+        for w, ns in ds_pairs:
             for k, (t, m, d) in enumerate(ns):
                 DS_PART.note(t, m, d * .97, w if k == 0 else "+")
-        DS_GAIN.append((S.at(bar), S.at(bar + bars), amp))
+        DS_GAIN.append((S.at(bar), S.at(bar + bars), amp, ds_pairs[-1][1][0][0], echo_last))
     for i, (w, ns) in enumerate(pairs):
         last = i == len(pairs) - 1
         t = ns[0][0]
@@ -429,11 +430,17 @@ for bar in range(120):
         diva(bar, *CHORUS[0], amp=.8, choir=.4, echo_last=.6)
 
 if DS:   # the whole diva part in one take, each line at its own level
-    y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"))
+    y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
+                       pitch=os.environ.get("DS_PITCH", "0.5"))   # hard | free | 0..1 (see ds.py); 0.5: her own scoops, half
     g = np.ones(len(y))
-    for t0, t1, a in DS_GAIN:
+    for t0, t1, a, _, _ in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a
-    S.put("vox", 0.0, y * g, .5, 1.0, wet=.18, echo=.15)
+    y = y * g
+    S.put("vox", 0.0, y, .5, 1.0, wet=.18, echo=.05)
+    for t0, t1, a, last, echo_last in DS_GAIN:   # the echo on each line's last word, as the Piper diva has it
+        i, j = int((last - .08) * e.SR), min(int(t1 * e.SR), len(y))
+        if j > i:            # straight into the echo send (centre: cos 45 degrees on each side)
+            S.echo[i:j] += (np.stack([y[i:j], y[i:j]], 1) * (echo_last * np.cos(np.pi / 4))).astype(np.float32)
 
 snare_roll(76, 4, 1.1)
 S.put("fx", S.at(76), e.riser(S.bar * 4, .4), .5, wet=.3)

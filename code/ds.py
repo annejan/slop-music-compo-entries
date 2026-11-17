@@ -36,7 +36,7 @@ class Part:
     def note(self, t, midi, seconds, word):
         self.notes.append((float(t), int(midi), float(seconds), word))
 
-    def score(self, bank, voice, lang="en"):
+    def score(self, bank, voice, lang="en", hard=False, expr=None, vibrato="5.6:30:250"):
         """warble's JSON score: every note at its own tick (480 a beat), so a lyric can be any word (in the text
         format, a word such as "time" is read as a directive)."""
         notes = []                            # [start, midi, seconds, word]; gaps under 30 ms join the note before
@@ -50,13 +50,24 @@ class Part:
         out = []
         for t, m, d, w in notes:
             pos = int(round(t * tick))
-            out.append({"lyric": w, "tone": m, "position": pos, "duration": max(int(round((t + d) * tick)) - pos, 1)})
+            n = {"lyric": w, "tone": m, "position": pos, "duration": max(int(round((t + d) * tick)) - pos, 1)}
+            if hard:   # hard tuned: the pitch model off, flat on the note (a vibrato on the long ones), like voice.sing
+                n["controls"] = {"pts": f"0:0:io,{d * 1000:.0f}:0:io", "snap": 0}
+                if d > .3 and vibrato:
+                    n["controls"]["vib"] = vibrato
+            elif expr is not None:   # the pitch model's expressiveness: 1 its own melody, 0 close to the notes
+                n["controls"] = {"expr": float(expr)}
+            out.append(n)
         return {"bpm": self.bpm, "tracks": [{"name": "lead", "bank": find_bank(bank), "lang": lang, "voice": voice,
                                              "notes": out}]}
 
-    def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12):
-        """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing)."""
-        text = json.dumps(self.score(bank, voice, lang), ensure_ascii=False)
+    def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12, pitch="free"):
+        """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing).
+        pitch: "free" (the bank's pitch model), "hard" (flat notes, the model off: the voice locks to the synths),
+        or a number 0..1, the model's expressiveness (0.5: half its own scoops and overshoots)."""
+        hard = pitch == "hard"
+        expr = None if pitch in ("hard", "free") else float(pitch)
+        text = json.dumps(self.score(bank, voice, lang, hard=hard, expr=expr), ensure_ascii=False)
         key = hashlib.sha1(f"{text}|{seed}".encode()).hexdigest()[:16]
         path = os.path.join(CACHE, f"ds{key}.npy")
         if os.path.exists(path):

@@ -341,7 +341,8 @@ for bar in range(112):
         rapper(bar, RAP[[0, 6, 0, 7][bar - 72]], amp=1.1)
 
 if DS:   # the whole diva part in one take, each line at its own level
-    y = DS_PART.render(bank=V.DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"))
+    y = DS_PART.render(bank=V.DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
+                       pitch=os.environ.get("DS_PITCH", "0.5"))   # hard | free | 0..1 (see ds.py); 0.5: half her own
     g = np.ones(len(y))
     for t0, t1, a in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a

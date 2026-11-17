@@ -88,7 +88,10 @@ the voicebanks are not in this repository: install warble in
 (or set `WARBLE` and `WARBLE_BANKS`). `DIVA=ds:hanami segfault.py` lets Hoshino
 Hanami (Lotte V; her own licence: any use with credit, vocoder CC BY-NC-SA 4.0)
 sing the diva part in her "Fragrance" (power) mode; `DS_VOICE` picks another
-mode. The key change is sung by DiffSinger itself: her terms forbid
+mode. The same works for `rhythm_of_the_badge.py`. `DS_PITCH` sets how she
+moves between the notes: `free` (her own pitch model), `hard` (flat notes,
+locked to the synths) or a number for the model's expressiveness; the default
+0.5 keeps half her own scoops and overshoots. The key change is sung by DiffSinger itself: her terms forbid
 pitch-shifting finished renders.
 
 The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is
@@ -169,7 +172,12 @@ each file.
 | [hooks-and-humor.md](research/hooks-and-humor.md) | how dance hooks work, sing-along rules, 30 title ideas, three finished lyrics |
 | [local-and-alt-generators.md](research/local-and-alt-generators.md) | open AI music and singing models that run on this laptop |
 | [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
+| [render-speed.md](research/render-speed.md) | how fast the code tracks, DiffSinger and ACE-Step render on this laptop |
 | [suno-tips.md](research/suno-tips.md) | Suno v6 (not used; see below) |
+
+`master.py IN.wav OUT.wav --bpm 120` masters a song from another generator
+(ACE-Step) the same way: the beat grid moved to sample 0, 44.1 kHz, -10 LUFS,
+-1.2 dBTP, 16-bit with dither.
 
 ## Other options we might try
 
