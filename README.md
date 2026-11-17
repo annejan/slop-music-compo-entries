@@ -42,6 +42,16 @@ instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
 glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass
 2.0 film.
 
+Two more parts come from the NPU demos in `~/Projects/npu` (MIT, same author),
+ported from the NPU to numpy so that the tracks render on any computer:
+
+- [code/dx7.py](code/dx7.py): a DX7-style FM synthesizer: six operators, the
+  32 algorithms of the DX7, operator feedback. Warm Boot's Rhodes is its
+  electric piano patch.
+- [code/room.py](code/room.py): a 3-D wave simulation (FDTD) of the air in a
+  7 x 5 x 3 m room. It records the room's stereo impulse response, and Warm
+  Boot's reverb uses it. The simulation takes 6 seconds and is cached.
+
 ### Voices
 
 [code/voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
@@ -77,7 +87,7 @@ Then render:
 .venv/bin/python segfault.py       # writes renders/segfault_132bpm_Am.wav
 ```
 
-Warm Boot renders in about 20 seconds. Segfault takes about 90 seconds the first
+Warm Boot renders in about 30 seconds. Segfault takes about 90 seconds the first
 time, because Piper speaks every word; the speech is cached in `.cache/`.
 
 | Variable | Effect |
@@ -87,6 +97,7 @@ time, because Piper speaks every word; the speech is cached in `.cache/`.
 | `CHOIR=v1,v2,v3,v4,v5` | the choir: left double, right double, third above; in the last chorus also an octave down and a sixth down |
 | `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
 | `SOLO=vox` | render only these buses (comma separated), for auditions |
+| `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb from `engine.py` (default: `dx7`, `sim`) |
 
 `trials.py` renders Segfault with many voice pairs and cuts bars 24-58 (verse,
 rap, pre-chorus, chorus) into `renders/voices/`; with `--solo` it renders the

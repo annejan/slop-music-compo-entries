@@ -38,8 +38,11 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 - **Drums:** a soft sine kick, a clap with a snare under it, 808-style metallic
   hats with a 58 % shuffle, a shaker, rimshots.
 - **Bass:** a round deep-house bass: a sine, a little saturation, a little saw.
-- **Keys:** an FM electric piano (Rhodes) that comps the chords and plays the
-  melody in the second chorus; M1-style organ stabs in the choruses.
+- **Keys:** an electric piano that comps the chords and plays the melody in
+  the second chorus. It is the E.Piano patch of a DX7-style FM synthesizer
+  ([code/dx7.py](code/dx7.py)): six sine operators in algorithm 5, a feedback
+  operator, and a ratio-14 operator for the bell-like attack. M1-style organ
+  stabs in the choruses.
 - **Pads:** a slow supersaw string pad, and an "ooh" choir made from formant
   filters.
 - **Effects:** vinyl crackle all through, a riser and a downlifter around the
@@ -47,8 +50,12 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 - **Voice:** the formant robot (a saw through vowel filters) sings "warm boot,
   baby", "all night long", "bring me back up slow" and "standby".
 - **Mix:** the kick ducks the pads and the bass; a dotted-eighth ping-pong
-  delay; a noise reverb; the master filter closes in the break; a glue
-  compressor; a true-peak limiter.
+  delay; the reverb of a simulated 7 x 5 x 3 m room (a 3-D wave simulation in
+  [code/room.py](code/room.py), RT60 1.8 s, nothing above 4 kHz); the master
+  filter closes in the break; a glue compressor; a true-peak limiter.
+
+The DX7 synthesizer and the room simulation are numpy ports of the NPU demos
+in `~/Projects/npu` (MIT), which run on the Ryzen AI NPU there.
 
 ---
 
@@ -77,7 +84,8 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 - **Riff and keys:** supersaw stabs, a rave piano, a supersaw lead that doubles
   the chorus hook.
 - **Pads and effects:** a string pad, orchestra hits, risers, downlifters.
-- **Mix:** as Warm Boot, but louder.
+- **Mix:** as Warm Boot, but louder, and with a noise reverb instead of the
+  simulated room.
 
 Voices, made in [code/voice.py](code/voice.py):
 

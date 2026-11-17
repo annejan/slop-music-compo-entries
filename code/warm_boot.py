@@ -15,6 +15,9 @@ asks for a warm boot. The first and last 16 bars are drums only, for the DJ.
         72-87  chorus again, with a Rhodes melody on top
         88-103 winding down: the pad and the organ go, the bass and the Rhodes stay
        104-119 outro: drums only
+
+The Rhodes is a DX7-style FM electric piano (dx7.py) and the reverb is a simulated room (room.py), both ported
+from the NPU demos in ~/Projects/npu. KEYS=fm and ROOM=noise switch back to the simple versions in engine.py.
 """
 import os
 import sys
@@ -22,6 +25,18 @@ import sys
 import numpy as np
 
 import engine as e
+import dx7
+import room
+
+KEYS = os.environ.get("KEYS", "dx7")
+ROOM = os.environ.get("ROOM", "sim")
+
+
+def rhodes(m, d, vel):
+    """The electric piano: the DX7 E.Piano (dx7.py), or the simple FM one from engine.py with KEYS=fm."""
+    if KEYS == "fm":
+        return e.rhodes(m, d, vel)
+    return dx7.note("epiano", m, d, vel, tail=.9)
 
 e.seed(120)
 S = e.Song(bpm=120, bars=120)
@@ -85,7 +100,7 @@ def rhodes_comp(bar, amp=1.0, cut=None):
     notes = e.voicing(chord_of(bar), lo=55, drop_root=True)
     for k, n, vel in RHODES_COMP:
         for j, m in enumerate(notes):
-            g = e.rhodes(m, n * STEP, vel)
+            g = rhodes(m, n * STEP, vel)
             if cut:
                 g = e.lowpass(g, cut)
             # a tremolo that pans the Rhodes side to side, one cycle a bar
@@ -123,8 +138,8 @@ MELODY = [
 
 def melody(bar, amp=1.0):
     for t, m, d in S.notes(bar, MELODY[bar % 4]):
-        S.put("lead", t, e.rhodes(m + 12, d, .95), .55, .32 * amp, wet=.35, echo=.35)
-        S.put("lead", t, e.rhodes(m, d, .6), .45, .18 * amp, wet=.3)
+        S.put("lead", t, rhodes(m + 12, d, .95), .55, .32 * amp, wet=.35, echo=.35)
+        S.put("lead", t, rhodes(m, d, .6), .45, .18 * amp, wet=.3)
 
 
 # ---------------------------------------------------------------- the robot
@@ -206,4 +221,5 @@ here = os.path.dirname(os.path.abspath(__file__))
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "warm-boot_120bpm_Am.wav")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 S.mixdown(out, {"drums": .85, "perc": .7, "bass": .9, "pads": 1.0, "keys": 1.1, "lead": 1.2, "vox": 1.3, "fx": .5},
-          cut_keys=cut, room=.22, echo_mix=.45, lufs=-10.0)
+          cut_keys=cut, room=.22, echo_mix=.45, lufs=-10.0,
+          ir=room.impulse_response((7.0, 5.0, 3.0), rt60=1.8) if ROOM == "sim" else None)

@@ -489,7 +489,7 @@ class Song:
         for off, g in robot(syllables):
             self.put("vox", t + off, g, pan, amp, wet=wet, echo=echo)
 
-    def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0,
+    def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0, ir=None,
                 tail_fade=2.0, ceiling_db=-1.2):
         """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
         16-bit WAV of the song's length plus the reverb's tail."""
@@ -534,12 +534,16 @@ class Song:
                 music[:, ch] = sweep(music[:, ch], cutoff, .9, 256)
         mix = music + self.bus["fx"] * gains.get("fx", 1.0)
         # the room
+        # the room: an impulse response (stereo, unit energy per channel, e.g. from room.py), or decaying noise
         ir_len = int(2.2 * SR)
         ti = np.arange(ir_len) / SR
         for ch in range(2):
-            ir = lowpass(rng.standard_normal(ir_len) * np.exp(-ti * 2.8), 6500)
-            ir /= np.sqrt(np.sum(ir ** 2))
-            mix[:, ch] += signal.fftconvolve(highpass(self.send[:, ch], 250), ir)[:n] * room
+            if ir is not None:
+                h = ir[:, ch]
+            else:
+                h = lowpass(rng.standard_normal(ir_len) * np.exp(-ti * 2.8), 6500)
+                h /= np.sqrt(np.sum(h ** 2))
+            mix[:, ch] += signal.fftconvolve(highpass(self.send[:, ch], 250), h)[:n] * room
         mix = highpass(mix, 28)
         tt_ = np.arange(n) / SR
         if fade_in:
