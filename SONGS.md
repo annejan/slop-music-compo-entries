@@ -85,9 +85,12 @@ Voices, made in [code/voice.py](code/voice.py):
   wrong") and the chorus. Piper's `en_US-hfc_female-medium` voice speaks each
   word. WORLD (`pyworld`) takes the speech apart and puts it back on our notes.
   The vowel is stretched to the note length, the consonants keep their length,
-  and the pitch is tuned hard to the note, with vibrato on long notes. In the
-  chorus, two more takes (Piper is a little different on each run) double the
-  voice left and right, and a third take sings a third above.
+  and the pitch is tuned hard to the note, with vibrato on long notes.
+- **The choir** stacks other voices around the diva in the chorus and the
+  pre-chorus: Piper `en_US-ljspeech-high` doubles her on the left, Piper
+  `en_US-kristin-medium` on the right, and Piper `en_GB-cori-high` sings a third
+  above. In the last chorus, Piper `en_US-hfc_male-medium` joins an octave down
+  and Festival `cmu_us_slt_cg` a sixth down.
 - **The rapper** raps the S-E-G-F-A-U-L-T verse and the build. Piper's
   `en_US-ryan-high` voice speaks each line. WORLD fits it to one bar and makes
   the pitch lower and flatter.
@@ -115,6 +118,11 @@ will be code tracks too, made the same way as the two above.
 | pyworld (WORLD vocoder) | MIT (pyworld), modified BSD (WORLD) | no (installed with pip) |
 | Voice `en_US-hfc_female-medium` | trained on Hi-Fi-CAPTAIN (NICT): CC BY-NC-SA 4.0 | no (downloaded) |
 | Voice `en_US-ryan-high` | trained on RyanSpeech: CC BY-NC-SA 4.0 | no (downloaded) |
+| Voices `en_US-ljspeech-high`, `en_US-kristin-medium` | public domain | no (downloaded) |
+| Voices `en_GB-cori-high`, `en_US-hfc_male-medium` | see each Piper model card (CC BY / CC BY-NC-SA) | no (downloaded) |
+| Festival, Flite, eSpeak NG | free software (X11-style, BSD-style, GPL-3.0) | no (zypper) |
+| CMU ARCTIC voices for Festival and Flite | free (BSD-style, CMU) | no (downloaded from festvox.org) |
+| Mimic 3 and its voices | AGPL-3.0; voices CC BY / CC0 / PD | no (pip, downloaded) |
 
 **The Segfault render is non-commercial.** The two Piper voices are trained
 on data under CC BY-NC-SA 4.0. That is fine for a private party. Do not sell

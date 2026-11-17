@@ -155,7 +155,12 @@ def sing_notes(notes, words, octave=-12, amp=1.0, wet=.3, echo=.2):
         S.sing(t, [(onset, vowels, m + octave, d, coda)], amp=amp, wet=wet, echo=echo)
 
 
-CHORUS_STYLE = os.environ.get("CHORUS_STYLE", "harmony")   # octave | doubles | harmony
+CHORUS_STYLE = os.environ.get("CHORUS_STYLE", "choir")   # octave | doubles | harmony | choir
+# the choir: other voices around the diva. Left double, right double, a third above; and in the last chorus a man
+# an octave down and one more a sixth down
+CHOIR = os.environ.get("CHOIR", ",".join([
+    "en_US-ljspeech-high", "en_US-kristin-medium", "en_GB-cori-high",
+    "en_US-hfc_male-medium", "festival:cmu_us_slt_cg"])).split(",")
 
 
 def third_above(m, key):
@@ -182,11 +187,12 @@ def words_on(notes, words):
     return out
 
 
-def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, style="octave"):
+def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, style="octave", big=False):
     """The diva sings a line: a word on its notes, the consonants before the beat; an echo on the last word.
     double: how loud the stack is. style "octave": an octave up, left and right (one take, offset); "doubles": two
     more takes of the same notes, a little out of time and tune, left and right; "harmony": those two takes and a
-    third above in the middle."""
+    third above in the middle; "choir": other voices (CHOIR) for the doubles and the third, and with big=True a man
+    an octave down and a sixth down as well."""
     key = key_of(bar) if key is None else key
     pairs = words_on(S.notes(bar, line, key, bars), words)
     for i, (w, ns) in enumerate(pairs):
@@ -195,6 +201,18 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
         li, y = V.sing(w, [(m + octave, d * .97) for _, m, d in ns])
         S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if last else .05)
         if not double:
+            continue
+        if style == "choir":
+            notes = [(m + octave, d * .95) for _, m, d in ns]
+            third = [(third_above(m, key) + octave, d * .95) for _, m, d in ns]
+            parts = [(CHOIR[0], notes, 8, .018, .15, .75), (CHOIR[1], notes, -8, .009, .85, .75),
+                     (CHOIR[2], third, 0, .006, .4, .6)]
+            if big:
+                parts += [(CHOIR[3], [(n - 12, d) for n, d in notes], 0, .012, .55, .7),
+                          (CHOIR[4], [(n - 12, d) for n, d in third], 5, .015, .7, .45)]
+            for voice, ns2, cents, late, pan, g in parts:
+                li, y = V.sing(w, ns2, voice=voice, cents=cents)
+                S.put("vox", t - li + late, y, pan, amp * double * g, wet=.15, echo=.05)
             continue
         if style == "octave":
             li, y = V.sing(w, [(m + octave + 12, d * .97) for _, m, d in ns], formant=1.08)
@@ -211,7 +229,7 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
 
 def chorus_line(bar, lead_amp=1.0):
     line, words = CHORUS[bar % 4]
-    diva(bar, line, words, double=.55, style=CHORUS_STYLE)
+    diva(bar, line, words, double=.55, style=CHORUS_STYLE, big=bar >= 80)
     for t, m, d in S.notes(bar, line, key_of(bar)):   # the riff synth doubles the hook, under the voice
         S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
 

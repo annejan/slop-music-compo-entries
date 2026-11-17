@@ -48,8 +48,9 @@ glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass
 a neural text-to-speech model that runs on the CPU, to speak each word. Then
 [WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
 (`pyworld`) re-pitches the word onto our melody notes. It stretches only the
-vowel, so the consonants stay crisp. In the chorus, extra Piper takes double the
-voice and sing a third above. The rap is spoken and fitted to the bar. The
+vowel, so the consonants stay crisp. In the chorus, a choir of other voices
+doubles the diva left and right and sings a third above; in the last chorus a
+male voice an octave down and a fifth voice join. The rap is spoken and fitted to the bar. The
 formant robot from `engine.py` only says "signal eleven" in the break.
 
 The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is
@@ -82,7 +83,8 @@ time, because Piper speaks every word; the speech is cached in `.cache/`.
 | Variable | Effect |
 |---|---|
 | `STEMS=1` | print the loudness of each bus |
-| `CHORUS_STYLE=octave`, `doubles`, `harmony` | how the Segfault chorus is stacked (default `harmony`) |
+| `CHORUS_STYLE=octave`, `doubles`, `harmony`, `choir` | how the Segfault chorus is stacked (default `choir`: other voices) |
+| `CHOIR=v1,v2,v3,v4,v5` | the choir: left double, right double, third above; in the last chorus also an octave down and a sixth down |
 | `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
 | `SOLO=vox` | render only these buses (comma separated), for auditions |
 

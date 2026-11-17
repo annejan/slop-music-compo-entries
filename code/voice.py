@@ -65,12 +65,16 @@ def _classic(engine, name, text, length_scale):
         if engine == "espeak":
             cmd = ["espeak-ng", "-v", name, "-s", str(int(165 / length_scale)), "-w", out, text]
         elif engine == "flite":
+            if name.endswith(".flitevox") and "://" not in name and not os.path.exists(name):
+                raise FileNotFoundError(name)   # flite would quietly fall back to its default voice
             cmd = ["flite", "-voice", name, "--setf", f"duration_stretch={length_scale}", "-t", text, "-o", out]
         elif engine == "festival":
             txt = os.path.join(tmp, "in.txt")
             with open(txt, "w") as fh:
                 fh.write(text)
-            cmd = ["text2wave", "-eval", f"(voice_{name})", "-eval",
+            local = os.path.join(VOICES, "festival", "festival", "lib", "voices", "us", name)
+            reg = [f'(voice-location "{name}" "{local}/" "local")'] if os.path.isdir(local) else []
+            cmd = ["text2wave", *[a for r in reg for a in ("-eval", r)], "-eval", f"(voice_{name})", "-eval",
                    f"(Parameter.set 'Duration_Stretch {length_scale})", txt, "-o", out]
         elif engine == "mimic3":
             exe = shutil.which("mimic3") or os.path.join(HERE, ".venv-mimic3", "bin", "mimic3")
