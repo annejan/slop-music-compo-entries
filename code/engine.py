@@ -512,6 +512,15 @@ class Song:
         for k in range(1, 6):
             side = k % 2
             echo[k * d:, side] += (src[:n - k * d, 0] + src[:n - k * d, 1] * .3) * .5 ** k
+        solo = os.environ.get("SOLO")   # only these buses (comma separated), for auditions
+        if solo:
+            keep = solo.split(",")
+            for k in BUSES:
+                if k not in keep:
+                    self.bus[k][:] = 0
+            self.send[:] = 0
+            self.echo[:] = 0
+            self.kicks = []
         if os.environ.get("STEMS"):   # how loud each bus is, for mixing by numbers
             for k in BUSES:
                 x = self.bus[k].astype(np.float64) * gains.get(k, 1.0)

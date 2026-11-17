@@ -83,7 +83,14 @@ time, because Piper speaks every word; the speech is cached in `.cache/`.
 |---|---|
 | `STEMS=1` | print the loudness of each bus |
 | `CHORUS_STYLE=octave`, `doubles`, `harmony` | how the Segfault chorus is stacked (default `harmony`) |
-| `DIVA=<voice>`, `RAPPER=<voice>` | the Piper voices of Segfault |
+| `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
+| `SOLO=vox` | render only these buses (comma separated), for auditions |
+
+`trials.py` renders Segfault with many voice pairs and cuts bars 24-58 (verse,
+rap, pre-chorus, chorus) into `renders/voices/`; with `--solo` it renders the
+voices a cappella into `renders/voices-solo/`, so they are easy to tell apart.
+The classic engines need `sudo zypper in espeak-ng flite festival`; Mimic 3
+lives in its own Python 3.11 venv (`.venv-mimic3`, `mycroft-mimic3-tts`).
 
 The output is a 44.1 kHz, 16-bit stereo WAV. The beat grid starts at sample 0
 and the tempo is exact, so a DJ can sync it without beat analysis. The renders

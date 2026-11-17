@@ -6,6 +6,7 @@ code/renders/
 *.ogg
 *.flac
 .venv/
+.venv-*/
 venv/
 .env
 .cache/

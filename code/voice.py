@@ -6,10 +6,18 @@ the note's length, the consonants keep their own length, and the pitch is tuned 
 "robot diva" sound), with a vibrato on the long notes.
 
 Needs the venv (see README): piper-tts, pyworld, and the voices in code/voices/.
+
+A voice is a Piper voice name ("en_US-ryan-high"), or one of the classic engines, if installed:
+"espeak:en-us+f3" (eSpeak NG), "flite:slt" (Flite, also a .flitevox path or URL), "festival:kal_diphone"
+(Festival), "mimic3:en_US/vctk_low#p239" (Mimic 3).
 """
 import hashlib
 import os
+import shutil
+import subprocess
+import tempfile
 import warnings
+import wave
 
 import numpy as np
 from scipy import signal
@@ -38,6 +46,45 @@ def _voice(name):
     return _loaded[name]
 
 
+def _read_wav(path):
+    with wave.open(path) as w:
+        sr, ch, n = w.getframerate(), w.getnchannels(), w.getnframes()
+        x = np.frombuffer(w.readframes(n), "<i2").astype(np.float64) / 32768
+    if ch > 1:
+        x = x.reshape(-1, ch).mean(1)
+    if sr != TTS_SR:
+        g = np.gcd(sr, TTS_SR)
+        x = signal.resample_poly(x, TTS_SR // g, sr // g)
+    return x
+
+
+def _classic(engine, name, text, length_scale):
+    """Speech from a command-line engine, as 22.05 kHz floats."""
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, "out.wav")
+        if engine == "espeak":
+            cmd = ["espeak-ng", "-v", name, "-s", str(int(165 / length_scale)), "-w", out, text]
+        elif engine == "flite":
+            cmd = ["flite", "-voice", name, "--setf", f"duration_stretch={length_scale}", "-t", text, "-o", out]
+        elif engine == "festival":
+            txt = os.path.join(tmp, "in.txt")
+            with open(txt, "w") as fh:
+                fh.write(text)
+            cmd = ["text2wave", "-eval", f"(voice_{name})", "-eval",
+                   f"(Parameter.set 'Duration_Stretch {length_scale})", txt, "-o", out]
+        elif engine == "mimic3":
+            exe = shutil.which("mimic3") or os.path.join(HERE, ".venv-mimic3", "bin", "mimic3")
+            with open(out, "wb") as fh:
+                subprocess.run([exe, "--voices-dir", os.path.join(VOICES, "mimic3"), "--voice", name,
+                                "--length-scale", str(length_scale), text], stdout=fh,
+                               stderr=subprocess.DEVNULL, check=True)
+            return _read_wav(out)
+        else:
+            raise ValueError(f"unknown voice engine {engine!r}")
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return _read_wav(out)
+
+
 def tts(text, voice, length_scale=1.0, take=0):
     """Speech for a text, 22.05 kHz, the silence at both ends trimmed; cached on disk. Piper's noise is random, so
     every take is a little different (with the same timing): a double-tracked voice."""
@@ -45,8 +92,12 @@ def tts(text, voice, length_scale=1.0, take=0):
     path = os.path.join(CACHE, key + ".npy")
     if os.path.exists(path):
         return np.load(path)
-    cfg = SynthesisConfig(length_scale=length_scale, noise_scale=.5, noise_w_scale=.6)
-    x = np.concatenate([c.audio_float_array for c in _voice(voice).synthesize(text, cfg)]).astype(np.float64)
+    if ":" in voice:
+        engine, name = voice.split(":", 1)
+        x = _classic(engine, name, text, length_scale)
+    else:
+        cfg = SynthesisConfig(length_scale=length_scale, noise_scale=.5, noise_w_scale=.6)
+        x = np.concatenate([c.audio_float_array for c in _voice(voice).synthesize(text, cfg)]).astype(np.float64)
     env = np.convolve(np.abs(x), np.ones(110) / 110, "same")
     on = np.nonzero(env > .02 * env.max())[0]
     x = x[max(on[0] - 60, 0):on[-1] + 200] if len(on) else x
@@ -56,6 +107,18 @@ def tts(text, voice, length_scale=1.0, take=0):
 
 
 def analyse(x):
+    """WORLD's pitch, spectral envelope and aperiodicity of a piece of speech, and its energy per frame; cached."""
+    path = os.path.join(CACHE, "w" + hashlib.sha1(x.tobytes()).hexdigest()[:16] + ".npz")
+    if os.path.exists(path):
+        z = np.load(path)
+        return z["f0"], z["sp"], z["ap"], z["energy"]
+    f0, sp, ap, energy = _analyse(x)
+    os.makedirs(CACHE, exist_ok=True)
+    np.savez(path, f0=f0, sp=sp, ap=ap, energy=energy)
+    return f0, sp, ap, energy
+
+
+def _analyse(x):
     f0, t = pyworld.harvest(x, TTS_SR, frame_period=FRAME, f0_floor=70, f0_ceil=600)
     sp = pyworld.cheaptrick(x, f0, t, TTS_SR)
     ap = pyworld.d4c(x, f0, t, TTS_SR)
