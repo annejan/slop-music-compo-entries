@@ -138,8 +138,8 @@ MELODY = [
 
 def melody(bar, amp=1.0):
     for t, m, d in S.notes(bar, MELODY[bar % 4]):
-        S.put("lead", t, rhodes(m + 12, d, .95), .55, .32 * amp, wet=.35, echo=.35)
-        S.put("lead", t, rhodes(m, d, .6), .45, .18 * amp, wet=.3)
+        S.put("lead", t, rhodes(m + 12, d, .95), .55, .24 * amp, wet=.35, echo=.35)
+        S.put("lead", t, rhodes(m, d, .6), .45, .135 * amp, wet=.3)
 
 
 # ---------------------------------------------------------------- the robot

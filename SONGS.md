@@ -41,7 +41,8 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 - **Keys:** an electric piano that comps the chords and plays the melody in
   the second chorus. It is the E.Piano patch of a DX7-style FM synthesizer
   ([code/dx7.py](code/dx7.py)): six sine operators in algorithm 5, a feedback
-  operator, and a ratio-14 operator for the bell-like attack. M1-style organ
+  operator, a ratio-14 operator for the bell-like attack, and keyboard
+  scaling that makes the high notes softer and darker. M1-style organ
   stabs in the choruses.
 - **Pads:** a slow supersaw string pad, and an "ooh" choir made from formant
   filters.

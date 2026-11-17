@@ -55,19 +55,25 @@ MOD_TURNS = 6.0             # phase deviation (in turns) of a modulator at outpu
 FB_TURNS = {k: 0.0 if k == 0 else 0.06 * 2 ** (k - 1) for k in range(8)}   # feedback 0..7 -> turns at full level
 
 
-def op(coarse=1, fine=0, detune=0, level=99, rates=(99, 50, 30, 50), levels=(99, 80, 0, 0), fixed=False, vel=0.0):
-    return dict(coarse=coarse, fine=fine, detune=detune, level=level, rates=rates, levels=levels, fixed=fixed, vel=vel)
+def op(coarse=1, fine=0, detune=0, level=99, rates=(99, 50, 30, 50), levels=(99, 80, 0, 0), fixed=False, vel=0.0,
+       ks=0.0):
+    """One operator. ks: keyboard level scaling, dB per octave softer above middle C (on a modulator: a darker tone
+    in the high notes, as on the DX7's own E.PIANO)."""
+    return dict(coarse=coarse, fine=fine, detune=detune, level=level, rates=rates, levels=levels, fixed=fixed, vel=vel,
+                ks=ks)
 
+
+KS = 5.0                    # the E.Piano's keyboard scaling, dB per octave
 
 PATCHES = {
     # operators 1..6
     "epiano": dict(algo=5, feedback=5, gain=2.2, ops=[
         op(1, 0, 0, 99, (95, 25, 20, 60), (99, 85, 0, 0), vel=0.4),      # 1 carrier: body
-        op(1, 0, 0, 80, (95, 30, 20, 60), (99, 80, 0, 0), vel=0.9),      # 2 -> 1: tine edge, velocity
-        op(1, 0, 3, 90, (90, 20, 20, 60), (99, 90, 0, 0), vel=0.3),      # 3 carrier
-        op(14, 0, 0, 74, (99, 60, 60, 70), (99, 0, 0, 0), vel=1.0),      # 4 -> 3: the bell-like attack
-        op(1, 0, -3, 80, (95, 22, 20, 60), (99, 80, 0, 0), vel=0.3),     # 5 carrier, detuned
-        op(1, 0, 0, 76, (95, 22, 20, 60), (99, 85, 0, 0), vel=0.6),      # 6 -> 5
+        op(1, 0, 0, 80, (95, 30, 20, 60), (99, 80, 0, 0), vel=0.9, ks=KS),     # 2 -> 1: tine edge, velocity
+        op(1, 0, 3, 90, (90, 20, 20, 60), (99, 90, 0, 0), vel=0.3),             # 3 carrier
+        op(14, 0, 0, 74, (99, 60, 60, 70), (99, 0, 0, 0), vel=1.0, ks=KS * 1.5),  # 4 -> 3: the bell-like attack
+        op(1, 0, -3, 80, (95, 22, 20, 60), (99, 80, 0, 0), vel=0.3),            # 5 carrier, detuned
+        op(1, 0, 0, 76, (95, 22, 20, 60), (99, 85, 0, 0), vel=0.6, ks=KS),      # 6 -> 5
     ]),
     "bass": dict(algo=2, feedback=6, gain=.5, ops=[
         op(1, 0, 0, 99, (99, 40, 20, 60), (99, 90, 0, 0), vel=0.5),
@@ -159,6 +165,7 @@ def _note(patch, midi, n_on, velocity, tail):
     for k in range(OPS, 0, -1):     # operator 6 first: the modulators before the carriers
         o = p["ops"][k - 1]
         scale = level_amp(o["level"]) * (1 - o["vel"] * (1 - velocity))
+        scale *= 10 ** (-o.get("ks", 0.0) * max(midi - 60, 0) / 12 / 20)
         if scale == 0.0:
             out[k] = np.zeros(n)
             continue
