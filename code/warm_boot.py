@@ -206,4 +206,4 @@ here = os.path.dirname(os.path.abspath(__file__))
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "warm-boot_120bpm_Am.wav")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 S.mixdown(out, {"drums": .85, "perc": .7, "bass": .9, "pads": 1.0, "keys": 1.1, "lead": 1.2, "vox": 1.3, "fx": .5},
-          cut_keys=cut, room=.22, echo_mix=.45, rms_db=-12.5)
+          cut_keys=cut, room=.22, echo_mix=.45, lufs=-10.0)

@@ -237,4 +237,4 @@ here = os.path.dirname(os.path.abspath(__file__))
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "segfault_132bpm_Am.wav")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 S.mixdown(out, {"drums": .95, "perc": .7, "bass": .85, "pads": .8, "keys": 1.0, "lead": 1.0, "vox": 1.4, "fx": .55},
-          cut_keys=cut, duck={"pads": .7, "bass": .3, "keys": .3, "lead": .35}, room=.2, echo_mix=.4, rms_db=-11.5)
+          cut_keys=cut, duck={"pads": .7, "bass": .3, "keys": .3, "lead": .35}, room=.2, echo_mix=.4, lufs=-9.0)

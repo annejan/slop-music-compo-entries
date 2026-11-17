@@ -42,7 +42,7 @@ robot made from formant filters.
 
 [code/engine.py](code/engine.py) holds the shared parts: oscillators,
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
-glue compressor, limiter). It comes from the soundtrack of the QtPass 2.0 film.
+glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass 2.0 film.
 
 ### Render
 

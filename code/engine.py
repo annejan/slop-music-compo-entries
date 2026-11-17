@@ -383,6 +383,51 @@ def robot(syllables):
     return out
 
 
+# ---------------------------------------------------------------- loudness (ITU-R BS.1770) and true peak
+def k_weight(x):
+    """The K-weighting: a high shelf (+4 dB above about 1.7 kHz) and a high-pass at about 38 Hz."""
+    g, fc, q = 3.999843853973347, 1681.974450955533, .7071752369554196
+    A, w = 10 ** (g / 40), 2 * math.pi * fc / SR
+    c, al = math.cos(w), math.sin(w) / (2 * q)
+    b = [A * ((A + 1) + (A - 1) * c + 2 * math.sqrt(A) * al), -2 * A * ((A - 1) + (A + 1) * c),
+         A * ((A + 1) + (A - 1) * c - 2 * math.sqrt(A) * al)]
+    a = [(A + 1) - (A - 1) * c + 2 * math.sqrt(A) * al, 2 * ((A - 1) - (A + 1) * c),
+         (A + 1) - (A - 1) * c - 2 * math.sqrt(A) * al]
+    x = signal.lfilter(b, a, x, axis=0)
+    fc, q = 38.13547087602444, .5003270373238773
+    w = 2 * math.pi * fc / SR
+    c, al = math.cos(w), math.sin(w) / (2 * q)
+    return signal.lfilter([(1 + c) / 2, -(1 + c), (1 + c) / 2], [1 + al, -2 * c, 1 - al], x, axis=0)
+
+
+def integrated_lufs(x):
+    """Integrated loudness: 400 ms blocks, 75 % overlap, the absolute gate at -70 LUFS, the relative at -10 LU."""
+    y = k_weight(x) ** 2
+    n, hop = int(.4 * SR), int(.1 * SR)
+    c = np.concatenate([np.zeros((1, y.shape[1])), np.cumsum(y, axis=0)])
+    starts = np.arange(0, len(y) - n + 1, hop)
+    z = ((c[starts + n] - c[starts]) / n).sum(1)
+    z = z[-.691 + 10 * np.log10(z + 1e-12) > -70]
+    rel = -.691 + 10 * np.log10(z.mean()) - 10
+    z = z[-.691 + 10 * np.log10(z + 1e-12) > rel]
+    return -.691 + 10 * np.log10(z.mean())
+
+
+def true_peak(x):
+    """The peak of each sample's neighbourhood, 4 times oversampled (the peaks between the samples), both channels."""
+    up = np.abs(signal.resample_poly(x, 4, 1, axis=0)).max(1)
+    return up[:len(x) * 4].reshape(-1, 4).max(1)
+
+
+def limit(x, ceiling):
+    """A look-ahead limiter on the true peak: the gain comes down 4 ms before a peak and goes back up slowly."""
+    look = int(.004 * SR)
+    g = np.minimum(1.0, ceiling / np.maximum(true_peak(x), 1e-9))
+    g = minimum_filter1d(g, 2 * look + 1)
+    g = np.minimum(g, one_pole(g, .002))
+    return x * g[:, None]
+
+
 # ---------------------------------------------------------------- the song
 BUSES = ("drums", "perc", "bass", "pads", "keys", "lead", "vox", "fx")
 
@@ -443,10 +488,10 @@ class Song:
         for off, g in robot(syllables):
             self.put("vox", t + off, g, pan, amp, wet=wet, echo=echo)
 
-    def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, rms_db=-12.0, fade_in=0.0,
-                tail_fade=2.0):
-        """Duck, delay, room, master filter, glue, limiter; write a 16-bit WAV of the song's length plus the
-        reverb's tail."""
+    def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0,
+                tail_fade=2.0, ceiling_db=-1.2):
+        """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
+        16-bit WAV of the song's length plus the reverb's tail."""
         n = self.n
         duck = duck or {"pads": .7, "bass": .45, "keys": .25}
         env = np.zeros(n)
@@ -494,18 +539,28 @@ class Song:
         reduce_db = np.maximum(db - threshold, 0) * (1 - 1 / 3.0)
         reduce_db = np.maximum(one_pole(reduce_db, .12), reduce_db * .6)
         mix *= (10 ** (-reduce_db / 20))[:, None]
-        loud = mix[:int(self.length * SR)]
-        mix /= np.sqrt(np.mean(loud ** 2)) / 10 ** (rms_db / 20)
-        # look-ahead limiter to just under full scale
-        look = int(.004 * SR)
-        peak = maximum_filter1d(np.abs(mix).max(1), 2 * look + 1)
-        g = np.minimum(1.0, .93 / np.maximum(peak, 1e-9))
-        g = one_pole(minimum_filter1d(g, 2 * look + 1), .002)
-        mix = np.clip(mix * g[:, None], -.97, .97)
+        # to the loudness target, under a true-peak ceiling: the limiter takes the loudness down a little, so
+        # aim again and limit again until both hold
+        ceiling = 10 ** (ceiling_db / 20)
+        dry = mix
+        for _ in range(4):
+            mix = dry * 10 ** ((lufs - integrated_lufs(dry if _ == 0 else mix)) / 20)
+            for _pass in range(3):
+                mix = limit(mix, ceiling)
+            dry = mix
+            if abs(integrated_lufs(mix) - lufs) < .1:
+                break
+        mix = limit(mix, ceiling)
+        # TPDF dither to 16 bits
+        q = 1 / 32767
+        out = np.round((mix + (rng.random(mix.shape) - rng.random(mix.shape)) * q) * 32767)
+        out = np.clip(out, -32767, 32767).astype("<i2")
         with wave.open(path, "wb") as w:
             w.setnchannels(2)
             w.setsampwidth(2)
             w.setframerate(SR)
-            w.writeframes((mix * 32767).astype("<i2").tobytes())
+            w.writeframes(out.tobytes())
         m, s = divmod(len(mix) / SR, 60)
-        print(f"wrote {path}: {int(m)}:{s:04.1f}, {self.bars} bars at {self.bpm} BPM")
+        tp = 20 * np.log10(true_peak(out / 32767).max())
+        print(f"wrote {path}: {int(m)}:{s:04.1f}, {self.bars} bars at {self.bpm} BPM, "
+              f"{integrated_lufs(out / 32767):.1f} LUFS, {tp:+.1f} dBTP")
