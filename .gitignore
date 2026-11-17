@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+code/renders/
+*.wav
+*.mp3
+*.ogg
+*.flac
