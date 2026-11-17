@@ -58,6 +58,68 @@ Sounds, all synthesised in [code/engine.py](code/engine.py):
 The DX7 synthesizer and the room simulation are numpy ports of the NPU demos
 in `~/Projects/npu` (MIT), which run on the Ryzen AI NPU there.
 
+### Packet Loss (Of Love) (code track)
+
+[code/packet_loss.py](code/packet_loss.py). Garage house, 122 BPM, F minor,
+120 bars, 3:58, -10 LUFS. A late-night duet over a bad network connection.
+
+- **Structure:** intro (drums), organ bass and the DX7 piano behind a filter,
+  verse 1 (him, she answers "ACK" and "NACK"), verse 2 (her), chorus with a
+  choir that answers "say it once again", sax solo, a break with thunder and
+  a terminal voice ("64 bytes from your heart ... packet loss: fifty
+  percent"), chorus 2 in which the lead vocals really lose 30 ms packets,
+  wind-down to "Request timed out", outro (drums).
+- **Sounds:** swung garage drums with congas and rimshots, an M1-style organ
+  bass, the DX7 electric piano, a gospel piano, a pad, a tenor saxophone made
+  from a saw with scoops, glides and vibrato, rain on the window, thunder,
+  sonar pings in the key. A simulated 5.5 x 4 x 2.6 m room.
+- **Voices (Piper):** `en_US-hfc_male-medium` (him) and `en_US-hfc_female-medium`
+  (her); a choir of `en_GB-cori-high`, `en_US-kristin-medium`,
+  `en_US-ljspeech-high`, `en_GB-alan-medium` and `en_US-john-medium`; the
+  computer is `en_US-lessac-high` through a telephone band-pass.
+
+### Low Battery Lullaby (code track)
+
+[code/low_battery.py](code/low_battery.py). Instrumental deep house, 120 BPM,
+D minor, 120 bars, 4:02, -10 LUFS. A laptop that falls asleep at sunrise.
+
+- **Structure:** intro (drums), sub bass and the Rhodes ("Battery low"),
+  verse with vocal chops ("Ten percent remaining"), the chop hook ("low
+  battery / ten percent / ch-ch-charging / sleep mode") with organ stabs, a
+  "sleep mode" break in which the battery beep plays Brahms' Lullaby, then
+  "Battery fully charged" and a second hook ("fully charged / a hundred
+  percent / wide awake"), a wind-down from ten percent to "Shutting down. Good
+  night." with a tape stop, outro (drums).
+- **Sounds:** the DX7 electric piano, a soft DX7 "nightlight" melody patch,
+  a sub bass, a pad, M1 organ stabs, a drawbar organ, a sine battery beep,
+  909-style drums with a 58 % shuffle, rimshots, shaker, congas, vinyl crackle.
+  A simulated 4.5 x 3.6 x 2.6 m bedroom.
+- **Voices (Piper):** `en_GB-jenny_dioco-medium` sings the chops, gated like a
+  sampler, with stutters and reversed swells; `en_US-amy-medium` is the
+  laptop's system voice; `en_GB-cori-high`, `en_US-kristin-medium` and
+  `en_US-ljspeech-high` sing "ooh".
+
+### Low Pass Love (code track)
+
+[code/low_pass_love.py](code/low_pass_love.py). French house, 122 BPM,
+A minor (Am9, D9, Fmaj9, E7), 128 bars, 4:14, -10 LUFS. A love song to a
+low-pass filter.
+
+- **Structure:** intro (drums), the disco loop with the filter closed, the
+  filter opens, the talk box hook, the full loop with a Rhodes melody, a disco
+  verse in which the filter follows the words (down to 80 Hz on "eighty
+  hertz"), a break ("close it, close it ... open it up", "from twenty hertz to
+  twenty K"), the hook with a choir, the filter closes slowly, outro (drums).
+- **Sounds:** a disco loop made in code: a fingered bass guitar, strings with
+  swoops, a Karplus-Strong funk guitar, the DX7 electric piano, vinyl
+  crackle; the whole loop goes through a resonant low-pass, a 6-stage phaser
+  and a sidechain pump. A simulated 9 x 6.5 x 3.5 m room.
+- **Voices:** the talk box is two saws and a pulse, shaped every 5 ms by the
+  spectral envelope (WORLD) of Piper `en_US-ryan-high` speech. The disco
+  singer is `en_US-hfc_male-medium`; the choir is `en_US-joe-medium`,
+  `en_GB-alan-medium` and `en_US-john-medium`; `en_US-bryce-medium` sings
+  falsetto; `en_US-norman-medium` speaks.
+
 ---
 
 ## Sunday: eurodance
@@ -105,6 +167,45 @@ Voices, made in [code/voice.py](code/voice.py):
   the pitch lower and flatter.
 - **The robot** from `engine.py` says "signal eleven" in the break.
 
+### Blinky (The LED Song) (code track)
+
+[code/blinky.py](code/blinky.py). Bubblegum eurodance, 132 BPM, D major, E major
+in the last chorus, 112 bars, 3:26, -9 LUFS. A song about blinking an LED.
+
+- **Structure:** intro (drums), riff and pizzicato with "hey!" shouts, verse,
+  chorus twice, rap, a break in which the LED spells B-L-I-N-K-Y in Morse code
+  (exactly four bars of sixteenths), a zero-based count-in ("zero, one, two,
+  three"), the last chorus a tone up, post-chorus, outro (drums).
+- **Sounds:** additive pizzicato strings, a bouncy pulse-wave riff, LED bleeps,
+  a slide whistle, a DX7 toy glockenspiel, the rave piano with the DX7
+  electric piano, offbeat bass, pad, orchestra hits, tambourine. A simulated
+  9 x 6 x 3.5 m room.
+- **Voices (Piper):** the diva is `en_US-lessac-high`; the choir is
+  `en_US-amy-medium`, `en_GB-jenny_dioco-medium`, `en_GB-cori-high` (a third
+  above) and `en_US-hfc_male-medium` (an octave down, last chorus); the
+  rapper is `en_US-bryce-medium`; `en_US-joe-medium`, `en_US-john-medium`,
+  `en_GB-alan-medium` and `en_US-norman-medium` shout "hey!" and "set the pin
+  high!".
+
+### The Rhythm Of The Badge (code track)
+
+[code/rhythm_of_the_badge.py](code/rhythm_of_the_badge.py). Dark eurodance,
+134 BPM, E minor, F# minor in the last chorus, 120 bars, 3:37, -9 LUFS. A
+night club anthem about flashing firmware to a badge.
+
+- **Structure:** intro (drums), hoover riff with lasers, verse, chorus, riff
+  with piano, rap, chorus, a break ("That is the C six. Do not flash the C
+  six."), a build with the upload progress read out ("Fifty percent ... Upload
+  complete!"), the last chorus twice a tone up, riff, outro (drums).
+- **Sounds:** a hoover (detuned PWM saws, a scoop on each note, an octave dive,
+  stereo chorus), a DX7 "badgepiano" patch, a rolling saw-and-sub bass with
+  the DX7 FM bass, a 909-style kick, a big reverb snare, lasers, orchestra
+  hits, risers. A simulated 12 x 9 x 5 m club, RT60 2.4 s.
+- **Voices (Piper):** the diva is `en_US-amy-medium`; the MC is
+  `en_GB-alan-medium`, pitched down; the choir is `en_GB-jenny_dioco-medium`,
+  `en_US-lessac-high` and `en_GB-cori-high`, with `en_US-norman-medium` and
+  `en_US-kristin-medium` in the last chorus.
+
 ---
 
 ## Surprise themes
@@ -133,10 +234,12 @@ will be code tracks too, made the same way as the two above.
 | CMU ARCTIC voices for Festival and Flite | free (BSD-style, CMU) | no (downloaded from festvox.org) |
 | Mimic 3 and its voices | AGPL-3.0; voices CC BY / CC0 / PD | no (pip, downloaded) |
 
-**The Segfault render is non-commercial.** The two Piper voices are trained
-on data under CC BY-NC-SA 4.0. That is fine for a private party. Do not sell
-the render. If you share it, credit the Hi-Fi-CAPTAIN corpus (NICT) and
-RyanSpeech, and share it under the same terms. Warm Boot uses no voice model.
+**The renders with voices are non-commercial.** Some Piper voices are trained
+on data under CC BY-NC-SA 4.0 (`hfc_female`, `hfc_male`, `ryan` and others:
+see each model card). That is fine for a private party. Do not sell the
+renders. If you share them, credit the voice data sets (for example the
+Hi-Fi-CAPTAIN corpus of NICT and RyanSpeech), and share them under the same
+terms. Warm Boot uses no voice model.
 
 ---
 
@@ -144,12 +247,13 @@ RyanSpeech, and share it under the same terms. Warm Boot uses no voice model.
 
 Claude also wrote style prompts and lyrics for each theme in Suno's format. We
 do not use Suno, because it is a closed service. The text also works as input
-for an open song generator such as ACE-Step.
+for an open song generator such as ACE-Step. All seven takes are now also
+code tracks (see above).
 
 ### Saturday
 
 Prompts and lyrics in [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md).
-Lyrics and prompts by Claude. Not rendered: we do not use Suno.
+Lyrics and prompts by Claude. Not rendered with Suno: we do not use Suno.
 
 | Take | Title | Tempo, key | Style |
 |---|---|---|---|
@@ -161,7 +265,7 @@ Lyrics and prompts by Claude. Not rendered: we do not use Suno.
 ### Sunday
 
 Prompts and lyrics in [suno/sunday-eurodance.md](suno/sunday-eurodance.md).
-Lyrics and prompts by Claude. Not rendered: we do not use Suno.
+Lyrics and prompts by Claude. Not rendered with Suno: we do not use Suno.
 
 | Take | Title | Tempo, key | Style |
 |---|---|---|---|

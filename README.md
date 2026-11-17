@@ -27,15 +27,21 @@ sounds and voices it uses.
 
 ## The tracks: `code/`
 
-Two songs written by Claude as Python code. Every note and every sound is in
+Seven songs written by Claude as Python code. Every note and every sound is in
 the source: there are no samples and no loops. The synthesis is numpy and
-scipy. Warm Boot sings with a formant robot; Segfault has an AI diva and rapper
-(see Voices).
+scipy. Warm Boot sings with a formant robot; the other songs have AI singers
+and rappers (see Voices). Warm Boot and Segfault are our entries; the other
+five are the other takes from `suno/`, made as code tracks for fun.
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
 | [code/warm_boot.py](code/warm_boot.py) | 90's mellow house | 120 BPM, A minor | 4:02 |
+| [code/packet_loss.py](code/packet_loss.py) | 90's mellow house | 122 BPM, F minor | 3:58 |
+| [code/low_battery.py](code/low_battery.py) | 90's mellow house | 120 BPM, D minor | 4:02 |
+| [code/low_pass_love.py](code/low_pass_love.py) | 90's mellow house (French house) | 122 BPM, A minor | 4:14 |
 | [code/segfault.py](code/segfault.py) | eurodance | 132 BPM, A minor, then B minor | 3:26 |
+| [code/blinky.py](code/blinky.py) | eurodance | 132 BPM, D major, then E major | 3:26 |
+| [code/rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
 
 [code/engine.py](code/engine.py) holds the shared parts: oscillators,
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
@@ -87,8 +93,16 @@ Then render:
 .venv/bin/python segfault.py       # writes renders/segfault_132bpm_Am.wav
 ```
 
-Warm Boot renders in about 30 seconds. Segfault takes about 90 seconds the first
-time, because Piper speaks every word; the speech is cached in `.cache/`.
+Every song script works the same way. Warm Boot renders in about 30 seconds.
+Segfault takes about 90 seconds the first time, because Piper speaks every
+word; the speech is cached in `.cache/`. The five other songs take 3 to 5
+minutes each and need about 3 GB of memory.
+
+To share the songs in a chat app such as Signal:
+
+```sh
+.venv/bin/python share.py    # writes renders/share/NN Title (BPM, key).mp3, 320 kbit/s, about 9 MB each
+```
 
 | Variable | Effect |
 |---|---|
