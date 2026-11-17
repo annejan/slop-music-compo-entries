@@ -14,7 +14,9 @@ before the deadline.
 The DJ mixes the tracks live, so each track keeps one tempo from start to end,
 and starts and ends with 16 bars of drums only.
 
-There are two kinds of entry. Both are fully made by AI.
+There are two kinds of entry. Both are fully made by AI: the lyrics too, and
+no hand edits. [SONGS.md](SONGS.md) lists, per song, which AI made which part
+and which tools, sounds and voices it uses.
 
 ## 1. Suno prompts: `suno/`
 
@@ -22,7 +24,7 @@ Style prompts and lyrics to paste into [Suno](https://suno.com) (Custom mode).
 
 - [suno/README.md](suno/README.md): how to use the prompts, and tips for the DJ.
 - [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md): "Warm Boot",
-  "Packet Loss (Of Love)", "Low Battery Lullaby".
+  "Packet Loss (Of Love)", "Low Battery Lullaby", "Low Pass Love" (French house).
 - [suno/sunday-eurodance.md](suno/sunday-eurodance.md): "Segfault (In My Heart)",
   "Blinky (The LED Song)", "The Rhythm Of The Badge".
 - [suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md): a two-hour
@@ -32,8 +34,8 @@ Style prompts and lyrics to paste into [Suno](https://suno.com) (Custom mode).
 
 The same two songs ("Warm Boot" and "Segfault (In My Heart)"), but written by
 Claude as Python code. Every note and every sound is in the source: there are no
-samples and no loops. The synthesis is numpy and scipy. The voice is a vocoder
-robot made from formant filters.
+samples and no loops. The synthesis is numpy and scipy. Warm Boot sings with a
+formant robot; Segfault has an AI diva and rapper (see Voices).
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
@@ -42,7 +44,8 @@ robot made from formant filters.
 
 [code/engine.py](code/engine.py) holds the shared parts: oscillators,
 instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
-glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass 2.0 film.
+glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass
+2.0 film.
 
 ### Voices
 
@@ -50,9 +53,13 @@ Segfault has a real diva and a real rapper, also made by AI.
 [code/voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
 a neural text-to-speech model that runs on the CPU, to speak each syllable.
 Then [WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
-(`pyworld`) re-pitches the syllable onto our melody note. It stretches only the
-vowel, so the consonants stay crisp. The rap is spoken and fitted to the bar.
-The formant robot from `engine.py` only sings "signal eleven" in the break.
+(`pyworld`) re-pitches the word onto our melody notes. It stretches only the
+vowel, so the consonants stay crisp. In the chorus, extra Piper takes double the
+voice and sing a third above. The rap is spoken and fitted to the bar. The
+formant robot from `engine.py` only says "signal eleven" in the break.
+
+Both voices are trained on data under CC BY-NC-SA 4.0, so the Segfault render
+is for non-commercial use. See [SONGS.md](SONGS.md#software-and-licences).
 
 ### Render
 
@@ -76,16 +83,32 @@ Then render:
 
 Warm Boot renders in about 20 seconds. Segfault takes about 90 seconds the first
 time, because Piper speaks every syllable; the speech is cached in `.cache/`.
-Set `STEMS=1` to print the loudness of each bus. The output is a 44.1 kHz, 16-bit stereo
-WAV. The beat grid starts at sample 0 and the tempo is exact, so a DJ can sync it
+Set `STEMS=1` to print the loudness of each bus. Set
+`CHORUS_STYLE=octave`, `doubles` or `harmony` (the default) to choose how the
+Segfault chorus is stacked. The output is a 44.1 kHz, 16-bit stereo WAV. The beat grid starts at sample 0 and the tempo is exact, so a DJ can sync it
 without beat analysis.
 
 The renders are not in the repository. Run the scripts to make them.
 
 ## Research: `research/`
 
-Notes on the genres, reference tracks with their tempos, and Suno tips.
+Notes written by Claude research agents, with their web sources at the bottom of
+each file.
+
+| File | About |
+|---|---|
+| [mellow-house-90s.md](research/mellow-house-90s.md) | tempo, chords, sounds, sub-styles and reference tracks of 90s mellow house |
+| [eurodance.md](research/eurodance.md) | the eurodance formula, tempo per year, progressions, 31 reference tracks |
+| [surprise-genres.md](research/surprise-genres.md) | 16 likely surprise genres, each with a tempo range and a ready Suno prompt |
+| [suno-tips.md](research/suno-tips.md) | Suno v6: tags, tempo, intros and outros, download limits |
+| [hooks-and-humor.md](research/hooks-and-humor.md) | how dance hooks work, sing-along rules, 30 title ideas, three finished lyrics |
+| [local-and-alt-generators.md](research/local-and-alt-generators.md) | AI music and singing models that run on this laptop, and hosted options |
+| [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT for everything in this repository. See [LICENSE](LICENSE). The repository
+follows the [REUSE](https://reuse.software) specification: [REUSE.toml](REUSE.toml)
+gives the copyright and licence of every file, and `uvx reuse lint` checks it.
+The voice models, the Python packages and the renders are not in the
+repository; [SONGS.md](SONGS.md#software-and-licences) lists their licences.

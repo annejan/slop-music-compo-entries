@@ -38,9 +38,10 @@ def _voice(name):
     return _loaded[name]
 
 
-def tts(text, voice, length_scale=1.0):
-    """Speech for a text, 22.05 kHz, the silence at both ends trimmed; cached on disk."""
-    key = hashlib.sha1(f"{voice}|{length_scale}|{text}".encode()).hexdigest()[:16]
+def tts(text, voice, length_scale=1.0, take=0):
+    """Speech for a text, 22.05 kHz, the silence at both ends trimmed; cached on disk. Piper's noise is random, so
+    every take is a little different (with the same timing): a double-tracked voice."""
+    key = hashlib.sha1(f"{voice}|{length_scale}|{text}|{take}".encode()).hexdigest()[:16]
     path = os.path.join(CACHE, key + ".npy")
     if os.path.exists(path):
         return np.load(path)
@@ -85,13 +86,13 @@ def _finish(y, gain_db=0.0):
     return y * 10 ** (gain_db / 20)
 
 
-def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12):
+def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12, take=0, cents=0.0):
     """One syllable sung over one or more notes [(midi, seconds), ...], one after the other.
 
     Returns (lead_in seconds, mono 44.1 kHz audio): put the audio lead_in seconds before the first note's time,
     so the consonants come just before the beat and the vowel lands on it.
     """
-    x = tts(text, voice)
+    x = tts(text, voice, take=take)
     f0, sp, ap, energy = analyse(x)
     n = len(f0)
     voiced = f0 > 0
@@ -124,7 +125,7 @@ def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12
         tgt[i] = notes[min(j, len(notes) - 1)][0]
     # a quick glide between notes (hard tuned), then a vibrato that grows on the long notes
     alpha = 1 - np.exp(-FS / glide)
-    sm = signal.lfilter([alpha], [1, alpha - 1], tgt - tgt[0], zi=[0.0])[0] + tgt[0]
+    sm = signal.lfilter([alpha], [1, alpha - 1], tgt - tgt[0], zi=[0.0])[0] + tgt[0] + cents / 100
     tau = np.maximum((np.arange(m) - pre) * FS, 0)
     starts = np.concatenate([[0], ends[:-1]])
     since = tau - starts[np.clip(np.searchsorted(ends, tau, side="right"), 0, len(notes) - 1)]

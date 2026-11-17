@@ -117,10 +117,10 @@ def orch(bar, amp=1.0):
 
 # ---------------------------------------------------------------- the chorus: a melody and its words
 CHORUS = [
-    ("E5 - E5 - - - D5 - C5 - E5 - - - - -", "seg fault in my heart"),
-    ("F5 - E5 - C5 - A4 - C5 - - - - - - .", "tare ring me uh part"),
-    ("E5 - G5 - - - E5 - D5 - C5 - - - - -", "seg fault in my heart"),
-    ("D5 - D5 - - - B4 - C5 - D5 - - - - .", "ree boot from thuh start"),
+    ("E5 - E5 - - - D5 - C5 - E5 - - - - -", "segfault + in my heart"),
+    ("F5 - E5 - C5 - A4 - C5 - - - - - - .", "tearing + me apart +"),
+    ("E5 - G5 - - - E5 - D5 - C5 - - - - -", "segfault + in my heart"),
+    ("D5 - D5 - - - B4 - C5 - D5 - - - - .", "reboot + from the start"),
 ]
 # the verse, a line every two bars, on eighths (the words as the voice should say them, one per note)
 VERSE = [
@@ -155,26 +155,63 @@ def sing_notes(notes, words, octave=-12, amp=1.0, wet=.3, echo=.2):
         S.sing(t, [(onset, vowels, m + octave, d, coda)], amp=amp, wet=wet, echo=echo)
 
 
-def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None):
-    """The diva sings a line: a syllable a note, the consonants before the beat; an echo on the last word.
-    double: an octave-up double, left and right, this loud."""
+CHORUS_STYLE = os.environ.get("CHORUS_STYLE", "harmony")   # octave | doubles | harmony
+
+
+def third_above(m, key):
+    """The note two steps up the (natural minor) scale of the key: a diatonic third."""
+    scale = sorted((pc + 9 + key) % 12 for pc in (0, 2, 3, 5, 7, 8, 10))
+    for up in (3, 4):
+        if (m + up) % 12 in scale:
+            return m + up
+    return m + 3
+
+
+def words_on(notes, words):
+    """Pair words with notes: a word takes its note and one more for each "+" after it (sung as one word)."""
+    out, toks, i = [], words.split(), 0
+    for k, w in enumerate(toks):
+        if w == "+":
+            continue
+        span = 1
+        while k + span < len(toks) and toks[k + span] == "+":
+            span += 1
+        out.append((w, notes[i:i + span]))
+        i += span
+    assert i == len(notes), (words, len(notes))
+    return out
+
+
+def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, style="octave"):
+    """The diva sings a line: a word on its notes, the consonants before the beat; an echo on the last word.
+    double: how loud the stack is. style "octave": an octave up, left and right (one take, offset); "doubles": two
+    more takes of the same notes, a little out of time and tune, left and right; "harmony": those two takes and a
+    third above in the middle."""
     key = key_of(bar) if key is None else key
-    notes = S.notes(bar, line, key, bars)
-    words = words.split()
-    assert len(notes) == len(words), (line, words)
-    for i, ((t, m, d), w) in enumerate(zip(notes, words)):
-        last = i == len(notes) - 1
-        li, y = V.sing(w, [(m + octave, d * .97)])
+    pairs = words_on(S.notes(bar, line, key, bars), words)
+    for i, (w, ns) in enumerate(pairs):
+        last = i == len(pairs) - 1
+        t = ns[0][0]
+        li, y = V.sing(w, [(m + octave, d * .97) for _, m, d in ns])
         S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if last else .05)
-        if double:
-            li, y = V.sing(w, [(m + octave + 12, d * .97)], formant=1.08)
+        if not double:
+            continue
+        if style == "octave":
+            li, y = V.sing(w, [(m + octave + 12, d * .97) for _, m, d in ns], formant=1.08)
             S.put("vox", t - li, y, .25, amp * double, wet=.15, echo=.05)
             S.put("vox", t - li + .012, y, .75, amp * double, wet=.15, echo=.05)
+            continue
+        for take, cents, late, pan in ((1, 8, .018, .2), (2, -8, .009, .8)):
+            li, y = V.sing(w, [(m + octave, d * .95) for _, m, d in ns], take=take, cents=cents)
+            S.put("vox", t - li + late, y, pan, amp * double * .8, wet=.15, echo=.05)
+        if style == "harmony":
+            li, y = V.sing(w, [(third_above(m, key) + octave, d * .95) for _, m, d in ns], take=3)
+            S.put("vox", t - li + .006, y, .5, amp * double * .7, wet=.2, echo=.08)
 
 
 def chorus_line(bar, lead_amp=1.0):
     line, words = CHORUS[bar % 4]
-    diva(bar, line, words, double=.55)
+    diva(bar, line, words, double=.55, style=CHORUS_STYLE)
     for t, m, d in S.notes(bar, line, key_of(bar)):   # the riff synth doubles the hook, under the voice
         S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
 
@@ -240,8 +277,8 @@ for bar in range(112):
     if 32 <= bar < 40:
         rapper(bar, RAP[bar - 32])
     if bar in (42, 46):
-        diva(bar, *PRE[0], octave=-12, double=.4)
-        diva(bar + 1, *PRE[1], octave=-12, double=.3)
+        diva(bar, *PRE[0], octave=-12, double=.4, style=CHORUS_STYLE)
+        diva(bar + 1, *PRE[1], octave=-12, double=.3, style=CHORUS_STYLE)
     if chorus:
         chorus_line(bar, 1.2 if bar >= 80 else 1.0)
     if brk and bar % 4 == 0:
