@@ -202,7 +202,7 @@ Prices from a guide checked on 25 October 2026. Check suno.com/pricing.
 - **Google Flow Music (Lyria):** one guide lists it with free daily credits.
   Unverified.
 - **Stable Audio:** instrumental only, no vocals. Trained on licensed data;
-  open-weights models can run locally, which suits a hacker party.
+  open-weights models can run locally, which suits a techy crowd.
 
 ## Sources
 

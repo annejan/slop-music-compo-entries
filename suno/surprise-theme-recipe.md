@@ -45,12 +45,12 @@ Fill in each line, then join the lines with commas. The result is the style prom
 | Techno | 125 to 140 |
 | Hardstyle | 150 |
 
-## Lyric ideas that always work at a hacker party
+## Lyric ideas that work at a party with techy friends
 
 - Love song where the partner is hardware: a badge, a soldering iron, a router.
 - Breakup song in error messages: `segfault`, `404`, `connection reset`.
 - A rap that spells a word: `S-E-G-F-A-U-L-T`, `W-I-F-I`.
 - A chorus with a call and response: `(say it once again)`.
-- A shout-out to the party and the people in the tent.
+- A shout-out to the party, the host and the friends on the dance floor.
 
 Ask Claude for the lyrics with the theme name. It can write them in five minutes.
