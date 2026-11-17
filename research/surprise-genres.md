@@ -212,7 +212,7 @@ the prompt below: a safe middle that DJs can mix.
   Kraker" winner).
 - **Prompt:**
   `Dutch carnaval party schlager, 140 BPM, Dutch lyrics, oompah brass band, tuba bass, four-on-the-floor party beat, sing-along chorus, accordion, DJ-friendly drum intro and outro`
-- **Note:** write the lyrics in Dutch yourself. Suno sings Dutch, but
+- **Note:** have Claude write the Dutch lyrics. Suno sings Dutch, but
   pronunciation varies (unverified per model version). Keep the chorus short
   and repetitive.
 

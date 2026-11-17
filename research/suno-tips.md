@@ -100,8 +100,8 @@ What helps:
 6. **Generate several versions** and measure each one in DJ software (Mixxx,
    rekordbox, Traktor, Serato). Keep the one closest to target with a stable
    beat grid.
-7. **Fix the rest in software.** A difference of 2-4 BPM is easy to
-   time-stretch in a DAW or Suno Studio, or for the DJ to pitch live. A track
+7. **Let the DJ fix the rest.** A difference of 2-4 BPM is easy for the DJ
+   to pitch live. (Our rule is all AI: no time-stretching by hand.) A track
    whose tempo drifts during the song is much harder to fix. Reject it.
 8. **Half-time traps:** at 170+ BPM, Suno and BPM analysers sometimes land on
    half time (85 BPM). Listen before you trust the number.
@@ -122,10 +122,9 @@ DJs need 16-32 bars of beat at both ends. Combine these methods:
 4. **Replace Section / section edit:** regenerate only the intro or outro.
    Budget 2-5 tries for a clean join. In v6 you can describe the change in
    plain language.
-5. **Edit in a DAW (most reliable):** export WAV or stems, copy 16 or 32 bars
-   of drums from inside the song, and paste them at the start and end. Cut on
-   the bar line. This takes about 10 minutes in Audacity, Ardour, Reaper or
-   Suno Studio.
+5. **Not for us: edit in a DAW.** Copying drum bars by hand to the start and
+   end is the most reliable fix, but it breaks our all-AI rule. Use Extend and
+   Replace Section, or generate another take.
 
 ## Extend, Replace, Cover, Persona / Voices, stems
 
@@ -187,7 +186,7 @@ Prices from a guide checked on 25 October 2026. Check suno.com/pricing.
 2. Generate 4-8 versions per prompt. Listen in the browser.
 3. Measure BPM in DJ software. Keep tracks within 2 BPM of target.
 4. Check for a beat-only intro and outro of at least 16 bars. Fix with
-   Replace Section, Extend or a DAW.
+   Replace Section or Extend (no hand edits: all AI).
 5. Download the final version once, as WAV.
 6. Name the file `Artist - Title (BPM, key).wav` so the DJ can sort fast.
 

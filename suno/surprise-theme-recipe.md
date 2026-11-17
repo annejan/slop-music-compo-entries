@@ -7,7 +7,7 @@ The second theme of each day comes two hours before the deadline. Use this plan.
 | Minutes | Step |
 |---|---|
 | 0 to 10 | Fill in the genre sheet below. Write the style prompt. |
-| 10 to 25 | Write the lyrics: one hook, one verse, one silly rap or spoken part. |
+| 10 to 25 | Have Claude write the lyrics: one hook, one verse, one silly rap or spoken part. |
 | 25 to 75 | Generate 6 to 10 takes. Listen to all of them to the end. |
 | 75 to 95 | Fix the best take with Extend or Replace section. |
 | 95 to 105 | Download WAV. Check tempo. Name the file with BPM and key. |

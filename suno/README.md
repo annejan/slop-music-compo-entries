@@ -2,7 +2,7 @@
 
 Rules from the organisers:
 
-- Make the whole track with AI. You can write the lyrics yourself. Keep it fun.
+- Make the whole track with AI. Keep it fun.
 - Each day has two themes. The second theme comes two hours before the deadline.
 - The DJ mixes the tracks live. Use the normal tempo of the genre.
 - Each person gets at least one track played. If you send more, mark the best one.
@@ -14,6 +14,18 @@ Rules from the organisers:
 | Saturday | announced 2 h before | see the recipe | [surprise-theme-recipe.md](surprise-theme-recipe.md) |
 | Sunday | eurodance | 132 BPM | [sunday-eurodance.md](sunday-eurodance.md) |
 | Sunday | announced 2 h before | see the recipe | [surprise-theme-recipe.md](surprise-theme-recipe.md) |
+
+## Our rule: all AI
+
+The organisers allow hand-written lyrics. We do not use that: every part of
+every entry is made by AI.
+
+- Claude writes the lyrics and the style prompts.
+- Suno makes the audio. Fix a take only with Suno's own AI tools: Extend,
+  Replace Section, Cover.
+- No hand edits: no cutting, pasting or time-stretching in a DAW or Audacity.
+  If a take has a bad tempo or a bad intro, generate another take.
+- Measuring the tempo and naming the file is fine. That is not making music.
 
 ## How to use a prompt in Suno
 
