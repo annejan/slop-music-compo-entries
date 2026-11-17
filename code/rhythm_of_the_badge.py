@@ -20,7 +20,7 @@ The key change is two semitones up, for the last chorus. The first and last 16 b
         64-71  break: no kick; the piano alone, "flash me" in the echo, and a safety notice from the MC
         72-79  build: a snare roll and a riser while the MC reads out the upload progress
         80-95  the last chorus, twice, a tone up, with the whole choir
-        96-103 the hoover riff, the lasers, one last "feel the rhythm of the badge"
+        96-103 the hoover riff, the lasers, "feel the rhythm of the badge" twice more
        104-119 outro: drums only
 
 The voices are Piper (TTS) re-pitched with WORLD (voice.py): the diva is en_US-amy-medium, the MC is

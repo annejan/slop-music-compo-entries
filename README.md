@@ -104,6 +104,11 @@ To share the songs in a chat app such as Signal:
 .venv/bin/python share.py    # writes renders/share/NN Title (BPM, key).mp3, 320 kbit/s, about 9 MB each
 ```
 
+The lyric sheets are in [lyrics/](lyrics/): what each voice sings or says, with
+the time of each section. They are written from the code, so they show the
+words as rendered. `share.py` copies them next to the MP3s and puts them in
+the MP3 tags.
+
 | Variable | Effect |
 |---|---|
 | `STEMS=1` | print the loudness of each bus |

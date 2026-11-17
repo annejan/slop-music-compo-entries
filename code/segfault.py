@@ -5,13 +5,13 @@ the AI slop music compo.
 segfault.py [OUT.wav]   (default renders/segfault_132bpm_Am.wav)
 
 Every note and every sound here is written by Claude, in this file: no samples, no loops. 1994 on a Sunday: a
-supersaw riff, a rave piano, an offbeat bass, orchestra hits, a vocoder robot as the diva that sings the chorus,
-and a rap that spells it out. The key change is two semitones up, for the last chorus. The first and last 16
+supersaw riff, a rave piano, an offbeat bass, orchestra hits, an AI diva (Piper and WORLD, voice.py) with a choir
+of other voices, and a rapper who spells it out. The key change is two semitones up, for the last chorus. The first and last 16
 bars are drums only, for the DJ.
 
   bars   0-15  intro: kick, hats, clap (drums only)
         16-23  the riff, behind a closing door that opens; the bass comes in
-        24-39  verse: the rave piano and the pad; the robot raps S-E-G-F-A-U-L-T
+        24-39  verse: the rave piano and the pad; the diva sings, the rapper spells S-E-G-F-A-U-L-T
         40-47  pre-chorus: the kick holds back, a snare roll and a riser
         48-63  chorus: "segfault in my heart, tearing me apart; segfault in my heart, reboot from the start"
         64-71  break: the riff alone, filtered; "signal eleven"

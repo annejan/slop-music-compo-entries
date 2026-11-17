@@ -1,0 +1,97 @@
+Blinky (The LED Song)
+Sunday: bubblegum eurodance · 132 BPM · D major,
+E major in the last chorus · 3:26
+Words by Claude. Voices: DIVA: en_US-lessac,
+CHOIR: amy, jenny_dioco, cori (+ hfc_male in the last
+chorus), RAPPER: en_US-bryce, GANG: joe, john, alan,
+norman. LED: bleeps.
+
+[0:00] Intro (drums)
+
+[0:29] The riff and the pizzicato
+GANG: Hey!
+GANG: Hey!
+GANG: Hey!
+GANG: Hey!
+
+[0:43] Verse
+DIVA: I'm a little LED
+DIVA: On a little PCB
+DIVA: When you write a one to me
+DIVA: I light up, can't you see?
+
+[0:58] Chorus
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: On and off all night
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Red and green and white
+DIVA & CHOIR: Toggle me, baby
+DIVA & CHOIR: GPIO high
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Light up the sky
+
+[1:12] Chorus
+GANG: Hey!
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: On and off all night
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Red and green and white
+GANG: Hey!
+DIVA & CHOIR: Toggle me, baby
+DIVA & CHOIR: GPIO high
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Light up the sky
+
+[1:27] Rap
+GANG: Hey!
+RAPPER: Hello world!
+GANG: Hey!
+RAPPER: Hello world!
+RAPPER: Put your hands up, everybody, set the pin to
+        out! (slide whistle up)
+RAPPER: Delay one second, now everybody shout!
+GANG: Hey! Hey! (slide whistle down)
+GANG: Hey! Hey! Hey! Hey!
+
+[1:41] Break (no kick; the LED blinks BLINKY in Morse)
+[1:45] DIVA: Light up the sky
+
+[1:49] Build (snare roll, riser)
+[1:52] RAPPER: Set the pin high!
+[1:54] GANG: Zero! One! Two! Three!
+
+[1:56] Last chorus (a tone up)
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: On and off all night
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Red and green and white
+DIVA & CHOIR: Toggle me, baby
+DIVA & CHOIR: GPIO high
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Light up the sky
+
+[2:10] Last chorus, again
+GANG: Hey!
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: On and off all night
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Red and green and white
+GANG: Hey!
+DIVA & CHOIR: Toggle me, baby
+DIVA & CHOIR: GPIO high
+DIVA & CHOIR: Blink, blink, blinky (LED: blink blink)
+DIVA & CHOIR: Light up the sky
+
+[2:25] Post-chorus (the riff, slide whistle)
+GANG: Hey!
+GANG: Hey!
+RAPPER: Hello world!
+GANG: Hey!
+GANG: Hey!
+RAPPER: Hello world!
+
+[2:40] Winding down (the LED blinks BLINKY again)
+[2:43] DIVA: Light up the sky
+[2:50] DIVA: Light up the sky
+
+[2:54] Outro (drums)

@@ -1,0 +1,77 @@
+Packet Loss (Of Love)
+Saturday: 90's mellow house · 122 BPM · F minor · 3:58
+Words by Claude. Voices: HIM: hfc_male, HER: hfc_female,
+CHOIR: Cori, Kristin, LJSpeech, Alan, John,
+COMPUTER: Lessac (Piper).
+
+[0:00] Intro (drums only; the rain starts)
+
+[0:31] Organ bass, electric piano behind a door
+
+[0:47] Verse 1
+HIM: I sent you all my feelings
+HIM: in tiny little parts
+HER: Ack.
+HIM: but some of them got lost, girl
+HIM: somewhere between our hearts
+HER: Nack!
+
+[1:03] Verse 2
+HER: I only got the header
+HIM: Ack.
+HER: I only got your name
+HER: Retransmit it, baby
+HER: Say it once again
+HIM: Ack, ack.
+
+[1:19] Chorus (x2)
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HIM: Ping me when you're ready
+HER: I'll be waiting up
+HER+HIM: Packet loss of love
+(a sonar ping)
+
+[1:50] Sax solo
+
+[2:06] Break (no kick, thunder, the sax goes on)
+COMPUTER: Sixty-four bytes from your heart.
+COMPUTER: Time: one hundred twenty-two milliseconds.
+(sonar pings)
+COMPUTER: Packet loss: fifty percent.
+(a riser)
+
+[2:22] Chorus
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HIM: Ping me when you're ready
+HER: I'll be waiting up
+HER+HIM: Packet loss of love
+(the sax answers)
+
+[2:37] Chorus (the lead vocal drops packets)
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HER+HIM: Packet loss of love
+CHOIR: Say it once again
+HIM: Ping me when you're ready
+HER: I'll be waiting up
+HER+HIM: Packet loss of love
+(30 ms bits of every lead line vanish, about 3 in 10;
+the choir comes through whole; the sax answers)
+
+[2:53] Winding down
+HIM: Ping me when you're ready
+HER: I'll be waiting up
+(sax)
+HIM: Ping me when you're ready
+HER: I'll be waiting up
+HER: Say it once again
+COMPUTER: Request timed out.
+(one last ping)
+
+[3:25] Outro (drums only; the rain stops)

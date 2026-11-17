@@ -1,0 +1,59 @@
+Segfault (In My Heart)
+Sunday: eurodance · 132 BPM · A minor, B minor from
+2:25 (bar 80) · 3:26
+Words by Claude. Voices: DIVA: en_US-hfc_female,
+CHOIR: ljspeech, kristin, cori (+ hfc_male and
+cmu_us_slt in the last chorus), RAPPER: en_US-ryan,
+ROBOT: vocoder robot (synth formants).
+
+[0:00] Intro (drums)
+
+[0:29] The riff behind a door; the bass comes in
+
+[0:43] Verse
+DIVA: You told me you'd be there forever
+DIVA: You told me we were compiled together
+DIVA: But now I'm reading memory
+DIVA: That doesn't belong to me
+
+[0:58] Rap
+RAPPER: S-E-G-F-A-U-L-T!
+RAPPER: You overflowed the buffer that you gave to me.
+RAPPER: Null pointer, no answer, the stack is on fire.
+RAPPER: I free the same love twice, I'm a double free
+        liar.
+RAPPER: Check the bounds, check the bounds, but you
+        never do.
+RAPPER: Valgrind in the morning, it was always you.
+RAPPER: Get up, get down, get the backtrace now!
+RAPPER: Segfault, segfault, let me show you how!
+
+[1:12] Pre-chorus (snare roll, riser from 1:20)
+DIVA & CHOIR: Oh, oh, oh
+DIVA & CHOIR: Something's going wrong
+DIVA & CHOIR: Oh, oh, oh
+DIVA & CHOIR: Something's going wrong
+
+[1:27] Chorus (x4)
+DIVA & CHOIR: Segfault in my heart
+DIVA & CHOIR: Tearing me apart
+DIVA & CHOIR: Segfault in my heart
+DIVA & CHOIR: Reboot from the start
+
+[1:56] Break (the riff alone, filtered)
+ROBOT: Signal eleven
+[2:03] ROBOT: Signal eleven
+
+[2:10] Build (snare roll, riser from 2:18)
+RAPPER: S-E-G-F-A-U-L-T!
+RAPPER: Get up, get down, get the backtrace now!
+RAPPER: S-E-G-F-A-U-L-T!
+RAPPER: Segfault, segfault, let me show you how!
+
+[2:25] Last chorus (x4, a tone up, bigger choir)
+DIVA & CHOIR: Segfault in my heart
+DIVA & CHOIR: Tearing me apart
+DIVA & CHOIR: Segfault in my heart
+DIVA & CHOIR: Reboot from the start
+
+[2:54] Outro (drums)
