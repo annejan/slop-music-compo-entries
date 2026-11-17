@@ -5,3 +5,8 @@ code/renders/
 *.mp3
 *.ogg
 *.flac
+.venv/
+venv/
+.env
+.cache/
+code/voices/
