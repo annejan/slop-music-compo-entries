@@ -346,14 +346,21 @@ def duet(bar, line, words, loss=0.0, bars=1, amp=1.0):
 def choir(bar, line, words, amp=1.0):
     """The answer: five other voices, women on the tune and a third under it, men an octave down."""
     ns = notes(bar, line)
+    # the first voice sings the words; the others only the vowels, on its vowel onsets, so the consonants of five
+    # different speakers do not smear
     parts = [(CHOIR[0], 0, False, 6, .010, .2, .55), (CHOIR[1], 0, True, -6, .018, .8, .5),
              (CHOIR[2], 0, False, 0, .022, .5, .4), (CHOIR[3], -12, False, -8, .014, .35, .45),
              (CHOIR[4], -12, True, 8, .02, .65, .4)]
     for voice, octave, third, cents, late, pan, g in parts:
+        words_first = voice == CHOIR[0]
         for w, wn in words_on(ns, words):
             tune = [((scale_third_below(m) if third else m) + octave, d * .94) for _, m, d in wn]
-            li, y = V.sing(w, tune, voice=voice, cents=cents)
-            S.put("vox", wn[0][0] - li + late, y, pan, .55 * amp * g, wet=.3, echo=.05)
+            if words_first:
+                li, y = V.sing(w, tune, voice=voice, cents=cents)
+                S.put("vox", wn[0][0] - li + late, y, pan, .55 * amp * g, wet=.3, echo=.05)
+            else:
+                _, y = V.sing(w, tune, voice=voice, cents=cents, vibrato=.15, vowel_only=True)
+                S.put("vox", wn[0][0] + late, y, pan, .25 * amp * g, wet=.3, echo=.05)   # under the words
 
 
 def say(bar, beat, text, who, seconds, amp=1.0, pan=.5, phone=False, wet=.2, echo=.25):

@@ -187,7 +187,8 @@ class Band:
     def diva(self, bar, line, words, bars=1, octave=-12, amp=1.0, choir=0.0, big=False, voice=None):
         """The diva sings a line: each word on its notes, the consonants just before the beat, an echo on the last
         word. choir > 0: other voices double her left and right and sing a third above; big: a man an octave down
-        and a fifth voice a sixth down as well."""
+        and a fifth voice a sixth down as well. The choir sings only the vowels (every voice has its own consonant
+        lengths, which would smear hers), with less vibrato."""
         S, key = self.S, self.key_of(bar)
         pairs = words_on(S.notes(bar, line, key, bars), words)
         for i, (w, ns) in enumerate(pairs):
@@ -203,9 +204,9 @@ class Band:
             if big:
                 parts += [(self.choir[3], [(m - 12, d) for m, d in notes], 0, .012, .55, .7),
                           (self.choir[4], [(m - 12, d) for m, d in third], 5, .015, .7, .45)]
-            for v, ns2, cents, late, pan, g in parts:
-                li, y = V.sing(w, ns2, voice=v, cents=cents)
-                S.put("vox", t - li + late, y, pan, amp * choir * g, wet=.15, echo=.05)
+            for v, ns2, cents, late, pan, g in parts:   # vowels only: the diva's consonants stay clean
+                _, y = V.sing(w, ns2, voice=v, cents=cents, vibrato=.15, vowel_only=True)
+                S.put("vox", t + late, y, pan, amp * choir * g, wet=.15, echo=.05)
 
     def rap(self, bar, text, bars=1, amp=1.0, voice=None, pitch=.92):
         """A spoken line from the downbeat, fitted to the bars (a sixteenth short, to breathe)."""

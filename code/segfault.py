@@ -210,9 +210,9 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
             if big:
                 parts += [(CHOIR[3], [(n - 12, d) for n, d in notes], 0, .012, .55, .7),
                           (CHOIR[4], [(n - 12, d) for n, d in third], 5, .015, .7, .45)]
-            for voice, ns2, cents, late, pan, g in parts:
-                li, y = V.sing(w, ns2, voice=voice, cents=cents)
-                S.put("vox", t - li + late, y, pan, amp * double * g, wet=.15, echo=.05)
+            for voice, ns2, cents, late, pan, g in parts:   # vowels only: the diva's consonants stay clean
+                _, y = V.sing(w, ns2, voice=voice, cents=cents, vibrato=.15, vowel_only=True)
+                S.put("vox", t + late, y, pan, amp * double * g, wet=.15, echo=.05)
             continue
         if style == "octave":
             li, y = V.sing(w, [(m + octave + 12, d * .97) for _, m, d in ns], formant=1.08)
@@ -229,7 +229,7 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
 
 def chorus_line(bar, lead_amp=1.0):
     line, words = CHORUS[bar % 4]
-    diva(bar, line, words, double=.55, style=CHORUS_STYLE, big=bar >= 80)
+    diva(bar, line, words, double=.37, style=CHORUS_STYLE, big=bar >= 80)
     for t, m, d in S.notes(bar, line, key_of(bar)):   # the riff synth doubles the hook, under the voice
         S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
 
@@ -295,8 +295,8 @@ for bar in range(112):
     if 32 <= bar < 40:
         rapper(bar, RAP[bar - 32])
     if bar in (42, 46):
-        diva(bar, *PRE[0], octave=-12, double=.4, style=CHORUS_STYLE)
-        diva(bar + 1, *PRE[1], octave=-12, double=.3, style=CHORUS_STYLE)
+        diva(bar, *PRE[0], octave=-12, double=.27, style=CHORUS_STYLE)
+        diva(bar + 1, *PRE[1], octave=-12, double=.2, style=CHORUS_STYLE)
     if chorus:
         chorus_line(bar, 1.2 if bar >= 80 else 1.0)
     if brk and bar % 4 == 0:

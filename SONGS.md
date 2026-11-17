@@ -75,7 +75,8 @@ in `~/Projects/npu` (MIT), which run on the Ryzen AI NPU there.
   sonar pings in the key. A simulated 5.5 x 4 x 2.6 m room.
 - **Voices (Piper):** `en_US-hfc_male-medium` (him) and `en_US-hfc_female-medium`
   (her); a choir of `en_GB-cori-high`, `en_US-kristin-medium`,
-  `en_US-ljspeech-high`, `en_GB-alan-medium` and `en_US-john-medium`; the
+  `en_US-ljspeech-high`, `en_GB-alan-medium` and `en_US-john-medium` (cori
+  sings the words, the others only the vowels); the
   computer is `en_US-lessac-high` through a telephone band-pass.
 
 ### Low Battery Lullaby (code track)
@@ -117,8 +118,8 @@ low-pass filter.
 - **Voices:** the talk box is two saws and a pulse, shaped every 5 ms by the
   spectral envelope (WORLD) of Piper `en_US-ryan-high` speech. The disco
   singer is `en_US-hfc_male-medium`; the choir is `en_US-joe-medium`,
-  `en_GB-alan-medium` and `en_US-john-medium`; `en_US-bryce-medium` sings
-  falsetto; `en_US-norman-medium` speaks.
+  `en_GB-alan-medium` and `en_US-john-medium`, and `en_US-bryce-medium` sings
+  falsetto, all on the vowels only, under the singer; `en_US-norman-medium` speaks.
 
 ---
 
@@ -161,7 +162,8 @@ Voices, made in [code/voice.py](code/voice.py):
   pre-chorus: Piper `en_US-ljspeech-high` doubles her on the left, Piper
   `en_US-kristin-medium` on the right, and Piper `en_GB-cori-high` sings a third
   above. In the last chorus, Piper `en_US-hfc_male-medium` joins an octave down
-  and Festival `cmu_us_slt_cg` a sixth down.
+  and Festival `cmu_us_slt_cg` a sixth down. The choir sings only the vowels,
+  about 6 dB under the diva (the man 12 dB); she sings the words.
 - **The rapper** raps the S-E-G-F-A-U-L-T verse and the build. Piper's
   `en_US-ryan-high` voice speaks each line. WORLD fits it to one bar and makes
   the pitch lower and flatter.
@@ -182,8 +184,8 @@ in the last chorus, 112 bars, 3:26, -9 LUFS. A song about blinking an LED.
   9 x 6 x 3.5 m room.
 - **Voices (Piper):** the diva is `en_US-lessac-high`; the choir is
   `en_US-amy-medium`, `en_GB-jenny_dioco-medium`, `en_GB-cori-high` (a third
-  above) and `en_US-hfc_male-medium` (an octave down, last chorus); the
-  rapper is `en_US-bryce-medium`; `en_US-joe-medium`, `en_US-john-medium`,
+  above) and `en_US-hfc_male-medium` (an octave down, last chorus), singing only the
+  vowels, about 6 dB under her; the rapper is `en_US-bryce-medium`; `en_US-joe-medium`, `en_US-john-medium`,
   `en_GB-alan-medium` and `en_US-norman-medium` shout "hey!" and "set the pin
   high!".
 
@@ -205,8 +207,7 @@ night club anthem about flashing firmware to a badge.
   `en_GB-alan-medium`, pitched down; the choir is `en_GB-jenny_dioco-medium`,
   `en_US-lessac-high` and `en_GB-cori-high`, with `en_US-norman-medium` and
   `en_US-kristin-medium` in the last chorus. The choir sings only the vowels,
-  in a straighter tone, about 5 dB under the diva; she sings the words (see
-  [HANDOFF.md](HANDOFF.md)).
+  in a straighter tone, about 5 dB under the diva; she sings the words.
 
 ---
 
@@ -245,7 +246,8 @@ finished render.
   10 x 7 x 4 m room, RT60 2 s.
 - **Voices (Piper):** the diva is `en_GB-jenny_dioco-medium`; the choir is
   `en_US-kristin-medium`, `en_US-ljspeech-high`, `en_GB-cori-high`, with
-  `en_US-hfc_male-medium` and `en_US-john-medium` in the last chorus; the MC is
+  `en_US-hfc_male-medium` and `en_US-john-medium` in the last chorus, on the
+  vowels only; the MC is
   `en_US-norman-medium`; ThreadSanitizer is `en_US-lessac-high` on the phone.
 
 ---

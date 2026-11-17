@@ -95,7 +95,7 @@ def keys(bar, amp=1.0):
 def chorus(bar, big=False):
     if bar % 2 == 0:
         line, words = CHORUS[(bar // 2) % 4]
-        P.diva(bar, line, words, bars=2, choir=.5, big=big)
+        P.diva(bar, line, words, bars=2, choir=.35, big=big)
         P.lead(bar, line, bars=2, amp=.35, sound="epiano")
 
 

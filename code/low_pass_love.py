@@ -244,8 +244,10 @@ def talkbox(text, notes, mouth=MOUTH, take=0, level=.12):
 
 
 @functools.lru_cache(maxsize=None)
-def sung(text, notes, voice, cents=0.0, take=0, formant=1.0):
-    return V.sing(text, list(notes), voice=voice, cents=cents, take=take, formant=formant)
+def sung(text, notes, voice, cents=0.0, take=0, formant=1.0, vowel_only=False):
+    """vowel_only: for the voices behind the singer (only the vowels, less vibrato), so his consonants stay clean."""
+    return V.sing(text, list(notes), voice=voice, cents=cents, take=take, formant=formant, vowel_only=vowel_only,
+                  vibrato=.15 if vowel_only else .35)
 
 
 def words_on(notes, words):
@@ -308,11 +310,11 @@ def disco(bar, line, words, octave=0, amp=1.0, choir=0.0, falsetto=0.0):
             for voice, ns2, cents, late, pan, g in ((BACKING[0], notes, 7, .014, .2, .75),
                                                     (BACKING[1], notes, -7, .008, .8, .75),
                                                     (BACKING[2], third, 0, .005, .45, .55)):
-                li2, y2 = sung(w, ns2, voice, cents=cents)
-                S.put("vox", t - li2 + late, y2, pan, amp * choir * g, wet=.2, echo=.05)
+                _, y2 = sung(w, ns2, voice, cents=cents, vowel_only=True)
+                S.put("vox", t + late, y2, pan, amp * choir * g, wet=.2, echo=.05)
         if falsetto:
-            li2, y2 = sung(w, tuple((m + 12, d) for m, d in notes), FALSETTO, formant=1.05)
-            S.put("vox", t - li2 + .01, y2, .55, amp * falsetto, wet=.3, echo=.1)
+            _, y2 = sung(w, tuple((m + 12, d) for m, d in notes), FALSETTO, formant=1.05, vowel_only=True)
+            S.put("vox", t + .01, y2, .55, amp * falsetto, wet=.3, echo=.1)
 
 
 # ---------------------------------------------------------------- drums
@@ -449,13 +451,13 @@ for bar in range(BARS):
         big = bar >= 80
         talk(bar, line, words, amp=1.0)
         if big:
-            disco(bar, line, words, octave=-12, amp=.55, choir=.6, falsetto=.3 if bar >= 88 else 0)
+            disco(bar, line, words, octave=-12, amp=.55, choir=.43, falsetto=.3 if bar >= 88 else 0)
     if 56 <= bar < 64 and bar % 2 == 0:
-        disco(bar, *VERSE[(bar - 56) // 2], choir=.35 if bar >= 60 else 0)
+        disco(bar, *VERSE[(bar - 56) // 2], choir=.25 if bar >= 60 else 0)
     if bar == 72:
         talk(bar, *CLOSE, amp=.9)
     if bar == 76:
-        disco(bar, *OPEN, octave=-12, choir=.6)
+        disco(bar, *OPEN, octave=-12, choir=.43)
     if bar in (100, 104):
         talk(bar, *HOOK[0], amp=.8, echo=.3)
 

@@ -315,14 +315,14 @@ def diva(bar, line, words, bars=1, amp=1.0, choir=0.0, big=False, echo_last=.35)
                  (CHOIR[2], third, 0, .006, .4, .55)]
         if big:
             parts.append((CHOIR[3], [(m - 12, d) for m, d in notes], 0, .012, .6, .6))
-        for v, ns2, cents, late, pan, g in parts:
-            li, y = V.sing(w, ns2, voice=v, cents=cents)
-            S.put("vox", t - li + late, y, pan, amp * choir * g, wet=.15, echo=.05)
+        for v, ns2, cents, late, pan, g in parts:   # vowels only: the diva's consonants stay clean
+            _, y = V.sing(w, ns2, voice=v, cents=cents, vibrato=.15, vowel_only=True)
+            S.put("vox", t + late, y, pan, amp * choir * g, wet=.15, echo=.05)
 
 
 def chorus_line(bar, big=False):
     line, words = CHORUS[bar % 8]
-    diva(bar, line, words, choir=.55, big=big)
+    diva(bar, line, words, choir=.42, big=big)
     # the toy glockenspiel doubles the hook, under the voices
     for t, m, d in S.notes(bar, line, key_of(bar)):
         S.put("lead", t, dx7.note("toy_glock", m, min(d, B), .8, tail=.6), .6, .3, wet=.3, echo=.15)

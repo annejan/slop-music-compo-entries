@@ -78,7 +78,7 @@ for bar in range(BARS):
         P.rap(bar, RAP[(bar - 40) % 4])
     if chorus:
         line, words = CHORUS[bar % 4]
-        P.diva(bar, line, words, choir=.55, big=bar >= 80)
+        P.diva(bar, line, words, choir=.37, big=bar >= 80)
         P.lead(bar, line, amp=.6)
     if bar == 64:
         P.say(bar, "This is the break. Nothing to see here.", phone=True)
