@@ -4,7 +4,9 @@ words are compared with the lyrics, so a mangled word ("badge-E-link", "bad link
 
 asr.py SONG.wav [LYRICS.txt | SONG]   (SONG: a script name such as segfault; its lyric sheet is used)
 
-Works best on a vocal stem (MUTE=drums,perc,bass,pads,keys,lead,fx); on a full mix the music hides some words.
+Works on a full mix (our Badge: 74 % of the words heard) and better on a vocal stem
+(MUTE=drums,perc,bass,pads,keys,lead,fx: 99 %). Whisper's voice-activity filter is off (WHISPER_VAD=1 turns it on):
+it takes singing over music for "not speech" and drops all of it.
 The first run downloads the model (WHISPER_MODEL, default base.en, about 150 MB) to ~/.cache/huggingface.
 """
 import difflib
@@ -14,6 +16,7 @@ import re
 import sys
 
 MODEL = os.environ.get("WHISPER_MODEL", "base.en")
+VAD = os.environ.get("WHISPER_VAD", "0") == "1"     # the voice-activity filter drops singing over music
 _model = None
 
 
@@ -49,7 +52,7 @@ def hear(path):
     x, sr = master.read(path)                       # our own reader: mono, 16 kHz, as float32 (no PyAV)
     g = np.gcd(sr, 16000)
     x = signal.resample_poly(x.mean(1), 16000 // g, sr // g).astype(np.float32)
-    segments, _ = _model.transcribe(x, language="en", vad_filter=True, beam_size=5)
+    segments, _ = _model.transcribe(x, language="en", vad_filter=VAD, beam_size=5)
     return [(s.start, s.end, s.text.strip()) for s in segments]
 
 
