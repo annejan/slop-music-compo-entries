@@ -41,6 +41,27 @@ def beat_phase(x, sr, bpm):
     return (edges[np.argmax(hist)] + edges[1] / 2) % beat
 
 
+def lag_to(x, sr, ours, start=30.0, seconds=90.0):
+    """Seconds by which x (at sr) runs late against ours (at engine.SR), negative if early: the cross-correlation of
+    the onset strength (the rise of the log envelope) of the kick band, 1 ms frames, `seconds` long from `start` (after
+    the DJ intro: ACE-Step's intro may not follow ours)."""
+    def env(a, rate):
+        seg = a[int(start * rate):int((start + seconds) * rate)].mean(1)
+        lo = signal.sosfilt(signal.butter(4, [40, 150], btype="band", fs=rate, output="sos"), seg)
+        h = rate // 1000
+        v = np.log(np.sqrt(np.add.reduceat(lo ** 2, np.arange(0, len(lo) - h, h)) / h) + 1e-6)
+        d = np.maximum(np.diff(v), 0)
+        return d - d.mean()
+    if sr != e.SR:                                  # the same frame length on both sides (44 samples is not 1 ms)
+        g = np.gcd(sr, e.SR)
+        x = signal.resample_poly(x[:int((start + seconds + 1) * sr)], e.SR // g, sr // g, axis=0)
+    a, b = env(x, e.SR), env(ours, e.SR)
+    c = signal.correlate(a, b, "full", method="fft")
+    lags = np.arange(-len(b) + 1, len(a))
+    ok = np.abs(lags) < 250
+    return lags[ok][np.argmax(c[ok])] / 1000
+
+
 def splice_dj(x, ours, bpm, bars, dj_bars=16):
     """The DJ intro and outro (drums only) from our own render, the other take in between: ACE-Step does not keep
     to "drums only" and sometimes drops out in the intro. Both start on the beat grid at sample 0. Ours is matched
@@ -115,17 +136,24 @@ if __name__ == "__main__":
     ap.add_argument("--bars", type=int, help="the song's length in bars (for --dj-from)")
     a = ap.parse_args()
     x, sr = read(a.src)
-    phase = beat_phase(x, sr, a.bpm)
-    x = x[int(round(phase * sr)):]
+    ours = None
+    if a.dj_from:
+        ours, sr2 = read(a.dj_from)
+        if sr2 != e.SR or not a.bars:
+            raise ValueError(f"--dj-from needs a {e.SR} Hz render (this one: {sr2} Hz) and --bars")
+        phase = lag_to(x, sr, ours, start=16 * 240 / a.bpm)   # line up with our render, from bar 16 on
+    else:
+        phase = beat_phase(x, sr, a.bpm)
+    if phase >= 0:
+        x = x[int(round(phase * sr)):]
+    else:                                           # the take runs early: silence in front
+        x = np.concatenate([np.zeros((int(round(-phase * sr)), 2)), x])
     if sr != e.SR:
         g = np.gcd(sr, e.SR)
         x = signal.resample_poly(x, e.SR // g, sr // g, axis=0)
     k = int(.004 * e.SR)
     x[:k] *= np.linspace(0, 1, k)[:, None]
-    if a.dj_from:
-        ours, sr2 = read(a.dj_from)
-        if sr2 != e.SR or not a.bars:
-            raise ValueError(f"--dj-from needs a {e.SR} Hz render (this one: {sr2} Hz) and --bars")
+    if ours is not None:
         x = splice_dj(x, ours, a.bpm, a.bars)
     if a.era == "90s":
         x = era_90s(x)
