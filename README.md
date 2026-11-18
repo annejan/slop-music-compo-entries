@@ -146,6 +146,7 @@ the MP3 tags; for the radio edits it moves the times to the edit.
 | `CHOIR=v1,v2,v3,v4,v5` | the choir: left double, right double, third above; in the last chorus also an octave down and a sixth down |
 | `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
 | `SOLO=vox` | render only these buses (comma separated), for auditions |
+| `MUTE=vox` | render without these buses (comma separated), the rest with its reverb and echo: stems |
 | `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb from `engine.py` (default: `dx7`, `sim`) |
 
@@ -181,6 +182,14 @@ each file.
 the 90s (narrower, less deep sub, no air above 15 kHz, a little tape, -11
 LUFS). `--dj-from OURS.wav --bars N` takes the 16-bar DJ intro and outro from
 our own render: ACE-Step does not keep them drums only.
+
+`weave.py` weaves the slop through the slop: our instrumental stem, unchanged,
+under a blend of our own vocals (the machine flow) and the same vocals cleaned
+up by ACE-Step (a cover of only our vocal stem, base model, strength 0.85).
+ACE-Step's take is lined up to ours and gated by our vocal envelope, so it
+adds nothing where our voices are silent. `MUTE=vox` (or a list of buses)
+renders a song without those buses, with everything else's reverb and echo
+intact: that is how the stems are made.
 
 **The workflow that works best so far:** write the song as a code track, give
 the render to ACE-Step as the source of a `cover-nofsq` (strength 0.3, the

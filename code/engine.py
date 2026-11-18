@@ -440,6 +440,7 @@ def limit(x, ceiling):
 
 # ---------------------------------------------------------------- the song
 BUSES = ("drums", "perc", "bass", "pads", "keys", "lead", "vox", "fx")
+MUTED = set(filter(None, os.environ.get("MUTE", "").split(",")))
 
 
 class Song:
@@ -460,7 +461,10 @@ class Song:
         return bar * self.bar + beat * self.beat
 
     def put(self, bus, t, g, pan=.5, amp=1.0, wet=.15, echo=0.0):
-        """Mix g (mono, or stereo as (n, 2)) into a bus at second t, panned 0 (left) .. 1 (right)."""
+        """Mix g (mono, or stereo as (n, 2)) into a bus at second t, panned 0 (left) .. 1 (right).
+        MUTE=vox (environment, comma separated): those buses stay out, their reverb and echo too (for stems)."""
+        if bus in MUTED:
+            return
         i = int(round(t * SR))
         if i >= self.n or len(g) == 0:
             return
