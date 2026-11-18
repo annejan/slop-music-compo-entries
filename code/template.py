@@ -16,6 +16,8 @@ write its lyric sheet in lyrics/: then ace.py (ACE-Step), share.py (MP3s) and dj
         80-95  last chorus, a key change up, the big choir
         96-111 outro: drums only (for the DJ)
 """
+import os
+
 import engine as e
 import parts
 import room
@@ -30,7 +32,8 @@ BASS = "offbeat"                       # offbeat | root | eighths | reese | dx7
 KEYS = "piano"                         # piano | epiano | organ | supersaw
 LUFS = -9.0                            # -10 for mellow, -9 for loud
 KEY_CHANGE = 2                         # semitones up for the last chorus (0: none)
-DIVA, RAPPER = "en_US-amy-medium", "en_US-joe-medium"
+DIVA = os.environ.get("DIVA", "en_US-amy-medium")    # a Piper voice, or ds:hanami (a DiffSinger voicebank)
+RAPPER = "en_US-joe-medium"
 
 CHORUS = [  # (melody: one token per note, "-" holds, "." rests; the words as the voice should say them)
     ("E5 - E5 - - - D5 - C5 - E5 - - - - -", "this + is a test"),
@@ -90,6 +93,7 @@ P.roll(76, 4)
 S.put("fx", S.at(76), e.riser(S.bar * 4, .4), .5, wet=.3)
 S.put("fx", S.at(64), e.downlifter(S.bar * 2, .3), .5, wet=.3)
 
+P.finish()   # a DiffSinger diva (DIVA=ds:hanami) sings her whole part here
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 2500), (S.at(72), 2500), (S.at(80) - .02, 12000),
        (S.at(80), 18000), (S.n / e.SR, 18000)]   # the master filter: closed in the break
 S.mixdown(parts.out_path(f"{TITLE}_{BPM}bpm"), {"drums": .95, "perc": .7, "bass": .85, "pads": .8, "keys": 1.0,

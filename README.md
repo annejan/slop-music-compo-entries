@@ -123,7 +123,7 @@ Render options (environment variables):
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
-| `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.unmask`); off by default until measured on every song |
+| `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); off by default until measured on every song |
 | `VOXCHAIN=1` | a 1995 vocal channel strip on the vox bus: mud out, fast compressor, presence, de-esser, exciter, leveler (`engine.vocal_chain`); off by default until measured |
 
 ## Voices
@@ -232,11 +232,18 @@ Those are the sections to produce.
 ## Surprise theme (two hours)
 
 1. Copy [code/template.py](code/template.py), set the tempo, chords, groove
-   and voices, write the words and the melody.
+   and voices, write the words and the melody. `DIVA=ds:hanami` lets the
+   DiffSinger voice sing the whole diva part (`parts.Band`, then
+   `P.finish()` before the mixdown); `ds_words=` where her words differ from
+   the Piper spelling. She sings an octave above the Piper diva, in the keys'
+   range, so she sits at twice the level (`DS_GAIN`, default 2.0): at 1.0 the
+   ear heard none of the template's verse words in the mix, at 2.0 to 2.5
+   more than with Piper. A whole song with her takes 46 s (Piper: 29 s).
 2. `PREVIEW=48-64 .venv/bin/python my_song.py` for a quick listen (under 20 s).
 3. Add the song to `share.SONGS` and write its lyric sheet in `lyrics/`.
 4. Render it; `asr.py` checks the words; optionally `ace.py` for ACE-Step.
 5. `share.py` and `dj.py`, then copy `renders/dj/` to the USB stick.
+6. `mix.py saturday --order auto` to hear the day as the DJ will play it.
 
 A rehearsal (Race Condition, drum and bass) took about 4 minutes from the theme
 to the finished render; with ACE-Step (`ace.py --mode cover`, base model) and

@@ -12,6 +12,11 @@ diva with a choir of other voices, a rapper, a spoken voice. The same parts as i
 
 Every part takes `bar` and works out the chord and the key change (key_of) itself. The words for the diva are as
 the voice should say them, one per note; "+" holds a word over one more note.
+
+diva_voice="ds:hanami" (or DIVA=ds:hanami in the template): a DiffSinger voicebank sings the whole diva part in one
+take (ds.py, DS_VOICE and DS_PITCH as in the Badge), the Piper choir stays under it. DiffSinger reads real words:
+give `ds_words` when the Piper spelling differs ("ee lek trih sih tee" -> "electricity + + + +"). Call
+P.finish() before S.mixdown().
 """
 import os
 
@@ -74,6 +79,14 @@ class Band:
         self.rapper_voice = rapper_voice or V.RAPPER
         self.choir = choir or CHOIR
         self.kick_kw = kick or dict(punch=130, base=50, length=.34, click=.4)
+        self.ds = self.diva_voice.startswith("ds:")
+        self.ds_gain = 2.0          # the DiffSinger diva's level (DS_GAIN overrides it): an octave above the Piper
+                                    # diva she sits in the keys' range; in the template the ear heard 0 of 32 verse
+                                    # words at 1.0, 18 at 1.6, 22 at 2.5 (the Piper diva: 14)
+        self.ds_lines = []                          # (from, to, amp, last word at, its echo) per diva line
+        if self.ds:
+            import ds
+            self.ds_part = ds.Part(S.bpm)
 
     # ------------------------------------------------------------ harmony
     def chord(self, bar):
@@ -184,18 +197,27 @@ class Band:
             S.put("lead", t, g, amp=.25 * amp, wet=.3, echo=.2)
 
     # ------------------------------------------------------------ voices
-    def diva(self, bar, line, words, bars=1, octave=-12, amp=1.0, choir=0.0, big=False, voice=None):
+    def diva(self, bar, line, words, bars=1, octave=-12, amp=1.0, choir=0.0, big=False, voice=None, ds_words=None):
         """The diva sings a line: each word on its notes, the consonants just before the beat, an echo on the last
         word. choir > 0: other voices double her left and right and sing a third above; big: a man an octave down
         and a fifth voice a sixth down as well. The choir sings only the vowels (every voice has its own consonant
-        lengths, which would smear hers), with less vibrato."""
+        lengths, which would smear hers), with less vibrato. With a DiffSinger diva (ds:...) the line goes into
+        her one take, an octave above the Piper diva (her own range); ds_words: the words as DiffSinger reads them."""
         S, key = self.S, self.key_of(bar)
         pairs = words_on(S.notes(bar, line, key, bars), words)
+        ds_here = self.ds and not voice
+        if ds_here:
+            ds_pairs = words_on(S.notes(bar, line, key, bars), ds_words or words)
+            for w, ns in ds_pairs:
+                for k, (t, m, d) in enumerate(ns):
+                    self.ds_part.note(t, m + octave + 12, d * .97, w if k == 0 else "+")
+            self.ds_lines.append((S.at(bar), S.at(bar + bars), amp, ds_pairs[-1][1][0][0], .35))
         for i, (w, ns) in enumerate(pairs):
             t = ns[0][0]
             notes = [(m + octave, d * .97) for _, m, d in ns]
-            li, y = V.sing(w, notes, voice=voice or self.diva_voice)
-            S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if i == len(pairs) - 1 else .05)
+            if not ds_here:
+                li, y = V.sing(w, notes, voice=voice or self.diva_voice)
+                S.put("vox", t - li, y, .5, amp, wet=.12, echo=.35 if i == len(pairs) - 1 else .05)
             if not choir:
                 continue
             third = [(self.step_up(m, 2, key), d) for m, d in notes]
@@ -207,6 +229,24 @@ class Band:
             for v, ns2, cents, late, pan, g in parts:   # vowels only: the diva's consonants stay clean
                 _, y = V.sing(w, ns2, voice=v, cents=cents, vibrato=.15, vowel_only=True)
                 S.put("vox", t + late, y, pan, amp * choir * g, wet=.15, echo=.05)
+
+    def finish(self):
+        """The DiffSinger diva's one take into the mix, each line at its own level, the echo on each line's last
+        word. Nothing to do with a Piper diva. Call it once, before S.mixdown()."""
+        if not self.ds or not self.ds_part.notes:
+            return
+        S = self.S
+        y = self.ds_part.render(bank=self.diva_voice.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
+                                pitch=os.environ.get("DS_PITCH", "0.5"))
+        g = np.ones(len(y))                       # 1 between the lines: the breath and consonants before them
+        for t0, t1, a, _, _ in self.ds_lines:
+            g[int(t0 * e.SR):int(t1 * e.SR)] = a
+        y = y * g * float(os.environ.get("DS_GAIN", self.ds_gain))
+        S.put("vox", 0.0, y, .5, 1.0, wet=.12, echo=.05)
+        for t0, t1, a, last, echo_last in self.ds_lines:
+            i, j = int((last - .08) * e.SR), min(int(t1 * e.SR), len(y))
+            if j > i:            # straight into the echo send (centre: cos 45 degrees on each side)
+                S.echo[i:j] += (np.stack([y[i:j], y[i:j]], 1) * (echo_last * np.cos(np.pi / 4))).astype(np.float32)
 
     def rap(self, bar, text, bars=1, amp=1.0, voice=None, pitch=.92):
         """A spoken line from the downbeat, fitted to the bars (a sixteenth short, to breathe)."""
