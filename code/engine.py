@@ -580,7 +580,7 @@ class Song:
             self.put("vox", t + off, g, pan, amp, wet=wet, echo=echo)
 
     def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0, ir=None,
-                tail_fade=2.0, ceiling_db=-1.2, unmask=0.0, voxchain=False):
+                tail_fade=2.0, ceiling_db=-1.2, unmask=6.0, voxchain=True):
         """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
         16-bit WAV of the song's length plus the reverb's tail.
 

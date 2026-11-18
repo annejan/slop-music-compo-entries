@@ -123,8 +123,14 @@ Render options (environment variables):
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
-| `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); off by default until measured on every song |
-| `VOXCHAIN=1` | a 1995 vocal channel strip on the vox bus: mud out, fast compressor, presence, de-esser, exciter, leveler (`engine.vocal_chain`); off by default until measured |
+| `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); on by default (6), `UNMASK=0` for the old mix |
+| `VOXCHAIN=1` | a 1995 vocal channel strip on the vox bus: mud out, fast compressor, presence, de-esser, exciter, leveler (`engine.vocal_chain`); on by default, `VOXCHAIN=0` for the old mix |
+
+Both together let the ear hear more of the words in every song (section by
+section, 18 November): Segfault 16 to 53 %, The Rhythm Of The Badge 70 to
+84 %, Packet Loss 29 to 40 %, Low Pass Love 17 to 21 %, Blinky 7 to 18 %, Race
+Condition 38 to 41 %, Low Battery Lullaby 8 to 26 %. Alone, UNMASK 6 gave 31 %
+on average, UNMASK 9 35 %, VOXCHAIN 38 %, both 40 % (none: 26 %).
 
 ## Voices
 
@@ -248,10 +254,11 @@ parts and no words of its own. Words heard, section by section:
 | Low Pass Love | 17 % | 15 % | 16 % | The DJ intro and outro are always ours. The result is in
 `renders/produce/<song>/`, with a radio edit and an ear report per section.
 
-What the ear (`asr.py`) hears of the lyrics in our full mixes: The Rhythm Of
-The Badge 74 %, Segfault 35 %, Race Condition 32 %, Low Pass Love 19 %, Packet
-Loss 18 %, Low Battery Lullaby 15 %, Blinky 12 % (Warm Boot's robot: 0 %).
-Those are the sections to produce.
+What the ear (`produce.py`'s, section by section) hears of the lyrics in our
+full mixes, with UNMASK and VOXCHAIN (the default since 18 November): The
+Rhythm Of The Badge 84 %, Segfault 53 %, Race Condition 41 %, Packet Loss
+40 %, Low Battery Lullaby 26 %, Low Pass Love 21 %, Blinky 18 % (Warm Boot's
+robot: 0 %). The low ones are the songs to produce.
 
 ## Surprise theme (two hours)
 
