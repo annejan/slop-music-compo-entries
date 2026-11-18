@@ -158,8 +158,8 @@ What we found:
   `--era 90s` (narrower, less sub, no air, tape) helps a little.
 - In covers, ACE-Step does not keep the 16 bars of drums at each end, so
   `master.py --dj-from` splices ours back in.
-- `lego` on the Badge was "an esoteric mess": ACE-Step sang its own words
-  (the ear heard 1 % of ours) and re-made most of the music.
+- `lego` on the Badge was "an esoteric mess", but interesting: ACE-Step sang
+  its own words (the ear heard 1 % of ours) and re-made most of the music.
 - For the vocals, the base model is the faithful one: it puts 9 % of its sound
   where our voices are silent, the turbo model 48 %.
 - ACE-Step reads the lyrics itself, not through eSpeak: `ace.py` respells them

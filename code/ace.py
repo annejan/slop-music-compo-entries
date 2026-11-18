@@ -145,6 +145,7 @@ def main():
     ap.add_argument("--era", choices=["90s"])
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--caption", help="replace the song's caption")
+    ap.add_argument("--lyrics", help="a text file with the lyrics (ACE-Step format, [Section] tags) instead of the sheet")
     ap.add_argument("--tag", help="the output's name (default: mode, model, strength, seed)")
     ap.add_argument("--check", action="store_true", help="the speech recognizer over the result")
     a = ap.parse_args()
@@ -168,7 +169,8 @@ def main():
         sys.exit("lego needs the base model (--model base)")
 
     caption = a.caption or (VOCALS_CAPTION if a.mode == "vocals" else CAPTIONS.get(a.song, day.split(": ")[1]))
-    req = {"caption": caption, "lyrics": ace_lyrics(n), "bpm": bpm, "keyscale": KEYS.get(key, key),
+    lyrics = open(a.lyrics, encoding="utf-8").read() if a.lyrics else ace_lyrics(n)
+    req = {"caption": caption, "lyrics": lyrics, "bpm": bpm, "keyscale": KEYS.get(key, key),
            "timesignature": "4", "vocal_language": "en", "seed": a.seed, "output_format": "wav16", **SYNTH[a.model]}
     base = os.path.join(out, tag)
     if a.mode in ("text", "lego"):
