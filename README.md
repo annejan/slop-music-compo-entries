@@ -244,14 +244,24 @@ up is one step of ACE-Step on the take, 0.5 two, 0.35 three.
 
 `noise` at the top of a project does the same to the whole song, starting
 from our own render instead of a cover: ACE-Step only cleans up, it adds no
-parts and no words of its own. Words heard, section by section:
+parts and no words of its own. Words heard, section by section, on the new
+default mix (UNMASK and VOXCHAIN; in brackets: the old mix):
 
 | Song | Our render | 1 step (`noise = 0.65`) | 2 steps (`noise = 0.5`) |
 |---|---|---|---|
-| Packet Loss | 29 % | **43 %** | 37 % |
-| The Rhythm Of The Badge | 73 % | **77 %** | 72 % |
-| Segfault | 14 % | 15 % | **34 %** |
-| Low Pass Love | 17 % | 15 % | 16 % | The DJ intro and outro are always ours. The result is in
+| Race Condition | 49 % | **59 %** | 50 % |
+| The Rhythm Of The Badge | 83 % (73) | **89 %** (77) | **89 %** (72) |
+| Segfault | 52 % (14) | 56 % (15) | **57 %** (34) |
+| Packet Loss | 43 % (29) | **46 %** (43) | 44 % (37) |
+| Low Pass Love | 20 % (17) | 21 % (15) | **23 %** (16) |
+| Blinky | 17 % | 18 % | 18 % |
+| Low Battery Lullaby | **24 %** | 18 % | 18 % |
+
+On the new mix one step adds 1 to 10 points on six songs (on average 41 to
+44 %); the mix itself gained more. Low Battery Lullaby loses words: its vocal
+chops do not survive ACE-Step, so it stays ours.
+
+The DJ intro and outro are always ours. The result is in
 `renders/produce/<song>/`, with a radio edit and an ear report per section.
 
 What the ear (`produce.py`'s, section by section) hears of the lyrics in our
@@ -259,6 +269,12 @@ full mixes, with UNMASK and VOXCHAIN (the default since 18 November): The
 Rhythm Of The Badge 84 %, Segfault 53 %, Race Condition 41 %, Packet Loss
 40 %, Low Battery Lullaby 26 %, Low Pass Love 21 %, Blinky 18 % (Warm Boot's
 robot: 0 %). The low ones are the songs to produce.
+
+The voices alone (`SOLO=vox`, through the same channel strip) against the
+full mix, section by section: Low Battery Lullaby 54 % against 26 %, Low Pass
+Love 44 % against 21 %, Blinky 30 % against 18 %. In these three the music
+hides about half the words; in Blinky the chorus is hard to hear even alone
+(0 to 32 %).
 
 ## Surprise theme (two hours)
 
