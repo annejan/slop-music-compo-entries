@@ -127,6 +127,7 @@ Render options (environment variables):
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
 | `GAIN=keys:0.5` | these buses' gains times these factors (comma separated), for mixing tests without editing the song |
 | `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
+| `VOX_HUMAN=1` | a sung voice as a singer instead of a tuner (0..1, default 0: hard tuned, the robot diva): scoops into the notes, a slow drift, a vibrato of its own, a swell on long notes, breath at their end (`voice._humanise`) |
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |

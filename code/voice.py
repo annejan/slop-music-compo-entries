@@ -35,6 +35,9 @@ FRAME = 5.0          # WORLD frame period, ms
 FS = FRAME / 1000
 
 DIVA = os.environ.get("DIVA", "en_US-hfc_female-medium")
+# 0: hard tuned, every syllable exactly on its note (the eurodance robot diva); 1: a singer's pitch and breath:
+# scoops into the notes, a slow drift, a vibrato of its own, a swell on long notes, breath at their end (see sing)
+HUMAN = float(os.environ.get("VOX_HUMAN", "0"))
 RAPPER = os.environ.get("RAPPER", "en_US-ryan-high")
 
 _loaded = {}
@@ -156,6 +159,40 @@ def _finish(y, gain_db=0.0):
 _VOWEL_LP = signal.butter(4, 6000, fs=OUT_SR, output="sos")   # the backing vowels: no air on top
 
 
+def _humanise(text, voice, take, notes, tgt, sm, vib, sp, ap, tau, starts, since, pre, room, glide, vibrato, cents,
+              h):
+    """A singer instead of a tuner, by h (0..1). The pitch scoops up into each note from below (less after a step
+    down) and glides more slowly between notes; it drifts a little (about 12 cents); the vibrato has its own rate
+    (5.0 to 6.2 Hz) and breathes in depth. The long notes swell a little in the middle, and their ends turn breathy
+    (more aperiodicity, a little quieter). Every syllable gets its own, repeatable variation (seeded by the word,
+    the voice and the take), so a choir of voices does not move as one."""
+    m = len(tgt)
+    rng = np.random.default_rng(int(hashlib.sha1(f"{text}|{voice}|{take}|{notes}".encode()).hexdigest()[:8], 16))
+    g = glide * (1 + 1.5 * h)
+    alpha = 1 - np.exp(-FS / g)
+    sm = signal.lfilter([alpha], [1, alpha - 1], tgt - tgt[0], zi=[0.0])[0] + tgt[0] + cents / 100
+    idx = np.arange(m)
+    for j, s0 in enumerate(starts):
+        down = j > 0 and notes[j][0] < notes[j - 1][0]
+        depth = h * (.5 + .3 * rng.random()) * (.4 if down else 1.0)
+        dt = tau - s0
+        on = (dt >= 0) & (idx >= pre if j else True)
+        sm = sm - np.where(on, depth * np.exp(-np.maximum(dt, 0) / .07), 0.0)
+    if m > 40:
+        b, a = signal.butter(2, 3.0, fs=1 / FS)
+        d = signal.filtfilt(b, a, rng.standard_normal(m))
+        sm = sm + d / (np.std(d) + 1e-9) * .12 * h
+    rate = 5.6 + h * (rng.random() * 1.2 - .6)
+    breathe = 1 + .3 * h * np.sin(2 * np.pi * .7 * tau + rng.random() * 6.28)
+    vib = vibrato * breathe * np.sin(2 * np.pi * rate * tau) * np.clip((since - .22 + .05 * h) / .25, 0, 1)
+    u = np.clip((idx - pre) / max(room, 1), 0, 1)
+    tail = np.clip((u - .7) / .3, 0, 1) * (idx >= pre)
+    gain = 1 + h * (.18 * np.sin(np.pi * u) - .12 * tail)
+    sp = sp * (gain ** 2)[:, None]
+    ap = ap + (1 - ap) * (h * .35 * tail)[:, None]
+    return sm, vib, sp, ap
+
+
 def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12, take=0, cents=0.0,
          vowel_only=False):
     """One syllable sung over one or more notes [(midi, seconds), ...], one after the other.
@@ -206,6 +243,9 @@ def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12
     starts = np.concatenate([[0], ends[:-1]])
     since = tau - starts[np.clip(np.searchsorted(ends, tau, side="right"), 0, len(notes) - 1)]
     vib = vibrato * np.sin(2 * np.pi * 5.6 * tau) * np.clip((since - .22) / .25, 0, 1)
+    if HUMAN > 0:
+        sm, vib, sp2, ap2 = _humanise(text, voice, take, notes, tgt, sm, vib, sp2, ap2, tau, starts, since, pre, room,
+                                      glide, vibrato, cents, HUMAN)
     f0_new = np.where(vo, _hz(sm + vib), 0.0)
     if formant != 1.0:   # move the formants up (brighter) or down (darker)
         bins = sp2.shape[1]
