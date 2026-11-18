@@ -121,6 +121,8 @@ Render options (environment variables):
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
+| `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.unmask`); off by default until measured on every song |
+| `VOXCHAIN=1` | a 1995 vocal channel strip on the vox bus: mud out, fast compressor, presence, de-esser, exciter, leveler (`engine.vocal_chain`); off by default until measured |
 
 ## Voices
 
@@ -187,6 +189,9 @@ name = "verse"
 bars = [24, 32]
 use = "repaint"       # ACE-Step makes these bars again, once per seed; the ear keeps the best,
                       # and only if it beats what is there
+window = 4            # repaint only this section plus 4 bars of context (not yet tested on the GPU)
+lyrics = "section"    # with only the lines sung in that window
+noise = 0.35          # starting from a noised copy of the take, so the words are already there
 seeds = [2, 3]
 
 [[section]]

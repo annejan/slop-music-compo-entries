@@ -21,6 +21,13 @@ projects/rhythm_of_the_badge.toml:
                              #          `seeds`; the ear picks the take with the most lyric words
                              # take: keep the take (the default)
     seeds = [2, 3, 4]
+    window = 4               # repaint: ACE-Step gets only this section and 4 bars on each side (and keeps the rest)
+    lyrics = "section"       # repaint: only the lines sung in that window ("all": the whole sheet)
+    noise = 0.35             # repaint: start from a noised copy of the take (0 pure noise .. 1 the take itself)
+
+    auto = true              # before the sections above: for every sung section of the lyric sheet, the ear
+                             # compares our render and the take, and the one with more words heard goes in
+                             # (ours only when it wins by `auto_margin`, default 0.1)
 
 The DJ intro and outro (16 bars of drums at each end) are always ours. The result is mastered like ours (-9 LUFS
 for eurodance and drum and bass, -10 for house, -1.2 dBTP), and asr.py reports per section how many words come
@@ -71,6 +78,11 @@ def heard_in(heard, t0, t1):
     return asr.words(" ".join(t for s, e_, t in heard if s < t1 and e_ > t0))
 
 
+def section_score(path, t0, t1, want):
+    """The share of `want` heard in t0..t1 of the file: the ear on that stretch alone (reproducible)."""
+    return score(heard_in(asr.hear(path, t0 - .5, t1 + .5), t0 - .5, t1 + .5), want)
+
+
 def score(heard, want):
     if not want:
         return 1.0
@@ -95,8 +107,9 @@ class Producer:
         sheets = [f for f in os.listdir(share.LYRICS) if f.startswith(f"{self.n:02d}-")]
         self.sheet = os.path.join(share.LYRICS, sheets[0]) if sheets else None
 
-    def synth(self, req, src):
-        """An ACE-Step result for this request and source file, cached; returned at 44.1 kHz, lined up with ours."""
+    def synth(self, req, src, align=True):
+        """An ACE-Step result for this request and source file, cached; returned at 44.1 kHz, lined up with ours
+        (align=False: as it comes, only resampled, for a cropped window)."""
         src_hash = hashlib.sha1(open(src, "rb").read()).hexdigest()[:12]
         key = hashlib.sha1((json.dumps(req, sort_keys=True) + src_hash).encode()).hexdigest()[:16]
         out = os.path.join(self.cache, key + ".wav")
@@ -112,10 +125,12 @@ class Producer:
                 sys.exit(f"ACE-Step failed, see {log}")
             os.replace(os.path.join(self.cache, key + "0.wav"), out)
         x, sr = master.read(out)
-        lag = master.lag_to(x, sr, self.ours, start=16 * self.bar)
         if sr != e.SR:
             g = np.gcd(sr, e.SR)
             x = signal.resample_poly(x, e.SR // g, sr // g, axis=0)
+        if not align:
+            return x
+        lag = master.lag_to(x, e.SR, self.ours, start=16 * self.bar)
         i = int(round(lag * e.SR))
         x = x[i:] if i >= 0 else np.concatenate([np.zeros((-i, 2)), x])
         n = len(self.ours)
@@ -155,18 +170,35 @@ class Producer:
         else:
             x = self.ours.copy()
             print("take: ours", flush=True)
+        if self.p.get("auto"):
+            x = self.auto(x)
         for sec in self.p.get("section", []):
             b0, b1 = sec["bars"]
             use = sec.get("use", "take")
             if use == "ours":
                 x = self.splice(x, self.ours, b0, b1)
             elif use == "repaint":
-                src = self.write_tmp(x, "current.wav")
                 best = (self.section_score(x, b0, b1), None)       # what is there now: a repaint must beat it
                 print(f"  {sec.get('name', '')} bars {b0}-{b1}, now: ear {best[0]:.0%}", flush=True)
+                w = sec.get("window")
+                c0, c1 = (max(b0 - w, 0), min(b1 + w, self.bars)) if w is not None else (0, None)
+                i0 = int(round(c0 * self.bar * e.SR))
+                i1 = int(round(c1 * self.bar * e.SR)) if c1 else len(x)
+                src = self.write_tmp(x[i0:i1], "current.wav")
+                extra = {}
+                if sec.get("lyrics") == "section":
+                    extra["lyrics"] = ace.ace_lyrics(self.n, c0 * self.bar, (c1 or self.bars) * self.bar)
+                if "noise" in sec:
+                    extra["cover_noise_strength"] = float(sec["noise"])
                 for seed in sec.get("seeds", [2, 3]):
-                    y = self.synth(self.request(task_type="repaint", repainting_start=b0 * self.bar,
-                                                repainting_end=b1 * self.bar, seed=seed), src)
+                    r = self.request(task_type="repaint", repainting_start=(b0 - c0) * self.bar,
+                                     repainting_end=(b1 - c0) * self.bar, seed=seed, **extra)
+                    if w is None:
+                        y = self.synth(r, src)
+                    else:                                       # the window back in place in a copy of the song
+                        part = self.synth(r, src, align=False)[:i1 - i0]
+                        y = x.copy()
+                        y[i0:i0 + len(part)] = part
                     s = self.section_score(y, b0, b1)
                     print(f"  {sec.get('name', '')} bars {b0}-{b1}, seed {seed}: ear {s:.0%}", flush=True)
                     if s > best[0]:
@@ -189,24 +221,43 @@ class Producer:
         print(self.report(out))
         return out
 
+    def auto(self, x):
+        """Per sung section of the lyric sheet: our render or the take, whichever the ear hears more words in."""
+        if not self.sheet:
+            return x
+        margin = self.p.get("auto_margin", .1)
+        take_path = self.write_tmp(x, "auto_take.wav")
+        lo, hi = 16, self.bars - 16
+        for t0, t1, want in section_words(self.sheet, self.bpm):
+            if not want:
+                continue
+            b0, b1 = max(round(t0 / self.bar), lo), min(round(t1 / self.bar), hi)
+            if b1 - b0 < 1:
+                continue
+            s_take = section_score(take_path, t0, t1, want)
+            s_ours = section_score(self.ours_path, t0, t1, want)
+            pick = "ours" if s_ours > s_take + margin else "take"
+            if pick == "ours":
+                x = self.splice(x, self.ours, b0, b1)
+            print(f"auto bars {b0}-{b1}: take {s_take:.0%}, ours {s_ours:.0%} -> {pick}", flush=True)
+        return x
+
     def section_score(self, y, b0, b1):
         """The share of the lyric words heard in bars b0..b1 of y."""
         if not self.sheet:
             return 0.0
         path = self.write_tmp(y, "score.wav")
-        heard = asr.hear(path)
         t0, t1 = b0 * self.bar, b1 * self.bar
         want = [w for s0, s1, ws in section_words(self.sheet, self.bpm) if s0 < t1 - 1 and s1 > t0 + 1 for w in ws]
-        return score(heard_in(heard, t0 - .5, t1 + .5), want)
+        return section_score(path, t0, t1, want)
 
     def report(self, path):
         if not self.sheet:
             return "no lyric sheet: no ear report"
-        heard = asr.hear(path)
         lines = [f"ear per section ({os.path.basename(path)}):"]
         for t0, t1, want in section_words(self.sheet, self.bpm):
             if want:
-                s = score(heard_in(heard, t0, min(t1, t0 + 60)), want)
+                s = section_score(path, t0, min(t1, t0 + 60), want)
                 lines.append(f"  bar {t0 / self.bar:5.1f}: {s:4.0%}  {' '.join(want[:8])}...")
         return "\n".join(lines)
 

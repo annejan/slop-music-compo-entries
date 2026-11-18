@@ -41,8 +41,9 @@ def words(text):
     return re.findall(r"[a-z']+|\d+", text)
 
 
-def hear(path):
-    """[(start, end, text)] of what the recognizer hears."""
+def hear(path, t0=None, t1=None):
+    """[(start, end, text)] of what the recognizer hears (from t0 to t1 seconds only, if given; times stay song
+    times). No context carried from one stretch to the next: one misheard line must not drag the next along."""
     global _model
     if _model is None:
         from faster_whisper import WhisperModel
@@ -53,8 +54,13 @@ def hear(path):
     x, sr = master.read(path)                       # our own reader: mono, 16 kHz, as float32 (no PyAV)
     g = np.gcd(sr, 16000)
     x = signal.resample_poly(x.mean(1), 16000 // g, sr // g).astype(np.float32)
-    segments, _ = _model.transcribe(x, language="en", vad_filter=VAD, beam_size=5)
-    return [(s.start, s.end, s.text.strip()) for s in segments]
+    off = 0.0
+    if t0 is not None:
+        off = max(t0, 0.0)
+        x = x[int(off * 16000):int(t1 * 16000) if t1 else None]
+    segments, _ = _model.transcribe(x, language="en", vad_filter=VAD, beam_size=5,
+                                    condition_on_previous_text=False, temperature=0.0)
+    return [(s.start + off, s.end + off, s.text.strip()) for s in segments]
 
 
 def sheet_text(sheet):

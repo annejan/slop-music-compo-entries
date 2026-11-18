@@ -438,6 +438,83 @@ def limit(x, ceiling):
     return x * g[:, None]
 
 
+def peaking(x, f0, gain_db, q=1.0):
+    """An RBJ peaking EQ."""
+    A, w = 10 ** (gain_db / 40), 2 * np.pi * f0 / SR
+    al = np.sin(w) / (2 * q)
+    return signal.lfilter([1 + al * A, -2 * np.cos(w), 1 - al * A], [1 + al / A, -2 * np.cos(w), 1 - al / A], x, axis=0)
+
+
+def compress(x, below_db=6.0, ratio=4.0, att=.002, rel=.06, knee=6.0):
+    """A feed-forward compressor, stereo linked, its threshold `below_db` under the signal's loud level (the 95th
+    percentile of its envelope while it sounds), so it works at any bus level; the output at the input's RMS."""
+    lv = np.abs(x).max(1)
+    a_, r_ = np.exp(-1 / (att * SR)), np.exp(-1 / (rel * SR))
+    env = np.maximum(signal.lfilter([1 - r_], [1, -r_], lv), signal.lfilter([1 - a_], [1, -a_], lv))
+    db = 20 * np.log10(env + 1e-9)
+    loud = np.percentile(db[db > db.max() - 50], 95)
+    over = db - (loud - below_db)
+    gr = np.where(over > knee / 2, over, np.where(over > -knee / 2, (over + knee / 2) ** 2 / (2 * knee), 0))
+    y = x * (10 ** (-gr * (1 - 1 / ratio) / 20))[:, None]
+    return y * np.sqrt(np.mean(x ** 2) / (np.mean(y ** 2) + 1e-12))
+
+
+def deess(x, lo=5500, thr=.35, depth_db=6.0):
+    """Split-band de-esser: the band above `lo` turned down when it is a large share of the voice."""
+    s = highpass(x, lo, 4)
+    ls = np.sqrt(one_pole((s ** 2).mean(1), .005))
+    lt = np.sqrt(one_pole((x ** 2).mean(1), .005)) + 1e-9
+    g = 10 ** (-depth_db * np.clip((ls / lt - thr) / thr, 0, 1) / 20)
+    return (x - s) + s * g[:, None]
+
+
+def vocal_chain(v):
+    """A 1995 vocal channel strip: the mud out (300 Hz -3 dB), a fast 1176-style compressor (4:1), presence (3 kHz
+    +3 dB), a de-esser, an Aphex-style exciter (harmonics above 6 kHz: Piper's voices stop at 11 kHz), and a slow
+    LA-2A-style leveler (2:1). Consonants and short words come up against the vowels. The output at the input's RMS."""
+    if np.abs(v).max() == 0:
+        return v
+    rms0 = np.sqrt(np.mean(v ** 2))
+    y = peaking(v, 300, -3, .8)
+    y = compress(y, 6, 4, .002, .06)
+    y = peaking(y, 3000, 3, .9)
+    y = deess(y)
+    h = highpass(y, 3000, 2)
+    y = y + .12 * highpass(np.tanh(4 * h) / 4, 6000, 2)
+    y = compress(y, 4, 2, .01, .25)
+    return y * rms0 / (np.sqrt(np.mean(y ** 2)) + 1e-12)
+
+
+def unmask(music, voice, depth_db=6.0, lo=250, hi=6000, nper=2048):
+    """music ducked per STFT bin where the voice has energy, in the band lo..hi, by up to depth_db: the words come
+    through, and between the lines nothing changes. The voice's power is smoothed over 9 bins (about a third of an
+    octave at 1 kHz) and held with a 120 ms release; each bin is measured against its own loud level."""
+    if np.abs(voice).max() == 0:
+        return music
+    hop = nper // 4
+    f, _, V = signal.stft(voice.mean(1).astype(np.float32), SR, nperseg=nper, noverlap=nper - hop)
+    P = signal.convolve2d(np.abs(V) ** 2, np.ones((9, 1), np.float32) / 9, mode="same").astype(np.float32)
+    del V                                   # float32 throughout: a whole song's STFT is large
+    rel = np.exp(-hop / SR / .12)
+    S = np.empty_like(P)
+    acc = np.zeros(P.shape[0])
+    for k in range(P.shape[1]):
+        acc = np.maximum(P[:, k], acc * rel)
+        S[:, k] = acc
+    db = 10 * np.log10(S + 1e-12)
+    ref = np.percentile(db[:, db.max(0) > db.max() - 40], 98, axis=1, keepdims=True)
+    m = np.clip((db - (ref - 30)) / 30, 0, 1)
+    band = ((f >= lo) & (f <= hi)).astype(float)[:, None]
+    g = (10 ** (-depth_db * m * band / 20)).astype(np.float32)
+    del S, db, m
+    out = np.zeros_like(music)
+    for ch in range(2):
+        _, _, X = signal.stft(music[:, ch].astype(np.float32), SR, nperseg=nper, noverlap=nper - hop)
+        _, y = signal.istft(X * g[:, :X.shape[1]], SR, nperseg=nper, noverlap=nper - hop)
+        out[:len(y), ch] = y[:len(music)]
+    return out
+
+
 # ---------------------------------------------------------------- the song
 BUSES = ("drums", "perc", "bass", "pads", "keys", "lead", "vox", "fx")
 MUTED = set(filter(None, os.environ.get("MUTE", "").split(",")))
@@ -503,7 +580,7 @@ class Song:
             self.put("vox", t + off, g, pan, amp, wet=wet, echo=echo)
 
     def mixdown(self, path, gains, cut_keys=None, duck=None, room=.25, echo_mix=.5, lufs=-10.0, fade_in=0.0, ir=None,
-                tail_fade=2.0, ceiling_db=-1.2):
+                tail_fade=2.0, ceiling_db=-1.2, unmask=0.0, voxchain=False):
         """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
         16-bit WAV of the song's length plus the reverb's tail.
 
@@ -533,6 +610,8 @@ class Song:
             self.bus[k] *= (1 - amount * env)[:, None].astype(np.float32)
         for k in ("pads", "keys", "lead", "vox"):     # the lows are the kick's and the bass's
             self.bus[k] = highpass(self.bus[k], 100 if k == "vox" else 160).astype(np.float32)   # a man raps
+        if os.environ.get("VOXCHAIN", "1" if voxchain else "0") == "1":   # the 1995 channel strip on the voices
+            self.bus["vox"] = vocal_chain(self.bus["vox"].astype(np.float64)).astype(np.float32)
         # the delay: dotted eighths, ping-pong, fading
         d = int(3 * self.step * SR)
         echo = np.zeros((n, 2))
@@ -554,7 +633,14 @@ class Song:
                 x = self.bus[k].astype(np.float64) * gains.get(k, 1.0)
                 if np.abs(x).max() > 0:
                     print(f"  {k:6s} {integrated_lufs(x):6.1f} LUFS")
-        music = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in BUSES if k != "fx") + echo * echo_mix
+        unmask_db = float(os.environ.get("UNMASK", unmask))
+        if unmask_db > 0:            # the pads, keys and lead make room where (and in the band where) the voice sings
+            vox = self.bus["vox"].astype(np.float64) * gains.get("vox", 1.0)
+            soft = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in ("pads", "keys", "lead"))
+            rest = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in ("drums", "perc", "bass"))
+            music = rest + unmask(soft, vox, unmask_db) + vox + echo * echo_mix
+        else:
+            music = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in BUSES if k != "fx") + echo * echo_mix
         if cut_keys:
             ks, vs = zip(*cut_keys)
             cutoff = np.exp(np.interp(np.arange(n) / SR, ks, np.log(vs)))

@@ -88,13 +88,29 @@ def song_info(script):
     sys.exit(f"{script}: not in share.SONGS (add the song there first)")
 
 
-def ace_lyrics(n):
-    """The lyric sheet as ACE-Step lyrics: [Section] tags, the sung words without the roles, respelled."""
+def ace_lyrics(n, t0=None, t1=None):
+    """The lyric sheet as ACE-Step lyrics: [Section] tags, the sung words without the roles, respelled. With t0 and
+    t1 (seconds): only the sections that start inside that stretch, or sing into it."""
     sheets = glob.glob(os.path.join(share.LYRICS, f"{n:02d}-*.txt"))
     if not sheets:
         return "[Instrumental]"
+    lines = open(sheets[0], encoding="utf-8").read().splitlines()
+    if t0 is not None:
+        keep, times = [], []
+        for line in lines:
+            m = re.match(r"\[(\d+):(\d\d)\]", line.strip())
+            times.append(int(m.group(1)) * 60 + int(m.group(2)) if m else None)
+        starts = [t for t in times if t is not None]
+        cur = None
+        for line, t in zip(lines, times):
+            if t is not None:
+                nxt = next((s for s in starts if s > t), 10 ** 6)
+                cur = t < t1 and nxt > t0
+            if cur:
+                keep.append(line)
+        lines = keep
     out, started = [], False
-    for line in open(sheets[0], encoding="utf-8").read().splitlines():
+    for line in lines:
         line = line.strip()
         m = re.match(r"\[\d+:\d\d\]\s*(.*)", line)
         started = started or bool(m)              # the header (title, voices) ends at the first time stamp
