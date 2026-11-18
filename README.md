@@ -177,7 +177,17 @@ each file.
 
 `master.py IN.wav OUT.wav --bpm 120` masters a song from another generator
 (ACE-Step) the same way: the beat grid moved to sample 0, 44.1 kHz, -10 LUFS,
--1.2 dBTP, 16-bit with dither.
+-1.2 dBTP, 16-bit with dither. `--era 90s` makes a modern-sounding mix more like
+the 90s (narrower, less deep sub, no air above 15 kHz, a little tape, -11
+LUFS). `--dj-from OURS.wav --bars N` takes the 16-bar DJ intro and outro from
+our own render: ACE-Step does not keep them drums only.
+
+**The workflow that works best so far:** write the song as a code track, give
+the render to ACE-Step as the source of a `cover-nofsq` (strength 0.3, the
+render also as `--ref-audio`), and master the result with `--dj-from`. Our code
+sets the structure, the tempo, the key and the melody; ACE-Step sets the sound
+and the voices. ACE-Step's own text-to-music takes sound too modern for the 90s
+themes.
 
 ## Other options we might try
 

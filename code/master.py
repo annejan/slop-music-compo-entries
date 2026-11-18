@@ -2,7 +2,7 @@
 """Master a finished song from another generator (ACE-Step) for the DJ, the same way engine.py masters ours:
 the beat grid moved to sample 0, 44.1 kHz, the loudness target under a true-peak ceiling, 16-bit with dither.
 
-master.py IN.wav OUT.wav --bpm 120 [--lufs -10] [--ceiling -1.2]
+master.py IN.wav OUT.wav --bpm 120 [--lufs -10] [--ceiling -1.2] [--era 90s] [--dj-from OURS.wav --bars 120]
 
 The beat is found from the kick: the onsets of the 40-120 Hz band, folded onto one beat. The start is cut to the
 first beat (a few ms fade in), so the grid starts at sample 0, as in our own renders.
@@ -41,6 +41,44 @@ def beat_phase(x, sr, bpm):
     return (edges[np.argmax(hist)] + edges[1] / 2) % beat
 
 
+def splice_dj(x, ours, bpm, bars, dj_bars=16):
+    """The DJ intro and outro (drums only) from our own render, the other take in between: ACE-Step does not keep
+    to "drums only" and sometimes drops out in the intro. Both start on the beat grid at sample 0. Ours is matched
+    to the take's level around each join, with a one-beat equal-power crossfade on the downbeat."""
+    beat = 60 / bpm
+    f = int(round(beat * e.SR))
+    n = min(len(x), len(ours))
+    x, ours = x[:n].copy(), ours[:n]
+    rms = lambda a, i0, i1: np.sqrt(np.mean(a[max(i0, 0):i1] ** 2) + 1e-12)
+    u = np.linspace(0, 1, f)[:, None]
+    fade_out, fade_in = np.cos(u * np.pi / 2), np.sin(u * np.pi / 2)
+    span = int(8 * beat * e.SR)
+    j = int(round(dj_bars * 4 * beat * e.SR))                      # the intro: ours up to bar dj_bars
+    g = min(rms(x, j - span, j) / rms(ours, j - span, j), rms(x, j, j + span) / rms(ours, j, j + span))
+    x[:j - f] = ours[:j - f] * g
+    x[j - f:j] = ours[j - f:j] * g * fade_out + x[j - f:j] * fade_in
+    j = int(round((bars - dj_bars) * 4 * beat * e.SR))             # the outro: ours from bar bars - dj_bars
+    g = rms(x, j - span, j) / rms(ours, j - span, j)
+    x[j:j + f] = x[j:j + f] * fade_out + ours[j:j + f] * g * fade_in
+    x[j + f:] = ours[j + f:] * g
+    return x
+
+
+def era_90s(x):
+    """Make a modern-sounding mix sit in a 90s club: a narrower stereo image, less of the deep sub, the top end
+    rolled off from about 15 kHz (DAT, CD and radio of the time, and samplers at 32 kHz), a soft tape saturation."""
+    mid, side = (x[:, 0] + x[:, 1]) / 2, (x[:, 0] - x[:, 1]) / 2
+    side = e.highpass(side, 200) * .65                             # narrower, and the lows in the middle
+    x = np.stack([mid + side, mid - side], 1)
+    sub = e.lowpass(x, 45, order=2)
+    x = x - .45 * sub                                              # the sub below 45 Hz down by about 5 dB
+    x = e.lowpass(x, 15500, order=4)                               # no air above 15 kHz
+    x = e.highpass(x, 28)
+    peak = np.abs(x).max() + 1e-9
+    drive = 1.6
+    return np.tanh(drive * x / peak) / np.tanh(drive) * peak       # tape: the peaks rounded off, a little warmth
+
+
 def master(x, lufs=-10.0, ceiling_db=-1.2):
     ceiling = 10 ** (ceiling_db / 20)
     level = e.integrated_lufs(x)
@@ -72,6 +110,9 @@ if __name__ == "__main__":
     ap.add_argument("--bpm", type=float, required=True)
     ap.add_argument("--lufs", type=float, default=-10.0)
     ap.add_argument("--ceiling", type=float, default=-1.2)
+    ap.add_argument("--era", choices=["90s"], help="90s: narrower, less sub, no air, tape (and -11 LUFS)")
+    ap.add_argument("--dj-from", help="our own render of the song: its DJ intro and outro replace the take's")
+    ap.add_argument("--bars", type=int, help="the song's length in bars (for --dj-from)")
     a = ap.parse_args()
     x, sr = read(a.src)
     phase = beat_phase(x, sr, a.bpm)
@@ -81,6 +122,15 @@ if __name__ == "__main__":
         x = signal.resample_poly(x, e.SR // g, sr // g, axis=0)
     k = int(.004 * e.SR)
     x[:k] *= np.linspace(0, 1, k)[:, None]
+    if a.dj_from:
+        ours, sr2 = read(a.dj_from)
+        if sr2 != e.SR or not a.bars:
+            raise ValueError(f"--dj-from needs a {e.SR} Hz render (this one: {sr2} Hz) and --bars")
+        x = splice_dj(x, ours, a.bpm, a.bars)
+    if a.era == "90s":
+        x = era_90s(x)
+        if a.lufs == -10.0:
+            a.lufs = -11.0
     x = master(x, a.lufs, a.ceiling)
     write(a.dst, x)
     tp = 20 * np.log10(e.true_peak(x).max())
