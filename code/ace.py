@@ -77,6 +77,9 @@ CAPTIONS = {
                       "soulful female vocal, male MC",
     "sdio_love": "80s Italo disco, male and female vocal duet, vocoder robot, arpeggiated octave synth bass, drum "
                  "machine, DX7 electric piano stabs and bells, dreamy synth melody, key change up for the last chorus",
+    "flash_the_c6": "late 90s digital hardcore punk, distorted breakbeat, distorted gabber kick, noise guitar power "
+                    "chords, sirens, shouted male and female punk vocals, gang vocal terrace chant, glitch stutter "
+                    "edits, bit crush, tape stops, chiptune bleeps, riot, aggressive",
 }
 VOCALS_CAPTION = ("a cappella vocals only, no instruments: natural, warm, human voices, the same melody, words and "
                   "timing, 1994 studio recording, expressive, breathing, not robotic")

@@ -8,7 +8,8 @@ dj.py [--only warm_boot,segfault] [--use rhythm_of_the_badge=renders/ace/rhythm_
 file of a song (another name: a new key, title or tempo) is removed, so the stick never holds a song twice.
 
 Checks per song: the true peak (at most -1.0 dBTP), the loudness, the beat grid at sample 0 (the kick on the
-grid), the 16 bars at each end drums only (little of the 300-3000 Hz band, where keys, pads and voices are), and
+grid), the 16 bars at each end drums only (little of the 300-3000 Hz band, where keys, pads and voices are, or no
+pitch in it: distorted drums fill that band too), and
 the length (the bars plus the reverb's tail: a preview or a cut file is flagged).
 """
 import argparse
@@ -57,6 +58,18 @@ def end_key(song, key):
     return NOTES[(PITCH[key[:-1] if minor else key] + int(m.group(1))) % 12] + ("m" if minor else "")
 
 
+def pitch_share(x, sr):
+    """How much of the 300-3000 Hz peaks fall on the 3 strongest pitch classes: about .33-.39 for drums (noise has no
+    key), .48-.66 for the sung bodies of our songs (18 November). An end above .44 carries pitch: keys, pads, voices."""
+    f, _, z = signal.stft(x, sr, nperseg=8192, noverlap=6144)
+    band = (f >= 300) & (f <= 3000)
+    f, p = f[band], np.abs(z[band]) ** 2
+    peak = (p > np.roll(p, 1, 0)) & (p > np.roll(p, -1, 0))
+    pc = np.round(12 * np.log2(f / 440)).astype(int) % 12
+    c = np.array([(p * peak)[pc == k].sum() for k in range(12)])
+    return float(np.sort(c / c.sum())[-3:].sum())
+
+
 def check(path, bpm, bars):
     x, sr = master.read(path)
     tp = 20 * np.log10(e.true_peak(x).max())
@@ -80,9 +93,11 @@ def check(path, bpm, bars):
         problems.append(f"true peak {tp:+.1f} dBTP")
     if grid > 10:
         problems.append(f"{grid:.0f} ms off the grid")
-    if intro > .5:
+    # drums only: little of the mid band, or (distorted drums are mid-heavy) no pitch in it
+    end = lambda t0, t1: x[int(t0 * sr):int(t1 * sr)].mean(1)
+    if intro > .5 and pitch_share(end(0, 15.5 * bar), sr) > .44:
         problems.append("the intro is not drums only")
-    if outro > .5:
+    if outro > .5 and pitch_share(end((bars - 15.5) * bar, bars * bar), sr) > .44:
         problems.append("the outro is not drums only")
     return dict(tp=tp, lufs=lufs, grid=grid, length=len(x) / sr, problems=problems)
 

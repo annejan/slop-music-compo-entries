@@ -282,6 +282,44 @@ DJ files.
 - **ACE-Step (optional):** one polish step from our render
   (`projects/_polish.toml`).
 
+
+## Bonus: digital hardcore
+
+### Flash The C Six (code track)
+
+[code/flash_the_c6.py](code/flash_the_c6.py). Asked for on 18 November as
+"something out of the box": digital hardcore in the spirit of Alec Empire and
+Atari Teenage Riot, the terrace unity anthem of Sham 69, glitchcore, and the
+one-shout punk of The Exploited, about something geeky. The words are all
+new. 174 BPM (it mixes with Race Condition), F minor, 144 bars, 3:21, -9 LUFS.
+The whole song is one shout, "Flash the C six!". In The Rhythm Of The Badge
+the polite MC said "Do not flash the C six"; here the room shouts him down
+until he gives in, and the glitches play what then happens to a Tanmatsu:
+esptool's dots, "Hard resetting via RTS pin", the boot ROM at the wrong baud
+rate, Guru Meditation, panic, a boot loop. "Told you." Four Claude
+songwriters pitched in parallel (No Split Brain, Void the Warranty, Flash The
+C Six, More Flux), a Claude judge picked this one, and a Claude builder made
+it from the template and checked it by ear: 80 % of the words heard, the
+clearest of our songs.
+
+- **Structure:** intro (the break, then the gabber), the band behind a
+  filter, riot A, the authority (half time, the terrace chant), the flash, the
+  crash, riot B, terrace, the authority gives in, riot C, the room alone, the
+  boot loop, outro.
+- **Sounds:** a distorted breakbeat, a gabber kick (a 909-style kick through
+  tanh), a sine sub, noise guitars from distorted saws, feedback, sirens, chip
+  arpeggios, esptool's dots, a USB-C click, UART noise. The glitches are edits
+  of the rendered buses: loops, stutters, bit-crush, tape stops, cuts to true
+  silence; none of them moves the beat grid or reaches the drums-only ends.
+- **Voices (Piper):** each shout is a clean take with a distorted copy over
+  it. The male shouter is `en_US-hfc_male-medium` (Ryan's one-word shouts
+  were never understood), the female shouter `en_GB-cori-high`; the room is
+  Joe, John, Bryce, Norman, Ryan, Amy, Kristin, Jenny and HFC female; the
+  authority is `en_GB-alan-medium`; the read-outs are `en_US-lessac-high`
+  through a small speaker.
+- **ACE-Step:** the one-step polish lost 20 of the 184 words, so ours is the
+  one shared.
+
 ---
 
 ## Software and licences

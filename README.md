@@ -32,8 +32,8 @@ sounds and voices it uses. The lyric sheets are in [lyrics/](lyrics/).
 Claude writes every song as a Python script: every note and every sound is in
 the source, with no samples and no loops. Warm Boot and Segfault are our
 entries; the other five are the other takes from `suno/`, made as code tracks
-for fun, and Race Condition and S.D.I.O. are rehearsals for the surprise
-themes.
+for fun. Race Condition and S.D.I.O. are rehearsals for the surprise themes,
+and Flash The C Six is a bonus: digital hardcore.
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
@@ -46,6 +46,7 @@ themes.
 | [rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
 | [race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
 | [sdio_love.py](code/sdio_love.py) | rehearsal: Italo disco | 120 BPM, D minor, then E minor | 3:46 |
+| [flash_the_c6.py](code/flash_the_c6.py) | bonus: digital hardcore | 174 BPM, F minor | 3:21 |
 
 ## How a song is made
 
