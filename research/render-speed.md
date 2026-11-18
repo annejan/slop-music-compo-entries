@@ -54,12 +54,24 @@ Turbo DiT (Q8_0, 8 steps) and the 1.7B LM (Q8_0).
 | 1:29 | 15 s | about 12 s | 17 s | 45 s |
 | 3:30 | about 31 s (34 tokens/s) | 25 s | 40 s | 102 to 139 s |
 
+| ACE-Step job (3:37 song) | Time |
+|---|---|
+| cover of the whole song, turbo DiT | 135 to 144 s |
+| cover of only the vocal stem, base DiT (50 steps) | 280 to 292 s |
+| `ace.py --mode vocals` from start to MP3 (stems, ACE-Step, weave, MP3, ear) | 290 s |
+
 Peak memory: 2 GB. `master.py` (beat grid to sample 0, 44.1 kHz, -10 LUFS,
--1.2 dBTP) takes 6 s for a 3:30 song.
+-1.2 dBTP) takes 6 s for a 3:30 song, `weave.py` 30 s.
+
+## The ear and the DJ files
+
+| Job | Time |
+|---|---|
+| `asr.py`: Whisper base.en on the CPU over a 3:37 song | 5 s (the first run also downloads 150 MB) |
+| `dj.py`: 8 WAVs copied and checked, the track list | 11 s |
 
 The research guess was 3 to 8 minutes for a 3-minute song; it is about 2
-minutes. The 4B LM and the base DiT (for adding vocals over our own tracks) are
-not measured yet.
+minutes.
 
 ## What this means for a surprise theme (2 hours)
 
