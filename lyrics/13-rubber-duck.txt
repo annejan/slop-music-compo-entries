@@ -1,0 +1,48 @@
+Rubber Duck
+Rehearsal: disco · 120 BPM · D minor · 3:46
+Words by Claude. Voices: DIVA: ACE-Step 1.5 (4B LM + SFT), its own take (seed 1, chosen by ear from three);
+NARRATORS: Ryan and Lessac, taking turns; THE ROOM: Joe, John, Amy, Kristin, Bryce
+
+[0:00] Intro (the disco drums alone)
+
+[0:32] The octave bass, the strings, the wah guitar
+[0:48] THE ROOM: Quack! Quack!
+[0:56] THE ROOM: Quack! Quack! (the horns come in)
+
+[1:04] DIVA: Talk to the duck, baby
+DIVA: Tell it all night long
+DIVA: Talk to the duck, baby
+DIVA: Tell it where it all went wrong
+[1:20] THE ROOM: Quack! Quack!
+THE ROOM: Quack! Quack!
+
+[1:36] RYAN: It worked on my machine.
+[1:40] LESSAC: Did you try turning it off and on again?
+[1:44] RYAN: I have been staring at this for six hours.
+[1:48] LESSAC: Have you tried explaining it to the duck?
+[1:52] THE ROOM: Quack! Quack!
+THE ROOM: Quack! Quack!
+
+[2:08] Break (no kick, the strings)
+RYAN: So, the function takes the list...
+[2:12] RYAN: and then it loops...
+[2:16] RYAN: and then... oh.
+[2:18] THE ROOM: Oh!
+[2:20] LESSAC: Oh!
+THE ROOM: Quack!
+
+[2:24] Build (the room faster, a snare roll)
+THE ROOM: Quack! Quack! Quack! Quack!
+
+[2:40] DIVA: Talk to the duck, baby
+DIVA: Tell it all night long
+DIVA: Talk to the duck, baby
+DIVA: Tell it where it all went wrong
+[2:56] THE ROOM: Quack! Quack!
+THE ROOM: Quack! Quack!
+
+[3:12] Outro (the disco drums alone)
+
+Notes
+- Disco was drawn at random at 18:23 on 18 November for a practice round. Rubber duck debugging: you explain
+  your bug to a rubber duck, and find it yourself. Both songs were built in short rounds with the user listening on a phone.

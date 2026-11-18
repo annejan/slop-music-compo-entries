@@ -34,6 +34,8 @@ SONGS = [
     ("sdio-love_120bpm_Dm.wav", "S.D.I.O. (I Love You So)", "Rehearsal: Italo disco", 120, "Dm", 112),
     ("flash-the-c6_174bpm_Fm.wav", "Flash The C Six", "Bonus: digital hardcore", 174, "Fm", 144),
     ("push-it-to-prod_124bpm_Em.wav", "Push It To Prod", "Rehearsal: big beat", 124, "Em", 112),
+    ("uptime-fever_120bpm_Am.wav", "Uptime Fever", "Rehearsal: disco", 120, "Am", 112),
+    ("rubber-duck_120bpm_Dm.wav", "Rubber Duck", "Rehearsal: disco", 120, "Dm", 112),
 ]
 
 

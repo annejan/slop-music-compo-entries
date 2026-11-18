@@ -47,6 +47,8 @@ and Flash The C Six is a bonus: digital hardcore.
 | [race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
 | [sdio_love.py](code/sdio_love.py) | rehearsal: Italo disco | 120 BPM, D minor, then E minor | 3:46 |
 | [push_it_to_prod.py](code/push_it_to_prod.py) | rehearsal: big beat | 124 BPM, E minor | 3:39 |
+| [uptime_fever.py](code/uptime_fever.py) | rehearsal: disco | 120 BPM, A minor | 3:46 |
+| [rubber_duck.py](code/rubber_duck.py) | rehearsal: disco | 120 BPM, D minor | 3:46 |
 | [flash_the_c6.py](code/flash_the_c6.py) | bonus: digital hardcore | 174 BPM, F minor | 3:21 |
 
 ## How a song is made
@@ -368,14 +370,15 @@ A timebox for the two hours: the first full render by 0:20, the words frozen
 by 0:45, no more changes after 1:15, `share.py` and `dj.py` by 1:30, the stick
 by 1:40.
 
-Three rehearsals so far. Race Condition (drum and bass) took about 4 minutes
+Four rehearsals so far. Race Condition (drum and bass) took about 4 minutes
 from the theme to the finished render. S.D.I.O. (Italo disco, drawn at random
 on 18 November) went through the whole line in 32:45: three songwriters
 pitched in parallel and a judge picked one (15:38), the first full render at
 19:08, five renders with ear checks to 27:00, then the polish, `share.py` and
 `dj.py`. Words heard: 56 % ours, 64 % polished. Push It To Prod (big beat,
 drawn on 18 November) was made in short rounds with the user listening to
-snippets on a phone, and took 26 minutes from the draw to the DJ files.
+snippets on a phone, and took 26 minutes from the draw to the DJ files. Disco (drawn the same evening) gave two songs, Uptime Fever and Rubber Duck, in 24 minutes from the
+draw to both DJ files, made the same way: the diva is an ACE-Step take, sung a cappella and played whole.
 
 ## Research: `research/`
 

@@ -1,0 +1,49 @@
+Uptime Fever
+Rehearsal: disco · 120 BPM · A minor · 3:46
+Words by Claude. Voices: DIVA: ACE-Step 1.5 (4B LM + SFT), its own take (seed 1, chosen by ear from three);
+NARRATORS: Ryan and Lessac, taking turns; THE ROOM: Joe, John, Amy, Kristin, Bryce
+
+[0:00] Intro (the disco drums alone)
+
+[0:32] The octave bass, the strings, the wah guitar
+[0:48] THE ROOM: Up-time! Up-time!
+[0:56] THE ROOM: Up-time! Up-time! (the horns come in)
+
+[1:04] DIVA: Don't you reboot me, baby
+DIVA: A thousand days and counting
+DIVA: Don't you reboot me, baby
+DIVA: A thousand days and counting
+[1:20] THE ROOM: Up-time! Up-time!
+THE ROOM: Up-time! Up-time!
+
+[1:36] RYAN: Up for a thousand days.
+[1:40] LESSAC: Nobody knows the root password.
+[1:44] RYAN: The last admin left in twenty nineteen.
+[1:48] LESSAC: Don't touch it. Don't even look at it.
+[1:52] THE ROOM: Up-time! Up-time!
+THE ROOM: Up-time! Up-time!
+
+[2:08] Break (no kick, the strings)
+LESSAC: Kernel update pending.
+THE ROOM: Ooh!
+[2:12] RYAN: Reboot required.
+THE ROOM: Ooh!
+[2:16] LESSAC: Reboot now, or later?
+[2:20] RYAN: Later.
+THE ROOM: Yeah!
+
+[2:24] Build (the room faster, a snare roll)
+THE ROOM: Up-time! Up-time! Up-time! Up-time!
+
+[2:40] DIVA: Don't you reboot me, baby
+DIVA: A thousand days and counting
+DIVA: Don't you reboot me, baby
+DIVA: A thousand days and counting
+[2:56] THE ROOM: Up-time! Up-time!
+THE ROOM: Up-time! Up-time!
+
+[3:12] Outro (the disco drums alone)
+
+Notes
+- Disco was drawn at random at 18:23 on 18 November for a practice round. The user picked this pitch, and then also
+  Rubber Duck. Both songs were built in short rounds with the user listening on a phone.
