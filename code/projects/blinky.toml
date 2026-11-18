@@ -1,0 +1,15 @@
+# Blinky (The LED Song): ACE-Step re-plays our render; the rap and the zero-based count-in stay ours.
+take = "cover"
+strength = 0.85
+model = "turbo"
+seed = 1
+
+[[section]]
+name = "rap"
+bars = [48, 56]
+use = "ours"
+
+[[section]]
+name = "morse and count-in"
+bars = [56, 64]
+use = "ours"

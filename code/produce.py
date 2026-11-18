@@ -4,6 +4,7 @@ tuned on its own. A project file (projects/<song>.toml) holds the knobs; a chang
 (every ACE-Step result is cached by its request).
 
 produce.py SONG [--project FILE]      writes renders/produce/<song>/<song>.wav, the MP3s and an ear report
+produce.py SONG --map                 the song's sections from its lyric sheet, with their bars: to write a project
 
 projects/rhythm_of_the_badge.toml:
 
@@ -211,7 +212,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("song")
     ap.add_argument("--project", help="default projects/<song>.toml (or just a cover take)")
+    ap.add_argument("--map", action="store_true", help="print the sections and their bars, then stop")
     a = ap.parse_args()
+    if a.map:
+        n, wav, title, day, bpm, key, bars = ace.song_info(a.song)
+        sheets = [f for f in os.listdir(share.LYRICS) if f.startswith(f"{n:02d}-")]
+        bar = 240 / bpm
+        print(f"{title}: {bpm} BPM, {bars} bars ({bar:.3f} s a bar)")
+        for line in open(os.path.join(share.LYRICS, sheets[0]), encoding="utf-8").read().splitlines():
+            m = re.match(r"\[(\d+):(\d\d)\]\s*(.*)", line.strip())
+            if m:
+                t = int(m.group(1)) * 60 + int(m.group(2))
+                print(f"  bar {round(t / bar):3d}  [{m.group(1)}:{m.group(2)}]  {m.group(3)[:70]}")
+        return
     path = a.project or os.path.join(HERE, "projects", a.song + ".toml")
     project = tomllib.load(open(path, "rb")) if os.path.exists(path) else {}
     Producer(a.song, project).run()

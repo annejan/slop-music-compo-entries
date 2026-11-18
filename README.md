@@ -174,7 +174,8 @@ What we found:
 
 ## Producing section by section
 
-`produce.py SONG` reads `code/projects/<song>.toml`:
+`produce.py SONG` reads `code/projects/<song>.toml`; `produce.py SONG --map`
+prints the song's sections with their bars, from the lyric sheet:
 
 ```toml
 take = "cover"        # the whole song first: ACE-Step re-plays our render ("ours": no ACE-Step)
