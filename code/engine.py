@@ -485,7 +485,7 @@ def vocal_chain(v):
     return y * rms0 / (np.sqrt(np.mean(y ** 2)) + 1e-12)
 
 
-def unmask(music, voice, depth_db=6.0, lo=250, hi=6000, nper=2048):
+def make_room(music, voice, depth_db=6.0, lo=250, hi=6000, nper=2048):
     """music ducked per STFT bin where the voice has energy, in the band lo..hi, by up to depth_db: the words come
     through, and between the lines nothing changes. The voice's power is smoothed over 9 bins (about a third of an
     octave at 1 kHz) and held with a 120 ms release; each bin is measured against its own loud level."""
@@ -638,7 +638,7 @@ class Song:
             vox = self.bus["vox"].astype(np.float64) * gains.get("vox", 1.0)
             soft = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in ("pads", "keys", "lead"))
             rest = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in ("drums", "perc", "bass"))
-            music = rest + unmask(soft, vox, unmask_db) + vox + echo * echo_mix
+            music = rest + make_room(soft, vox, unmask_db) + vox + echo * echo_mix
         else:
             music = sum(self.bus[k].astype(np.float64) * gains.get(k, 1.0) for k in BUSES if k != "fx") + echo * echo_mix
         if cut_keys:
