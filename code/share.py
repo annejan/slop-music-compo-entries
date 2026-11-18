@@ -3,7 +3,8 @@
 song (Signal's limit is 100 MB), plays on every phone. The lyric sheets from lyrics/ go in the tags and next to them.
 
 The renders are DJ versions (16 bars of drums at each end, for the compo). For sharing, each song also gets a radio
-edit: from where the music comes in (bar 16) to two bars into the outro, with a fade over the last four bars.
+edit: from where the music comes in (bar 16) to two bars into the outro, with a fade over the last four bars (two
+for a song in RADIO_FADE_BARS).
 
 share.py            writes renders/share/NN Title.mp3 (the radio edit) and NN Title - lyrics.txt (its times),
                     and renders/share/dj/NN Title (BPM, key).mp3 (the DJ version) for every song that is rendered
@@ -35,12 +36,16 @@ SONGS = [
 ]
 
 
-def radio_window(bpm, bars):
-    """(start, length, fade) in seconds: from the end of the DJ intro to two bars into the DJ outro."""
+RADIO_FADE_BARS = {"flash-the-c6_174bpm_Fm.wav": 2}    # its last bars before the outro are the punchline ("Told you.")
+
+
+def radio_window(bpm, bars, wav=None):
+    """(start, length, fade) in seconds: from the end of the DJ intro to two bars into the DJ outro. The fade is four
+    bars, or a song's own length in RADIO_FADE_BARS."""
     bar = 240 / bpm
     start = DJ_BARS * bar
     end = (bars - DJ_BARS + 2) * bar
-    return start, end - start, 4 * bar
+    return start, end - start, RADIO_FADE_BARS.get(wav, 4) * bar
 
 
 def shift_sheet(text, start, length):
@@ -83,7 +88,7 @@ if __name__ == "__main__":
             continue
         sheets = glob.glob(os.path.join(LYRICS, f"{n:02d}-*.txt"))
         sheet = open(sheets[0], encoding="utf-8").read() if sheets else ""
-        cut = radio_window(bpm, bars)
+        cut = radio_window(bpm, bars, wav)
         radio_sheet = shift_sheet(sheet, cut[0], cut[1]) if sheet else ""
         tags = ["-metadata", "artist=sunA", "-metadata", "album=slop-music-compo-entries",
                 "-metadata", f"comment={day}", "-metadata", f"genre={day.split(': ')[1]}",

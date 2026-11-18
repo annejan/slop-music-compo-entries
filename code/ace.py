@@ -258,7 +258,8 @@ def main():
         print(master.process(raw, final, bpm, era=a.era))
 
     tags = ["-metadata", f"title={title} ({tag})", "-metadata", "artist=sunA"]
-    share.encode(final, os.path.join(out, f"{title} ({tag}, radio edit).mp3"), tags, [], share.radio_window(bpm, bars))
+    share.encode(final, os.path.join(out, f"{title} ({tag}, radio edit).mp3"), tags, [],
+                 share.radio_window(bpm, bars, wav))
     if a.check:
         import asr
         sheet = glob.glob(os.path.join(share.LYRICS, f"{n:02d}-*.txt"))

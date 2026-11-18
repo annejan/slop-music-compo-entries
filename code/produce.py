@@ -261,7 +261,7 @@ class Producer:
         label = "produced" + (f", {self.tag}" if self.tag else "")
         share.encode(out, os.path.join(self.dir, f"{self.title} ({label}, radio edit).mp3"),
                      ["-metadata", f"title={self.title}", "-metadata", "artist=sunA"], [],
-                     share.radio_window(self.bpm, self.bars))
+                     share.radio_window(self.bpm, self.bars, self.wav))
         print(self.report(out))
         return out
 

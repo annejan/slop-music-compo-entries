@@ -303,9 +303,16 @@ it from the template and checked it by ear: 80 % of the words heard, the
 clearest of our songs.
 
 - **Structure:** intro (the break, then the gabber), the band behind a
-  filter, riot A, the authority (half time, the terrace chant), the flash, the
-  crash, riot B, terrace, the authority gives in, riot C, the room alone, the
-  boot loop, outro.
+  filter (the drums stay full), a gabber roll, riot A, the authority (half
+  time, the terrace chant), the flash, the crash, riot B, terrace (the gabber
+  stomping), the authority gives in, a gabber roll, riot C (crashes, a siren,
+  a sixteenth sub), the room alone, the final riot, the boot loop, outro.
+- **v2 (18 November):** the reviews of v1 (a producer's read for energy, a
+  code review) applied one change at a time: the changes above, the hook's
+  guitar on the right chord, a rising C-C-C-C chop, a chug instead of a tick
+  on the palm-muted guitar, band-only stutters in the riots, and the radio
+  edit no longer fades "Told you." (`share.RADIO_FADE_BARS`). Words heard: 79 %
+  (v1: 80 %, within the ear's noise).
 - **Sounds:** a distorted breakbeat, a gabber kick (a 909-style kick through
   tanh), a sine sub, noise guitars from distorted saws, feedback, sirens, chip
   arpeggios, esptool's dots, a USB-C click, UART noise. The glitches are edits

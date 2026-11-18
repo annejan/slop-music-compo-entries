@@ -7,10 +7,10 @@ READ-OUT: Lessac (through a small speaker)
 
 [0:00] Intro (the break, then the gabber kick, drums only)
 
-[0:22] The band arrives (feedback, the two-tone siren, noise guitars behind a filter, chip arps)
-[0:33] SHOUT F (chopped, an octave up): C-C-C-C-SIX!
-[0:39] SHOUT F (chopped, an octave up): C-C-C-C-SIX!
-[0:43] (everything stops)
+[0:22] The band arrives (feedback, the two-tone siren, noise guitars behind a filter, chip arps; the drums stay full)
+[0:33] SHOUT F (chopped, an octave up, rising): C-C-C-C-SIX!
+[0:39] SHOUT F (chopped, an octave up, rising): C-C-C-C-SIX!
+[0:43] (the gabber rolls in, then everything stops)
 SHOUT M: ONE! ONE! FIVE! TWO!
 
 [0:44] Riot
@@ -30,7 +30,7 @@ AUTHORITY: Warning. That is the C6.
 [1:09] GANG (slow, huge): FLASH! THE C! SIX! (clap clap clap)
 [1:12] AUTHORITY: Do not flash the C6.
 [1:14] ALL (slow): FLASH! THE C! SIX! (clap clap clap)
-(one beat of silence)
+(half a beat of silence)
 
 [1:17] The flash
 (a USB plug clicks in)
@@ -58,7 +58,7 @@ SHOUT F / GANG: C! SIX!
 SHOUT F / GANG: C! SIX!
 [1:49] ALL: SIX! SIX! SIX! (c-c-c-c)
 
-[1:50] Terrace (half time, the whole band)
+[1:50] Terrace (half time, the gabber stomping on every beat, the whole band)
 SHOUT M + F: FLASH! THE C! SIX! (clap clap clap)
 GANG: FLASH! THE C! SIX! (clap clap clap)
 ALL: FLASH! THE C! SIX! (clap clap clap)
@@ -68,10 +68,10 @@ GANG: FLASH! THE C! SIX! (clap clap clap)
 AUTHORITY (glitching): Do-do-do-do not flash the C6.
 [2:04] GANG (slow): FLASH! THE C! SIX! (clap clap clap)
 [2:07] AUTHORITY (clean, flat, defeated): Fine. Flash the C6.
-(snare roll, the whoop siren)
+(snare roll, the whoop siren, the gabber rolling in, eighths then sixteenths)
 [2:11] (everything stops) SHOUT M: ONE! ONE! FIVE! TWO!
 
-[2:12] Riot (the whole room)
+[2:12] Riot (the whole room; a crash every four bars, then the siren and a double-time sub)
 SHOUT M + F: FLASH THE C6!
 GANG: FLASH THE C6!
 SHOUT M + F: FLASH THE C6!
@@ -90,9 +90,11 @@ ALL: FLASH! THE C! SIX! (clap clap clap)
 THE ROOM (alone): FLASH! THE C! SIX! (clap clap clap)
 THE ROOM (alone): FLASH! THE C! SIX! (clap clap clap)
 
-[2:46] The boot loop
-ALL (looping): FLASH THE C6! FLASH THE C6!
-[2:48] FLASH the C- FLASH the C-
+[2:46] The final riot (the band slams back)
+ALL: FLASH THE C6! (x4)
+
+[2:51] The boot loop (the last bar, looping faster and faster)
+FLASH the C- FLASH the C-
 FLASH! FLASH! FLASH! FLASH!
 FL-FL-FL-FL-FL-FL-FL-FL... (a rising buzz, down to one bit) (hard cut)
 [2:56] AUTHORITY (dry, in the silence): Told you.

@@ -22,7 +22,8 @@ its bars and the next bar starts on time. The first and last 16 bars (drums only
         88-95  the authority caves; the count-in
         96-111 riot C, the biggest
        112-119 terrace final, the room alone
-       120-127 the boot loop, a cut, "Told you."
+       120-123 the final riot: ALL, the band slamming back
+       124-127 the boot loop (the riot's last bar collapsing), a cut, "Told you."
        128-143 outro: drums only (for the DJ)
 """
 import math
@@ -208,11 +209,11 @@ def call(who, t, text, secs, amp=1.0, wet=None, dirt=DIRT, spread=None):
 # "the C!" and "Six!" as two takes: the ear heard "the sea" and "next" / "text" / "thanks", even with no music.
 # "the C six!" as one take: "the C6", every time. The take runs from step 6 to the end of the bar (or into bar b
 # of the terrace form), so "six" still lands near step 12 (or bar b's downbeat).
-def riot(bar, who):
+def riot(bar, who, wet=None, amp=1.0):
     """One bar: Flash! (1.25 beats) the C six! (from step 6, six about on step 12)."""
     t = S.at(bar)
-    call(who, t, "Flash!", .43)
-    call(who, t + 6 * ST, "the C six!", .83)
+    call(who, t, "Flash!", .43, amp, wet)
+    call(who, t + 6 * ST, "the C six!", .83, amp, wet)
 
 
 def terrace(bar, who):
@@ -243,13 +244,15 @@ def chop_six():
     return fade(octave_up(take("Six!", .31, s["voice"], s["pitch"])), 2)
 
 
-def chop(t, n=4, six=False, amp=1.0):
-    """The chop on the LEAD bus (texture, not words): n c's in sixteenths, then (six) her Six! an octave up."""
+def chop(t, n=4, six=False, amp=1.0, bus="lead"):
+    """The chop on the LEAD bus (texture, not words): n c's in sixteenths, then (six) her Six! an octave up. The
+    teasers in the intro build go on the fx bus, over the band's filter. The c's rise (0, 3, 7, 12 semitones): a glitch
+    riser into the next downbeat."""
     c = chop_c()
     for k in range(n):
-        put("lead", t + k * ST, c, .3 if k % 2 == 0 else .7, amp, wet=.1)
+        put(bus, t + k * ST, fade(repitch(c, (0, 3, 7, 12)[k % 4]), 1.5), .3 if k % 2 == 0 else .7, amp, wet=.1)
     if six:
-        put("lead", t + n * ST - EARLY, chop_six(), .3 if n % 2 == 0 else .7, amp, wet=.15, echo=.1)
+        put(bus, t + n * ST - EARLY, chop_six(), .3 if n % 2 == 0 else .7, amp, wet=.15, echo=.1)
 
 
 def hook(bar):
@@ -290,8 +293,10 @@ SNARE_X = crunch(pad_sum(e.clap(.6), e.snare(.45)))
 GHOST = crunch(e.snare(.3))
 HAT_X = crunch(e.hat(.3))
 BKICK = e.kick(1.0, punch=150, base=50, length=.3, click=.5)
-_g = e.kick(1.0, punch=230, base=44, length=.45, click=.8)
-GABBER = e.lowpass(np.tanh(7 * _g) / np.tanh(7), 8000)
+_g = e.kick(1.0, punch=230, base=44, length=.45, click=.8)[:int(.33 * SR)]   # .45 drawn (the noise stream stays as
+GABBER = e.lowpass(np.tanh(7 * _g) / np.tanh(7), 8000)              # it was), .33 kept: no tail under the next beat
+_r = int(.008 * SR)
+GABBER[-_r:] *= np.linspace(1, 0, _r)   # an 8 ms fade on the tail only (fade() ramps the attack too: the click is 2 ms)
 CRASH = e.crash(1.0)
 ROOMCLAP = np.zeros((int(.35 * SR), 2))
 for _i in range(6):                     # six people clapping, 0-25 ms apart, across the room
@@ -316,6 +321,18 @@ def bkick(t, v=1.0):
 def gabber(t, amp=1.0):
     put("drums", t, GABBER, .5, .8 * amp, wet=0)
     S.kicks.append(t)
+
+
+GAB_SHORT = GABBER[:int(.9 * ST * SR)].copy()          # a sixteenth long: 16 tanh tails do not pile into mud
+_r = int(.003 * SR)
+GAB_SHORT[-_r:] *= np.linspace(1, 0, _r)              # the tail only, as GABBER: the attack keeps its click
+
+
+def gabber_roll(times):
+    """The gabber rolling into a drop (eighths, then sixteenths), the short take, louder and louder (.6 to 1)."""
+    for j, t in enumerate(times):
+        put("drums", t, GAB_SHORT, .5, .8 * (.6 + .4 * j / max(len(times) - 1, 1)), wet=0)
+        S.kicks.append(t)
 
 
 def brk(bar, amp=1.0, kick=True, steps=16, pat=None, until=None):
@@ -346,13 +363,15 @@ def four(bar, amp=1.0, steps=16):
 TERRACE_A = (50, 54, 80, 82, 84, 86, 90, 112, 114)     # the first bar of each terrace call
 
 
-def half(bar, amp=1.0, gab=True, kick=True):
+def half(bar, amp=1.0, gab=True, kick=True, stomp=False):
     """Half time, the gabber on the kick's steps; not on step 10 of a terrace call's first bar, where "the C six!"
-    starts (the ear heard "Flash, let's eat sex" under it)."""
+    starts (the ear heard "Flash, let's eat sex" under it). stomp: the gabber on every beat (the half-time snare
+    stays), but not on step 12 of a terrace call's first bar, one step after "the C six!" starts."""
     brk(bar, amp, kick=kick, pat=HALF)
     if gab:
-        for k, _ in hits(HALF["kick"]):
-            if not (k == 10 and bar in TERRACE_A):
+        steps = (0, 4, 8, 12) if stomp else [k for k, _ in hits(HALF["kick"])]
+        for k in steps:
+            if not (k in (10, 12) and bar in TERRACE_A):
                 gabber(S.at(bar) + k * ST, amp)
 
 
@@ -388,10 +407,10 @@ def root_of(bar):
     return e.root_note(P.chord(bar), lo=29)       # F1, Db2, Eb2
 
 
-def bass(bar, style="eighths", amp=1.0, steps=16, root=None):
+def bass(bar, style="eighths", amp=1.0, steps=16, root=None, first=0):
     m = root or root_of(bar)
     if style == "eighths":
-        for k in range(0, steps, 2):
+        for k in range(first, steps, 2):
             put("bass", S.at(bar) + k * ST, sub_note(m, 1.8 * ST), .5, .5 * amp, wet=0)
     elif style == "sixteenths":
         for k in range(steps):
@@ -402,7 +421,7 @@ def bass(bar, style="eighths", amp=1.0, steps=16, root=None):
 
 # ---------------------------------------------------------------- noise guitars (keys bus)
 POWER = {"F": (41, 48, 53), "Db": (37, 44, 49), "Eb": (39, 46, 51)}
-ARTIC = {"palm": .07, "stab": 2 * ST * .9, "beat": BT * .9, "ring": S.bar * 1.75}
+ARTIC = {"palm": .11, "stab": 2 * ST * .9, "beat": BT * .9, "ring": S.bar * 1.75}
 _gtrs = {}
 
 
@@ -415,7 +434,7 @@ def _gtr_take(chord, art, seed):
     x = e.highpass(x, 90)
     x = e.peaking(x, 1000, 4.0)
     if art == "palm":
-        x = e.lowpass(x, 1200) * np.exp(-t * 18)
+        x = e.lowpass(x, 2200) * np.exp(-t * 10)          # a chug, not a tick (1200 Hz, exp(-18 t) in v1)
     else:
         x = x * np.exp(-t * (1.2 if art == "ring" else 3))
     x = np.tanh(12 * x)
@@ -456,13 +475,13 @@ def gtr_riot(bar, push=True, steps=16, amp=1.0):
 
 
 # ---------------------------------------------------------------- feedback, sirens, chip (pads, fx)
-def feedback(bar0, bars, kind="drone", amp=1.0):
-    """A guitar feeding back: a sine on F6 and its 2nd harmonic, 5.5 Hz vibrato, tanh(4x). swell: rising from
-    nothing; whine: louder and bending up a semitone."""
+def feedback(bar0, bars, kind="drone", amp=1.0, m=89, semis=1):
+    """A guitar feeding back: a sine on m (F6) and its 2nd harmonic, 5.5 Hz vibrato, tanh(4x). swell: rising from
+    nothing; whine: louder and bending up `semis` semitones (linear in frequency, as in v1)."""
     d = bars * S.bar
     t = e.tt(d)
-    bend = 1 + (t / d) * (2 ** (1 / 12) - 1) if kind == "whine" else 1.0
-    f = e.hz(89) * bend * (1 + .004 * np.sin(2 * np.pi * 5.5 * t))
+    bend = 1 + (t / d) * (2 ** (semis / 12) - 1) if kind == "whine" else 1.0
+    f = e.hz(m) * bend * (1 + .004 * np.sin(2 * np.pi * 5.5 * t))
     ph = np.cumsum(f) / SR
     x = np.sin(2 * np.pi * ph) + .5 * np.sin(4 * np.pi * ph)
     env = {"swell": (t / d) ** 2, "drone": np.minimum(t / .4, 1) * np.minimum((d - t) / .2, 1),
@@ -471,14 +490,15 @@ def feedback(bar0, bars, kind="drone", amp=1.0):
     put("pads", S.at(bar0), y, .55, (.16 if kind == "whine" else .1) * amp, wet=.3)
 
 
-def siren(bar0, bars, amp=1.0):
-    """The two-tone: a square and a saw switching C5 / F5 every beat, band-passed, sweeping slowly across."""
+def siren(bar0, bars, amp=1.0, bus="fx"):
+    """The two-tone: a square and a saw switching C5 / F5 every beat, band-passed, sweeping slowly across. On the pads
+    bus (riot C) make_room carves it under the voices and the gabber's duck pumps it."""
     t = e.tt(bars * S.bar)
     f = np.where((t // BT).astype(int) % 2 == 0, e.hz(72), e.hz(77))
     x = e.bandpass(.5 * e.pulse(f, t) + .5 * e.saw(f, t), 600, 3000)
     p = .5 + .4 * np.sin(2 * np.pi * t / (4 * S.bar))
     st = np.stack([x * np.cos(p * np.pi / 2), x * np.sin(p * np.pi / 2)], 1)
-    put("fx", S.at(bar0), st, amp=.07 * amp, wet=.2)
+    put(bus, S.at(bar0), st, amp=.07 * amp, wet=.2)
 
 
 def whoop(bar0, bars, amp=1.0):
@@ -617,14 +637,16 @@ def glitch():
     loop(S.at(40), S.bar / 2, S.at(68), S.at(69))              # FLASH the C- FLASH the C-
     loop(S.at(40), S.bar / 4, S.at(69), S.at(70))              # FLASH! FLASH! FLASH! FLASH!
     loop(S.at(40), S.bar / 8, S.at(70), S.at(71, 2))           # FL-FL-FL-FL...
-    loop(S.at(110), S.bar, S.at(120), S.at(122))
-    for k, div in enumerate((2, 4, 8, 16)):                    # 1/16 bar: an 11.6 Hz buzz
-        loop(S.at(110), S.bar / div, S.at(122 + k), S.at(123 + k))
-    loop(S.at(110), S.bar / 32, S.at(126), S.at(127, 2))       # 1/32: 23 Hz
+    for k, div in enumerate((2, 4, 8)):                        # the final riot's last bar collapses
+        loop(S.at(123), S.bar / div, S.at(124 + k), S.at(125 + k))
+    loop(S.at(123), S.bar / 16, S.at(127), S.at(127, 1))       # 1/16 bar: an 11.6 Hz buzz
+    loop(S.at(123), S.bar / 32, S.at(127, 1), S.at(127, 2))    # 1/32: 23 Hz
     # stutters: the flash speeding up
     stutter(S.at(60, 3), ST, 4, buses=("drums", "perc", "keys", "bass"))
     stutter(S.at(61, 3), ST / 2, 8, buses=("drums", "perc", "keys", "bass"))
     stutter(S.at(62, 1), ST / 2, 8, buses=("drums", "perc", "keys", "bass"))
+    for b in (35, 43, 99, 107):                                # mid-riot: the band stutters, the words do not
+        stutter(S.at(b, 3), ST / 2, 8, buses=("drums", "perc", "keys", "bass"))
     # crushes
     crush(S.at(65), S.at(67), 6, 2, buses=("drums",))
     crush(S.at(127), S.at(127, 2), 1, 8)
@@ -636,7 +658,7 @@ def glitch():
         if b != 47:                                            # beat 4: the band out, only the chop
             cut(S.at(b, 3), S.at(b + 1), buses=("drums", "perc", "bass", "keys", "pads"))
     dropouts(57, 60, .05, .30)
-    cut(S.at(55, 3), S.at(56))
+    cut(S.at(55, 3.5), S.at(56))                               # after the room's third clap (step 12)
     cut(S.at(64), S.at(64, 2))
     cut(S.at(127, 2), S.at(128))
     i0, i1 = _span(S.at(126), S.at(128))                       # no tail rings under "Told you."
@@ -650,6 +672,7 @@ for bar in range(BARS):
     intro, outro = bar < 16, bar >= 128
     riot_a, riot_c = 32 <= bar < 47, 96 <= bar < 111
     riot_b = 72 <= bar < 79
+    final = 120 <= bar < 124                # the final riot, after the room alone; then it collapses (glitch)
     is_hook = bar in HOOKS
 
     # ---- drums
@@ -663,16 +686,16 @@ for bar in range(BARS):
     elif 16 <= bar < 31:
         brk(bar, kick=False)
         four(bar)
-    elif bar in (72, 74):                   # under a grievance: the gabber and the hats only, no snares
-        brk(bar, pat=dict(kick="", clap="", hat=BREAK_A["hat"]))
-        four(bar)
+    elif bar == 72:                         # under "Wifi is down!": the gabber and the hats only, no snares
+        brk(bar, pat=dict(kick="", clap="", hat=BREAK_A["hat"]))    # (the ear: 75 % thinned, 47 % with the band;
+        four(bar)                                                   # bar 74 drives on: 67 % with it, 42 % thinned)
     elif 76 <= bar < 79:                    # the name call: the drums answer in the gaps, nothing under the words
         for k in (4, 12):
             gabber(S.at(bar) + k * ST)
             put("drums", S.at(bar) + k * ST, SNARE_X, .5, 1.0, wet=.18)
         for k in (5, 6, 7, 13, 14, 15):
             put("perc", S.at(bar) + k * ST, HAT_X, .62, .6, wet=.04)
-    elif riot_a or riot_b or riot_c or is_hook:
+    elif riot_a or riot_b or riot_c or is_hook or final:
         steps = 16 if (not is_hook or bar == 47) else 12
         brk(bar, kick=False, steps=steps)
         four(bar, steps=steps)
@@ -682,27 +705,33 @@ for bar in range(BARS):
         brk(bar, .5, pat=dict(kick="", clap="", hat=BREAK_A["hat"]), steps=9)
         brk(bar, .8, pat=dict(kick="." * 9 + BREAK_A["kick"][9:], clap="." * 9 + BREAK_A["clap"][9:], hat="." * 9
                               + BREAK_A["hat"][9:]))
+    elif bar == 56:                         # no kick or hat on the downbeat: the USB-C click is alone there
+        brk(bar, .8, pat=dict(BREAK_A, kick="..x.......xx....", hat="..x.x.x.x.x.x.x."))
     elif 56 <= bar < 63:
         brk(bar, .8, until=S.at(62, 2))
     elif bar in (65, 66, 67):
         gabber(S.at(bar))
-    elif 80 <= bar < 88 or 112 <= bar < 116:
+    elif 80 <= bar < 88:                    # terrace: the half-time snare, the gabber stomping on every beat
+        half(bar, stomp=True)
+    elif 112 <= bar < 116:
         half(bar)
     elif 116 <= bar < 120:
         gabber(S.at(bar))
         gabber(S.at(bar) + 10 * ST)
-    if bar in (0, 32, 40, 72, 80, 96, 104, 112, 128):
+    if bar in (0, 32, 40, 72, 80, 96, 100, 104, 108, 112, 120, 128):     # riot C: a crash every 4 bars
         crash(bar)
 
     # ---- bass
-    if 20 <= bar < 31 or riot_a or riot_b or riot_c:
-        bass(bar, "eighths")
-    elif is_hook:
-        bass(bar, "eighths", steps=16 if bar == 47 else 12)
+    if final:
+        bass(bar, "sixteenths")
+    elif 20 <= bar < 31 or riot_a or riot_b or riot_c:
+        bass(bar, "sixteenths" if 104 <= bar < 111 else "eighths")     # riot C's second half: the sub doubles
+    elif is_hook:                           # the sub on F under the open F5 (the hook bars are Eb bars in PROG)
+        bass(bar, "eighths", steps=16 if bar == 47 else 12, root=29)
     elif 48 <= bar < 56 or 88 <= bar < 92:
         bass(bar, "whole", .9, root=29)
-    elif 56 <= bar < 62:
-        bass(bar, "eighths", .9, root=29)
+    elif 56 <= bar < 62:                    # bar 56: from step 2, the click alone on the downbeat
+        bass(bar, "eighths", .9, root=29, first=2 if bar == 56 else 0)
     elif bar == 62:
         bass(bar, "eighths", .9, steps=8, root=29)
     elif 80 <= bar < 88 or 112 <= bar < 116:
@@ -722,18 +751,18 @@ for bar in range(BARS):
         if bar == 47:                                          # beat 4 plays on, into the tape stop
             for k in (12, 14):
                 guitar(S.at(bar) + k * ST, "F", "palm", .9)
-    elif riot_a or riot_b or riot_c:
+    elif riot_a or riot_b or riot_c or final:
         gtr_riot(bar)
     elif bar in (48, 52, 88):
         guitar(S.at(bar), "F", "ring", .8)
     elif 56 <= bar < 62 or bar == 62:
         for k in range(16 if bar < 62 else 8):
-            if not (bar in (58, 59) and k < 9 or bar == 56 and 4 <= k < 12):   # stops dead under "Hold boot!"
-                                                                                # and "Connecting."
+            # stops dead under "Hold boot!" and "Connecting.", and is not on bar 56's downbeat (the click alone)
+            if not (bar in (58, 59) and k < 9 or bar == 56 and (k == 0 or 4 <= k < 12)):
                 guitar(S.at(bar) + k * ST, "F", "palm", .8)
     elif 80 <= bar < 88 or 112 <= bar < 116:
         if bar % 2 == 1:                                       # bar b: a choked stab with the room's first clap
-            guitar(S.at(bar) + 8 * ST, "F", "stab", 1.0)
+            guitar(S.at(bar) + 8 * ST, chord_of(bar), "stab", 1.0)    # on the sub's chord (Eb in 83, 87, 115)
 
     # ---- the chant
     if bar in RIOT_A:
@@ -745,7 +774,7 @@ for bar in range(BARS):
     if is_hook:
         hook(bar)
         if bar != 47:
-            chop(S.at(bar, 3))       # at 2.0 the ear took the c-c-c-c into the next bar as "6, 6, 6, 6..."
+            chop(S.at(bar, 3), amp=2.0)      # the spotlight on beat 4 (at 1.0: -27 dB against -10 on beat 3)
     if bar in (73, 75):
         riot(bar, "GANG")
     if 76 <= bar < 79:
@@ -754,6 +783,8 @@ for bar in range(BARS):
                     (112, "ALL"), (114, "ALL"), (116, "ROOM"), (118, "ROOM")):
         if bar == b0:
             terrace(bar, who)
+    if final:                                                  # ALL, as in the riots (ROOM at wet .2: the ear 0 %)
+        riot(bar, "ALL")
     if 104 <= bar < 111:                                       # a quiet C6 blip after each shout
         put("fx", S.at(bar) + 15 * ST, blip(84, .03), .5, .6, wet=.05)
 
@@ -763,9 +794,10 @@ siren(16, 4)
 for b in range(24, 28):
     chip_arp(b)
 for b in (24, 28):
-    chop(S.at(b) + 8 * ST, six=True, amp=.9)
+    chop(S.at(b) + 8 * ST, six=True, amp=.9, bus="fx")
 whoop(28, 3)
 roll(29, 2)
+gabber_roll([S.at(30) + k * ST for k in (10, 13, 14, 15)])      # four() plays 0, 4, 8 and 12
 count_in(31)
 
 # ---- the authority
@@ -775,7 +807,7 @@ authority(S.at(48), "Warning. That is the C six.")
 authority(S.at(52), "Do not flash the C six.")
 
 # ---- the flash
-usb_click(S.at(56))
+usb_click(S.at(56) + .005)                                  # past the cut's and the silence's 2 ms ramps
 put("vox", S.at(56, 1), readout("Connecting."), .5, .8, wet=.15, echo=.15)
 esptool(56, steps=range(8, 13))
 for b in (57, 58, 59):
@@ -821,7 +853,18 @@ authority(S.at(88, 1), "Do not flash the C six.")
 authority(S.at(92), "Fine. Flash the C six.")
 roll(93, 2)
 whoop(93, 2)
+gabber_roll([S.at(93) + k * ST for k in (0, 4, 8, 12)] + [S.at(94) + k * ST for k in (0, 2, 4, 6)]
+            + [S.at(94) + k * ST for k in range(8, 16)])
 count_in(95)
+
+# ---- riot C, the biggest: the siren in the band, a feedback whine bending into the last hook: Eb6 (the 9th of the
+# Db bar) up a whole tone to F6, the hook's root (F6 up to Gb6 landed a b9 over the hook's F)
+siren(104, 7, .8, bus="pads")
+feedback(110, 1, "whine", .8, m=87, semis=2)
+
+# ---- the final riot: a reverse crash into it
+_n = int(12 * ST * SR)                  # swelling from silence (cut at 1.03 s, the crash starts at -12 dB)
+put("perc", S.at(119) + 4 * ST, CRASH[:_n][::-1] * np.linspace(0, 1, _n) ** 2, amp=.6)
 
 # ---- the terraces' drone
 feedback(80, 8, "drone", .8)
@@ -831,18 +874,26 @@ if os.environ.get("GLITCH", "1") == "1":
     glitch()
 
 # ---- after the glitch pass: the boot chimes, the double-speed count-in, the authority's last word
-for b in (68, 69, 70, 120, 121, 122, 123):
-    put("fx", S.at(b), JINGLE, .5, .9 if b < 100 else .5, wet=.1)   # 120-123: softer, over the looped "Flash!"
+for b in (68, 69, 70, 124, 125, 126):
+    put("fx", S.at(b), JINGLE, .5, .9 if b < 100 else .5, wet=.1)   # 124-126: softer, over the looped "Flash!"
 count_in(71, 2, .5, .17)
 put("vox", S.at(127, 2), take("Told you.", .55, AUTHORITY, .84), .5, 1.1, wet=0, echo=0)
 
+# ---- the band arrives behind a filter (700 Hz up to 6 kHz, open at the count-in); the drums stay full, so the
+# energy does not drop after the DJ's mix-in (a master filter on the whole sum muffled the break for 15 bars)
+_cut = np.exp(np.interp(np.arange(S.n) / SR, [0, S.at(16), S.at(16) + .05, S.at(30.9), S.at(31)],
+                        np.log([18000, 18000, 700, 6000, 18000])))
+_i0, _i1 = int(S.at(16) * SR), int(S.at(31) * SR)
+for _k in ("bass", "keys", "pads"):
+    for _ch in (0, 1):
+        S.bus[_k][_i0:_i1, _ch] = e.sweep(S.bus[_k][_i0:_i1, _ch].astype(np.float64), _cut[_i0:_i1], .9, 256)
+
 # ---------------------------------------------------------------- the mixdown
-cut_keys = [(0, 18000), (S.at(16), 18000), (S.at(16) + .05, 700), (S.at(30.9), 6000), (S.at(31) - .005, 6000),
-            (S.at(31), 18000), (S.n / SR, 18000)]   # the master filter: the band arrives behind it
 NAME = f"{os.path.basename(__file__)[:-3].replace('_', '-')}_{BPM}bpm_{KEY}"
 OUT = parts.out_path(NAME)
 S.mixdown(OUT, {"drums": 1.0, "perc": .7, "bass": .9, "pads": .7, "keys": 1.0, "lead": .6, "vox": 1.5, "fx": .6},
-          cut_keys=cut_keys, duck={"pads": .7, "bass": .45, "keys": .35}, room=.15, echo_mix=.3, lufs=LUFS,
+          cut_keys=[(0, 18000), (S.n / SR, 18000)],        # v1's master filter outside the build: flat at 18 kHz
+          duck={"pads": .7, "bass": .45, "keys": .35}, room=.15, echo_mix=.3, lufs=LUFS,
           ir=room.impulse_response((8.0, 6.0, 3.5), rt60=1.0))
 
 
@@ -875,6 +926,6 @@ def true_silence(path, holes):
 
 
 if os.environ.get("GLITCH", "1") == "1":
-    true_silence(written(OUT), [(S.at(55, 3), S.at(56)), (S.at(64), S.at(64, 2))])
+    true_silence(written(OUT), [(S.at(55, 3.5), S.at(56)), (S.at(64), S.at(64, 2))])
 print(f"{len(_takes)} voice takes rendered")
 print(f"share.SONGS row: (\"{NAME}.wav\", \"{TITLE}\", \"{DAY}\", {BPM}, \"{KEY}\", {BARS}),")
