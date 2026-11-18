@@ -65,9 +65,11 @@ deliver   share.py (radio edit + DJ version as MP3), dj.py (the USB stick),
    beat grid starts at sample 0 and the tempo is exact. A song renders in 18 to
    34 seconds once its speech is cached (see
    [render-speed.md](research/render-speed.md)).
-2. **ACE-Step (optional).** [ace.py](code/ace.py) gives the render to ACE-Step
-   1.5, an open song generator (MIT) that runs on this laptop's GPU through
-   Vulkan, and masters the result for the DJ. See "ACE-Step" below.
+2. **ACE-Step (optional).** [ace.py](code/ace.py) gives the render to
+   [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5), an open song
+   generator by ACE Studio and StepFun (MIT) that runs on this laptop's GPU
+   through Vulkan ([acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp)),
+   and masters the result for the DJ. See "ACE-Step" below.
 3. **Sharing.** [share.py](code/share.py) makes a radio edit of every song
    (from where the music comes in to two bars into the outro, with a fade) and
    the DJ version, as 320 kbit/s MP3 with the lyrics in the tags.
@@ -90,10 +92,10 @@ Optional parts, outside this repository:
 
 | Part | For | Where |
 |---|---|---|
-| eSpeak NG, Flite, Festival | the classic voices in `trials.py` | `sudo zypper in espeak-ng flite festival` |
-| Mimic 3 | more classic voices | its own Python 3.11 venv, `code/.venv-mimic3` |
-| [warble](https://github.com/erz0r/warble) and DiffSinger voicebanks | `ds.py`: a DiffSinger singer | `~/Projects/diffsinger/warble`, `~/Projects/diffsinger/banks` (or `WARBLE`, `WARBLE_BANKS`) |
-| [acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) and its models (12 GB) | `ace.py`: ACE-Step | `~/Projects/acestep.cpp`, built with `./buildvulkan.sh` (needs `spirv-headers`) |
+| [eSpeak NG](https://github.com/espeak-ng/espeak-ng), [Flite](http://www.festvox.org/flite/), [Festival](https://www.cstr.ed.ac.uk/projects/festival/) | the classic voices in `trials.py` | `sudo zypper in espeak-ng flite festival` |
+| [Mimic 3](https://github.com/MycroftAI/mimic3) | more classic voices | its own Python 3.11 venv, `code/.venv-mimic3` |
+| [warble](https://github.com/erz0r/warble) and [DiffSinger](https://github.com/openvpi/DiffSinger) voicebanks ([Hoshino Hanami](https://lottev.moe/hoshino-hanami-ai%e2%9d%a4dol-for-diffsinger-v1-0-is-out/), [TIGER](https://tigermeat.xyz/cast/tiger/)) | `ds.py`: a DiffSinger singer | `~/Projects/diffsinger/warble`, `~/Projects/diffsinger/banks` (or `WARBLE`, `WARBLE_BANKS`) |
+| [acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) and its [GGUF models](https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF) (12 GB), converted from [ACE-Step 1.5](https://huggingface.co/ACE-Step/Ace-Step1.5) | `ace.py`: ACE-Step | `~/Projects/acestep.cpp`, built with `./buildvulkan.sh` (needs `spirv-headers`) |
 
 ## The tools in `code/`
 
@@ -109,7 +111,7 @@ Optional parts, outside this repository:
 | [produce.py](code/produce.py) | a song section by section from a project file: an ACE-Step take of the whole song, then per section our own render, the take, or a `repaint` with several seeds of which the ear picks the best; everything cached |
 | [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s`; `--match 0.7` our render's tonal balance and width |
 | [weave.py](code/weave.py) | our instrumental, unchanged, under a blend of our vocals and another generator's take of them |
-| [asr.py](code/asr.py) | a speech recognizer (faster-whisper) checks which words of the lyrics can be heard |
+| [asr.py](code/asr.py) | a speech recognizer ([faster-whisper](https://github.com/SYSTRAN/faster-whisper), OpenAI's [Whisper](https://github.com/openai/whisper) base.en) checks which words of the lyrics can be heard |
 | [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
 | [mix.py](code/mix.py) | a day's songs as one DJ set: one tempo (varispeed), each song over the 16-bar outro of the one before, the lows swapped 4 bars before the end, the keys checked on the Camelot wheel; `--order auto` for the fewest key clashes, `--use` for produced versions |
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
@@ -166,12 +168,12 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
   fine for rap and speech, not for singing.
 - **The formant robot** (`engine.robot`, the vocoder sound) is for hooks
   without words: the ear has never heard a word it sang.
-- **DiffSinger.** [ds.py](code/ds.py) lets a DiffSinger voicebank sing a whole
+- **DiffSinger.** [ds.py](code/ds.py) lets a [DiffSinger](https://github.com/openvpi/DiffSinger) voicebank sing a whole
   part on our notes, through [warble](https://github.com/erz0r/warble) (MIT,
-  ONNX on the CPU). Hoshino Hanami (Lotte V; any use with credit, vocoder CC
+  ONNX on the CPU). [Hoshino Hanami](https://lottev.moe/hoshino-hanami-ai%e2%9d%a4dol-for-diffsinger-v1-0-is-out/) (Lotte V; any use with credit, vocoder CC
   BY-NC-SA 4.0) sings in her "Fragrance" (power) mode. Her terms forbid
   pitch-shifting finished renders, so DiffSinger sings the key changes itself.
-  TIGER (male, CC BY-NC-ND) is installed as well.
+  [TIGER](https://tigermeat.xyz/cast/tiger/) (male, CC BY-NC-ND) is installed as well.
 
 ## ACE-Step
 

@@ -327,21 +327,21 @@ clearest of our songs.
 | What | Licence | In this repository? |
 |---|---|---|
 | Our code, lyrics, prompts, research notes | MIT | yes |
-| numpy, scipy | BSD-3-Clause | no (installed with pip) |
-| Piper (`piper-tts`) | GPL-3.0 | no (installed with pip) |
-| pyworld (WORLD vocoder) | MIT (pyworld), modified BSD (WORLD) | no (installed with pip) |
-| Voice `en_US-hfc_female-medium` | trained on Hi-Fi-CAPTAIN (NICT): CC BY-NC-SA 4.0 | no (downloaded) |
-| Voice `en_US-ryan-high` | trained on RyanSpeech: CC BY-NC-SA 4.0 | no (downloaded) |
-| Voices `en_US-ljspeech-high`, `en_US-kristin-medium` | public domain | no (downloaded) |
+| [numpy](https://numpy.org/), [scipy](https://scipy.org/) | BSD-3-Clause | no (installed with pip) |
+| [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`) and its [voices](https://huggingface.co/rhasspy/piper-voices) | GPL-3.0 | no (installed with pip) |
+| [pyworld](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder) ([WORLD](https://github.com/mmorise/World) vocoder) | MIT (pyworld), modified BSD (WORLD) | no (installed with pip) |
+| Voice `en_US-hfc_female-medium` | trained on [Hi-Fi-CAPTAIN](https://ast-astrec.nict.go.jp/en/release/hi-fi-captain/) (NICT): CC BY-NC-SA 4.0 | no (downloaded) |
+| Voice `en_US-ryan-high` | trained on [RyanSpeech](https://github.com/roholazandie/ryan-tts): CC BY-NC-SA 4.0 | no (downloaded) |
+| Voices `en_US-ljspeech-high`, `en_US-kristin-medium` | public domain ([LJ Speech](https://keithito.com/LJ-Speech-Dataset/)) | no (downloaded) |
 | Voices `en_GB-cori-high`, `en_US-hfc_male-medium` | see each Piper model card (CC BY / CC BY-NC-SA) | no (downloaded) |
-| Festival, Flite, eSpeak NG | free software (X11-style, BSD-style, GPL-3.0) | no (zypper) |
-| CMU ARCTIC voices for Festival and Flite | free (BSD-style, CMU) | no (downloaded from festvox.org) |
-| Mimic 3 and its voices | AGPL-3.0; voices CC BY / CC0 / PD | no (pip, downloaded) |
-| ACE-Step 1.5 (models) and acestep.cpp | MIT (the model card allows commercial use of the output) | no (downloaded, built) |
-| warble (DiffSinger engine) | MIT | no (git clone) |
-| Voicebank Hoshino Hanami (Lotte V) | Team L❤VE Voicebank License: any creative use with credit, no political use; her vocoder CC BY-NC-SA 4.0 | no (downloaded) |
-| Voicebank TIGER (spicytigermeat) | CC BY-NC-ND 4.0 with the Commons Clause | no (downloaded) |
-| faster-whisper (the speech recognizer in asr.py) and its Whisper model | MIT | no (pip, downloaded) |
+| [Festival](https://www.cstr.ed.ac.uk/projects/festival/), [Flite](http://www.festvox.org/flite/), [eSpeak NG](https://github.com/espeak-ng/espeak-ng) | free software (X11-style, BSD-style, GPL-3.0) | no (zypper) |
+| [CMU ARCTIC](http://festvox.org/cmu_arctic/) voices for Festival and Flite | free (BSD-style, CMU) | no (downloaded from festvox.org) |
+| [Mimic 3](https://github.com/MycroftAI/mimic3) and its voices | AGPL-3.0; voices CC BY / CC0 / PD | no (pip, downloaded) |
+| [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) ([models](https://huggingface.co/ACE-Step/Ace-Step1.5), [GGUF](https://huggingface.co/Serveurperso/ACE-Step-1.5-GGUF)) and [acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) | MIT (the model card allows commercial use of the output) | no (downloaded, built) |
+| [warble](https://github.com/erz0r/warble) ([DiffSinger](https://github.com/openvpi/DiffSinger) engine) | MIT | no (git clone) |
+| Voicebank [Hoshino Hanami](https://lottev.moe/hoshino-hanami-ai%e2%9d%a4dol-for-diffsinger-v1-0-is-out/) (Lotte V) | Team L❤VE Voicebank License: any creative use with credit, no political use; her vocoder CC BY-NC-SA 4.0 | no (downloaded) |
+| Voicebank [TIGER](https://tigermeat.xyz/cast/tiger/) (spicytigermeat) | CC BY-NC-ND 4.0 with the Commons Clause | no (downloaded) |
+| [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (the speech recognizer in asr.py) and its [Whisper](https://github.com/openai/whisper) model | MIT | no (pip, downloaded) |
 
 **The renders with voices are non-commercial.** Some Piper voices are trained
 on data under CC BY-NC-SA 4.0 (`hfc_female`, `hfc_male`, `ryan` and others:
