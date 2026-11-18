@@ -4,6 +4,9 @@ below, write the words and the melody, and shape the arrangement. It renders as 
 
 template.py [OUT.wav]          PREVIEW=48-64 template.py: only bars 48 to 63, for a quick listen
 
+For the rest of the route, add one line for the song to share.SONGS (render name, title, day, BPM, key, bars) and
+write its lyric sheet in lyrics/: then ace.py (ACE-Step), share.py (MP3s) and dj.py (the USB stick) know it.
+
   bars   0-15  intro: drums only (for the DJ)
         16-31  the band comes in
         32-47  verse (diva) and rap

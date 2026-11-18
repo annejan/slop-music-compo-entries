@@ -21,144 +21,161 @@ and starts and ends with 16 bars of drums only.
   and the lyrics. Nobody edits the audio by hand.
 - **Open tools only.** We use software and models under open terms: public
   domain, CC (non-commercial is fine, this is a fun competition), MIT, BSD,
-  GPL. No closed music services such as Suno.
+  GPL. No closed music services such as Suno. One voicebank (Hoshino Hanami)
+  has its own free licence; we allowed it.
 
 [SONGS.md](SONGS.md) lists, per song, which AI made which part and which tools,
-sounds and voices it uses.
+sounds and voices it uses. The lyric sheets are in [lyrics/](lyrics/).
 
-## The tracks: `code/`
+## The songs
 
-Eight songs written by Claude as Python code. Every note and every sound is in
-the source: there are no samples and no loops. The synthesis is numpy and
-scipy. Warm Boot sings with a formant robot; the other songs have AI singers
-and rappers (see Voices). Warm Boot and Segfault are our entries; the other
-five are the other takes from `suno/`, made as code tracks for fun, and Race
-Condition is a rehearsal for the surprise themes.
+Claude writes every song as a Python script: every note and every sound is in
+the source, with no samples and no loops. Warm Boot and Segfault are our
+entries; the other five are the other takes from `suno/`, made as code tracks
+for fun, and Race Condition is a rehearsal for the surprise themes.
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
-| [code/warm_boot.py](code/warm_boot.py) | 90's mellow house | 120 BPM, A minor | 4:02 |
-| [code/packet_loss.py](code/packet_loss.py) | 90's mellow house | 122 BPM, F minor | 3:58 |
-| [code/low_battery.py](code/low_battery.py) | 90's mellow house | 120 BPM, D minor | 4:02 |
-| [code/low_pass_love.py](code/low_pass_love.py) | 90's mellow house (French house) | 122 BPM, A minor | 4:14 |
-| [code/segfault.py](code/segfault.py) | eurodance | 132 BPM, A minor, then B minor | 3:26 |
-| [code/blinky.py](code/blinky.py) | eurodance | 132 BPM, D major, then E major | 3:26 |
-| [code/rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
-| [code/race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
+| [warm_boot.py](code/warm_boot.py) | 90's mellow house | 120 BPM, A minor | 4:02 |
+| [packet_loss.py](code/packet_loss.py) | 90's mellow house | 122 BPM, F minor | 3:58 |
+| [low_battery.py](code/low_battery.py) | 90's mellow house | 120 BPM, D minor | 4:02 |
+| [low_pass_love.py](code/low_pass_love.py) | 90's mellow house (French house) | 122 BPM, A minor | 4:14 |
+| [segfault.py](code/segfault.py) | eurodance | 132 BPM, A minor, then B minor | 3:26 |
+| [blinky.py](code/blinky.py) | eurodance | 132 BPM, D major, then E major | 3:26 |
+| [rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
+| [race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
 
-For a new song, start from [code/template.py](code/template.py): a complete
-song with the knobs at the top, built from the ready parts in
-[code/parts.py](code/parts.py) (drum grooves for many genres, basslines,
-chords, a diva with a choir, a rapper). See SONGS.md, "Surprise themes".
+## How a song is made
 
-[code/engine.py](code/engine.py) holds the shared parts: oscillators,
-instruments, drums, the robot voice, and the mixdown (sidechain, delay, reverb,
-glue compressor, true-peak limiter). It comes from the soundtrack of the QtPass
-2.0 film.
+```
+song script (code/*.py) --> render (renders/*.wav, the DJ version)
+                        \-> ace.py: ACE-Step re-plays or re-sings it --> master.py / weave.py
+render or ACE-Step take --> share.py (radio edit + DJ version as MP3) and dj.py (the USB stick)
+```
 
-Two more parts come from the NPU demos in `~/Projects/npu` (MIT, same author),
-ported from the NPU to numpy so that the tracks render on any computer:
+1. **The code track.** The script writes a 44.1 kHz, 16-bit stereo WAV. The
+   beat grid starts at sample 0 and the tempo is exact. A song renders in 18 to
+   34 seconds once its speech is cached (see
+   [render-speed.md](research/render-speed.md)).
+2. **ACE-Step (optional).** [ace.py](code/ace.py) gives the render to ACE-Step
+   1.5, an open song generator (MIT) that runs on this laptop's GPU through
+   Vulkan, and masters the result for the DJ. See "ACE-Step" below.
+3. **Sharing.** [share.py](code/share.py) makes a radio edit of every song
+   (from where the music comes in to two bars into the outro, with a fade) and
+   the DJ version, as 320 kbit/s MP3 with the lyrics in the tags.
+4. **The DJ.** [dj.py](code/dj.py) puts every song as a WAV with its tempo and
+   Camelot key in the name in `renders/dj/`, with a track list, and checks the
+   true peak, the loudness, the beat grid and the drums-only intro and outro.
 
-- [code/dx7.py](code/dx7.py): a DX7-style FM synthesizer: six operators, the
-  32 algorithms of the DX7, operator feedback. Warm Boot's Rhodes is its
-  electric piano patch.
-- [code/room.py](code/room.py): a 3-D wave simulation (FDTD) of the air in a
-  7 x 5 x 3 m room. It records the room's stereo impulse response, and Warm
-  Boot's reverb uses it. The simulation takes 6 seconds and is cached.
-
-### Voices
-
-[code/voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
-a neural text-to-speech model that runs on the CPU, to speak each word. Then
-[WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
-(`pyworld`) re-pitches the word onto our melody notes. It stretches only the
-vowel, so the consonants stay crisp. In the chorus, a choir of other voices
-doubles the diva left and right and sings a third above; in the last chorus a
-male voice an octave down and a fifth voice join. The choir sings only the
-vowels (`voice.sing(..., vowel_only=True)`), low-passed at 6 kHz, in a
-straighter tone, about 6 dB under the lead: every speaker has their own
-consonant lengths, so whole words from five voices smear. The rap is spoken and fitted to the bar. The
-formant robot from `engine.py` only says "signal eleven" in the break.
-
-**DiffSinger (optional).** [code/ds.py](code/ds.py) lets a DiffSinger
-voicebank sing a whole part on our notes, through
-[warble](https://github.com/erz0r/warble) (MIT, ONNX on the CPU). warble and
-the voicebanks are not in this repository: install warble in
-`~/Projects/diffsinger/warble` and put the banks in `~/Projects/diffsinger/banks`
-(or set `WARBLE` and `WARBLE_BANKS`). `DIVA=ds:hanami segfault.py` lets Hoshino
-Hanami (Lotte V; her own licence: any use with credit, vocoder CC BY-NC-SA 4.0)
-sing the diva part in her "Fragrance" (power) mode; `DS_VOICE` picks another
-mode. The same works for `rhythm_of_the_badge.py`. `DS_PITCH` sets how she
-moves between the notes: `free` (her own pitch model), `hard` (flat notes,
-locked to the synths) or a number for the model's expressiveness; the default
-0.5 keeps half her own scoops and overshoots. The key change is sung by DiffSinger itself: her terms forbid
-pitch-shifting finished renders.
-
-The default diva is Piper's `en_US-hfc_female-medium` and the default rapper is
-`en_US-ryan-high`. Both are trained on data under CC BY-NC-SA 4.0. Set `DIVA`
-and `RAPPER` to try other voices.
-
-### Render
-
-Warm Boot needs Python 3 with numpy and scipy. Segfault also needs the voices.
-Set them up once:
+## Setup
 
 ```sh
 cd code
-uv venv .venv && uv pip install --python .venv/bin/python piper-tts pyworld 'setuptools<81' numpy scipy
+uv venv .venv && uv pip install --python .venv/bin/python piper-tts pyworld 'setuptools<81' numpy scipy faster-whisper
 mkdir -p voices && cd voices
-../.venv/bin/python -m piper.download_voices en_US-hfc_female-medium en_US-ryan-high
+../.venv/bin/python -m piper.download_voices en_US-hfc_female-medium en_US-ryan-high   # and the other voices the songs use
 cd ..
-```
-
-Then render:
-
-```sh
 .venv/bin/python warm_boot.py      # writes renders/warm-boot_120bpm_Am.wav
-.venv/bin/python segfault.py       # writes renders/segfault_132bpm_Am.wav
 ```
 
-Every song script works the same way. Warm Boot renders in about 30 seconds.
-Segfault takes about 90 seconds the first time, because Piper speaks every
-word; the speech is cached in `.cache/`. The five other songs take 3 to 5
-minutes each and need about 3 GB of memory.
+Optional parts, outside this repository:
 
-To share the songs in a chat app such as Signal:
+| Part | For | Where |
+|---|---|---|
+| eSpeak NG, Flite, Festival | the classic voices in `trials.py` | `sudo zypper in espeak-ng flite festival` |
+| Mimic 3 | more classic voices | its own Python 3.11 venv, `code/.venv-mimic3` |
+| [warble](https://github.com/erz0r/warble) and DiffSinger voicebanks | `ds.py`: a DiffSinger singer | `~/Projects/diffsinger/warble`, `~/Projects/diffsinger/banks` (or `WARBLE`, `WARBLE_BANKS`) |
+| [acestep.cpp](https://github.com/ServeurpersoCom/acestep.cpp) and its models (12 GB) | `ace.py`: ACE-Step | `~/Projects/acestep.cpp`, built with `./buildvulkan.sh` (needs `spirv-headers`) |
 
-```sh
-.venv/bin/python share.py    # renders/share/: radio edits; renders/share/dj/: the DJ versions
-```
+## The tools in `code/`
 
-The renders are DJ versions, with 16 bars of drums at each end for the compo.
-For sharing, `share.py` also makes a radio edit of each song: from where the
-music comes in to two bars into the outro, with a fade (2:29 to 3:12). Both
-are 320 kbit/s MP3, under 10 MB each.
+| File | What it does |
+|---|---|
+| [engine.py](code/engine.py) | oscillators, instruments, drums, the formant robot, and the mixdown: sidechain, delay, reverb, glue compressor, true-peak limiter to a loudness target |
+| [dx7.py](code/dx7.py) | a DX7-style FM synthesizer: six operators, the 32 algorithms, feedback, keyboard scaling (ported from an NPU demo in `~/Projects/npu`) |
+| [room.py](code/room.py) | a 3-D wave simulation of the air in a room; its impulse response is a song's reverb (also from the NPU demos) |
+| [voice.py](code/voice.py) | Piper speaks each word, WORLD puts it on our notes (see Voices) |
+| [ds.py](code/ds.py) | a DiffSinger voicebank sings a whole part, through warble |
+| [parts.py](code/parts.py), [template.py](code/template.py) | ready parts and a whole song to start from, for the surprise themes |
+| [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3 |
+| [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s` |
+| [weave.py](code/weave.py) | our instrumental, unchanged, under a blend of our vocals and another generator's take of them |
+| [asr.py](code/asr.py) | a speech recognizer (faster-whisper) checks which words of the lyrics can be heard |
+| [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
+| [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
 
-The lyric sheets are in [lyrics/](lyrics/): what each voice sings or says, with
-the time of each section. They are written from the code, so they show the
-words as rendered. `share.py` copies them next to the MP3s and puts them in
-the MP3 tags; for the radio edits it moves the times to the edit.
+Render options (environment variables):
 
 | Variable | Effect |
 |---|---|
-| `STEMS=1` | print the loudness of each bus |
-| `CHORUS_STYLE=octave`, `doubles`, `harmony`, `choir` | how the Segfault chorus is stacked (default `choir`: other voices) |
-| `CHOIR=v1,v2,v3,v4,v5` | the choir: left double, right double, third above; in the last chorus also an octave down and a sixth down |
-| `DIVA=<voice>`, `RAPPER=<voice>` | the voices of Segfault: a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice |
-| `SOLO=vox` | render only these buses (comma separated), for auditions |
-| `MUTE=vox` | render without these buses (comma separated), the rest with its reverb and echo: stems |
 | `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen |
-| `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb from `engine.py` (default: `dx7`, `sim`) |
+| `STEMS=1` | print the loudness of each bus |
+| `SOLO=vox` | render only these buses (comma separated), dry: for auditions |
+| `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
+| `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
+| `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
+| `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
+| `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
 
-`trials.py` renders Segfault with many voice pairs and cuts bars 24-58 (verse,
-rap, pre-chorus, chorus) into `renders/voices/`; with `--solo` it renders the
-voices a cappella into `renders/voices-solo/`, so they are easy to tell apart.
-The classic engines need `sudo zypper in espeak-ng flite festival`; Mimic 3
-lives in its own Python 3.11 venv (`.venv-mimic3`, `mycroft-mimic3-tts`).
+## Voices
 
-The output is a 44.1 kHz, 16-bit stereo WAV. The beat grid starts at sample 0
-and the tempo is exact, so a DJ can sync it without beat analysis. The renders
-are not in the repository. Run the scripts to make them.
+[voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
+a neural text-to-speech model, to speak each word. Then
+[WORLD](https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder)
+(`pyworld`) re-pitches the word onto our melody notes. It stretches only the
+vowel, so the consonants stay crisp, and tunes the pitch hard to the note: the
+eurodance "robot diva". The rap is spoken and fitted to the bar.
+
+- **Choirs.** Other voices double the lead and sing a third above, but only
+  the vowels (`vowel_only=True`, low-passed at 6 kHz), about 6 dB under the
+  lead: whole words from five different speakers smear.
+- **Spelling.** Piper reads through eSpeak. Check new syllables with
+  `espeak-ng -v en-us -q --ipa "..."`: "Ay" is "eye", "Eff" is E-F-F.
+  Spelled-out letters work best as single capitals with "!" (`S! E! G!`), one
+  per beat. `asr.py` checks the result by ear.
+- **DiffSinger.** [ds.py](code/ds.py) lets a DiffSinger voicebank sing a whole
+  part on our notes, through [warble](https://github.com/erz0r/warble) (MIT,
+  ONNX on the CPU). Hoshino Hanami (Lotte V; any use with credit, vocoder CC
+  BY-NC-SA 4.0) sings in her "Fragrance" (power) mode. Her terms forbid
+  pitch-shifting finished renders, so DiffSinger sings the key changes itself.
+  TIGER (male, CC BY-NC-ND) is installed as well.
+
+## ACE-Step
+
+`ace.py SONG --mode ...` runs the whole route; the results land in
+`renders/ace/<song>/`.
+
+| Mode | ACE-Step does | Our part |
+|---|---|---|
+| `cover` | re-plays the whole song (`cover-nofsq`); `--strength` 1 follows us closely, 0.3 loosely | structure, tempo, key, melody, the DJ intro and outro |
+| `vocals` | re-sings only our vocal stem; its take is lined up, gated by our vocals and woven over our instrumental (`--ace` of it in the vocals) | all the music |
+| `lego` | sings a new vocal track over our instrumental, with its own melody | all the music, the words |
+| `text` | makes its own song from a caption and our lyrics | tempo, key, words |
+
+What we found:
+
+- ACE-Step's own songs (`text`) sound good but too modern for the 90s themes.
+  `--era 90s` (narrower, less sub, no air, tape) helps a little.
+- In covers, ACE-Step does not keep the 16 bars of drums at each end, so
+  `master.py --dj-from` splices ours back in.
+- For the vocals, the base model is the faithful one: it puts 9 % of its sound
+  where our voices are silent, the turbo model 48 %.
+- ACE-Step reads the lyrics itself, not through eSpeak: `ace.py` respells them
+  (`ACE_SPELL`): "badge-link", "C six", "U S B".
+- Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
+  model, about 5 minutes with the base model.
+
+## Surprise theme (two hours)
+
+1. Copy [code/template.py](code/template.py), set the tempo, chords, groove
+   and voices, write the words and the melody.
+2. `PREVIEW=48-64 .venv/bin/python my_song.py` for a quick listen (under 20 s).
+3. Add the song to `share.SONGS` and write its lyric sheet in `lyrics/`.
+4. Render it; `asr.py` checks the words; optionally `ace.py` for ACE-Step.
+5. `share.py` and `dj.py`, then copy `renders/dj/` to the USB stick.
+
+A rehearsal (Race Condition, drum and bass) took about 4 minutes from the theme
+to the finished render.
 
 ## Research: `research/`
 
@@ -174,50 +191,21 @@ each file.
 | [local-and-alt-generators.md](research/local-and-alt-generators.md) | open AI music and singing models that run on this laptop |
 | [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
 | [render-speed.md](research/render-speed.md) | how fast the code tracks, DiffSinger and ACE-Step render on this laptop |
-| [suno-tips.md](research/suno-tips.md) | Suno v6 (not used; see below) |
-
-`master.py IN.wav OUT.wav --bpm 120` masters a song from another generator
-(ACE-Step) the same way: the beat grid moved to sample 0, 44.1 kHz, -10 LUFS,
--1.2 dBTP, 16-bit with dither. `--era 90s` makes a modern-sounding mix more like
-the 90s (narrower, less deep sub, no air above 15 kHz, a little tape, -11
-LUFS). `--dj-from OURS.wav --bars N` takes the 16-bar DJ intro and outro from
-our own render: ACE-Step does not keep them drums only.
-
-`weave.py` weaves the slop through the slop: our instrumental stem, unchanged,
-under a blend of our own vocals (the machine flow) and the same vocals cleaned
-up by ACE-Step (a cover of only our vocal stem, base model, strength 0.85).
-ACE-Step's take is lined up to ours and gated by our vocal envelope, so it
-adds nothing where our voices are silent. `MUTE=vox` (or a list of buses)
-renders a song without those buses, with everything else's reverb and echo
-intact: that is how the stems are made.
-
-**The workflow that works best so far:** write the song as a code track, give
-the render to ACE-Step as the source of a `cover-nofsq` (strength 0.3, the
-render also as `--ref-audio`), and master the result with `--dj-from`. Our code
-sets the structure, the tempo, the key and the melody; ACE-Step sets the sound
-and the voices. ACE-Step's own text-to-music takes sound too modern for the 90s
-themes.
+| [suno-tips.md](research/suno-tips.md) | Suno v6 (not used) |
 
 ## Other options we might try
 
-- **ACE-Step 1.5** (MIT, open weights): an open song generator with lyrics and
-  vocals that runs on this laptop through Vulkan. See
-  [local-and-alt-generators.md](research/local-and-alt-generators.md).
-- **OpenUtau with a DiffSinger voice**: a real singing voice on our own melody.
+- **OpenUtau** (MIT) with a DiffSinger voicebank, to tune a phrase by hand in
+  its piano roll. The AppImage is in `~/Projects/diffsinger/dl/`.
 - **The prompts in `suno/`**: style prompts and lyrics written by Claude for
   each theme, in Suno's format. We do not use Suno, because it is a closed
-  service. Most of the text also works as input for ACE-Step.
-  - [suno/saturday-mellow-house.md](suno/saturday-mellow-house.md): "Warm
-    Boot", "Packet Loss (Of Love)", "Low Battery Lullaby", "Low Pass Love".
-  - [suno/sunday-eurodance.md](suno/sunday-eurodance.md): "Segfault (In My
-    Heart)", "Blinky (The LED Song)", "The Rhythm Of The Badge".
-  - [suno/surprise-theme-recipe.md](suno/surprise-theme-recipe.md): a two-hour
-    plan and a tempo table for the surprise themes.
+  service; `ace.py` uses the style prompts as ACE-Step captions.
 
 ## License
 
 MIT for everything in this repository. See [LICENSE](LICENSE). The repository
 follows the [REUSE](https://reuse.software) specification: [REUSE.toml](REUSE.toml)
 gives the copyright and licence of every file, and `uvx reuse lint` checks it.
-The voice models, the Python packages and the renders are not in the
-repository; [SONGS.md](SONGS.md#software-and-licences) lists their licences.
+The voice models, the Python packages, ACE-Step's models and the renders are not
+in the repository; [SONGS.md](SONGS.md#software-and-licences) lists their
+licences.

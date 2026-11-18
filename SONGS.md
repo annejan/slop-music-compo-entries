@@ -267,6 +267,11 @@ finished render.
 | Festival, Flite, eSpeak NG | free software (X11-style, BSD-style, GPL-3.0) | no (zypper) |
 | CMU ARCTIC voices for Festival and Flite | free (BSD-style, CMU) | no (downloaded from festvox.org) |
 | Mimic 3 and its voices | AGPL-3.0; voices CC BY / CC0 / PD | no (pip, downloaded) |
+| ACE-Step 1.5 (models) and acestep.cpp | MIT (the model card allows commercial use of the output) | no (downloaded, built) |
+| warble (DiffSinger engine) | MIT | no (git clone) |
+| Voicebank Hoshino Hanami (Lotte V) | Team L❤VE Voicebank License: any creative use with credit, no political use; her vocoder CC BY-NC-SA 4.0 | no (downloaded) |
+| Voicebank TIGER (spicytigermeat) | CC BY-NC-ND 4.0 with the Commons Clause | no (downloaded) |
+| faster-whisper (the speech recognizer in asr.py) and its Whisper model | MIT | no (pip, downloaded) |
 
 **The renders with voices are non-commercial.** Some Piper voices are trained
 on data under CC BY-NC-SA 4.0 (`hfc_female`, `hfc_male`, `ryan` and others:

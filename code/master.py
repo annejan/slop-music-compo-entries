@@ -4,7 +4,7 @@ the beat grid moved to sample 0, 44.1 kHz, the loudness target under a true-peak
 
 master.py IN.wav OUT.wav --bpm 120 [--lufs -10] [--ceiling -1.2] [--era 90s] [--dj-from OURS.wav --bars 120]
 
-The beat is found from the kick: the onsets of the 40-120 Hz band, folded onto one beat. The start is cut to the
+The beat is found from the onsets (40-8000 Hz), folded onto one beat (see beat_phase). The start is cut to the
 first beat (a few ms fade in), so the grid starts at sample 0, as in our own renders.
 """
 import argparse
@@ -29,14 +29,16 @@ def read(path):
 
 
 def beat_phase(x, sr, bpm):
-    """Seconds from the start to the first beat of the grid, from the kick onsets."""
-    hop = sr // 200
-    lo = signal.sosfilt(signal.butter(4, [40, 120], btype="band", fs=sr, output="sos"), x.mean(1))
-    env = np.sqrt(np.add.reduceat(lo ** 2, np.arange(0, len(lo) - hop, hop)) / hop)
-    onset = np.maximum(np.diff(env), 0)
+    """Seconds from the start to the first beat of the grid: the onset strength (the rise of the log envelope,
+    40-8000 Hz, 1 ms frames) folded onto one beat. Calibrated on our own renders (on the grid by construction):
+    within 1.3 ms. The kick band alone reads 10-40 ms late (our kicks sweep down into it)."""
+    hop = sr // 1000
+    band = signal.sosfilt(signal.butter(4, [40, 8000], btype="band", fs=sr, output="sos"), x.mean(1))
+    v = np.log(np.sqrt(np.add.reduceat(band ** 2, np.arange(0, len(band) - hop, hop)) / hop) + 1e-6)
+    onset = np.maximum(np.diff(v), 0)
     beat = 60 / bpm
     t = (np.arange(len(onset)) + 1) * hop / sr
-    hist, edges = np.histogram(t % beat, bins=200, range=(0, beat), weights=onset)
+    hist, edges = np.histogram(t % beat, bins=400, range=(0, beat), weights=onset)
     hist = np.convolve(np.r_[hist[-3:], hist, hist[:3]], np.ones(5) / 5, "same")[3:-3]
     return (edges[np.argmax(hist)] + edges[1] / 2) % beat
 
@@ -124,26 +126,18 @@ def write(path, x):
         w.writeframes(out.tobytes())
 
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("src")
-    ap.add_argument("dst")
-    ap.add_argument("--bpm", type=float, required=True)
-    ap.add_argument("--lufs", type=float, default=-10.0)
-    ap.add_argument("--ceiling", type=float, default=-1.2)
-    ap.add_argument("--era", choices=["90s"], help="90s: narrower, less sub, no air, tape (and -11 LUFS)")
-    ap.add_argument("--dj-from", help="our own render of the song: its DJ intro and outro replace the take's")
-    ap.add_argument("--bars", type=int, help="the song's length in bars (for --dj-from)")
-    a = ap.parse_args()
-    x, sr = read(a.src)
+def process(src, dst, bpm, lufs=None, ceiling=-1.2, era=None, dj_from=None, bars=None):
+    """The whole job: read, line up (with our render, else by the kick), 44.1 kHz, the DJ intro and outro from our
+    render, the era, the loudness, write. lufs None: -10, or -11 with era 90s. Returns a one-line report."""
+    x, sr = read(src)
     ours = None
-    if a.dj_from:
-        ours, sr2 = read(a.dj_from)
-        if sr2 != e.SR or not a.bars:
-            raise ValueError(f"--dj-from needs a {e.SR} Hz render (this one: {sr2} Hz) and --bars")
-        phase = lag_to(x, sr, ours, start=16 * 240 / a.bpm)   # line up with our render, from bar 16 on
+    if dj_from:
+        ours, sr2 = read(dj_from)
+        if sr2 != e.SR or not bars:
+            raise ValueError(f"dj_from needs a {e.SR} Hz render (this one: {sr2} Hz) and bars")
+        phase = lag_to(x, sr, ours, start=16 * 240 / bpm)   # line up with our render, from bar 16 on
     else:
-        phase = beat_phase(x, sr, a.bpm)
+        phase = beat_phase(x, sr, bpm)
     if phase >= 0:
         x = x[int(round(phase * sr)):]
     else:                                           # the take runs early: silence in front
@@ -154,14 +148,28 @@ if __name__ == "__main__":
     k = int(.004 * e.SR)
     x[:k] *= np.linspace(0, 1, k)[:, None]
     if ours is not None:
-        x = splice_dj(x, ours, a.bpm, a.bars)
-    if a.era == "90s":
+        x = splice_dj(x, ours, bpm, bars)
+    if era == "90s":
         x = era_90s(x)
-        if a.lufs == -10.0:
-            a.lufs = -11.0
-    x = master(x, a.lufs, a.ceiling)
-    write(a.dst, x)
+    if lufs is None:
+        lufs = -11.0 if era == "90s" else -10.0
+    x = master(x, lufs, ceiling)
+    write(dst, x)
     tp = 20 * np.log10(e.true_peak(x).max())
     m, s = divmod(len(x) / e.SR, 60)
-    print(f"wrote {a.dst}: {int(m)}:{s:04.1f}, grid moved {phase * 1000:.0f} ms, "
-          f"{e.integrated_lufs(x):.1f} LUFS, {tp:+.1f} dBTP")
+    return (f"wrote {dst}: {int(m)}:{s:04.1f}, grid moved {phase * 1000:.0f} ms, "
+            f"{e.integrated_lufs(x):.1f} LUFS, {tp:+.1f} dBTP")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("src")
+    ap.add_argument("dst")
+    ap.add_argument("--bpm", type=float, required=True)
+    ap.add_argument("--lufs", type=float, help="default -10, or -11 with --era 90s")
+    ap.add_argument("--ceiling", type=float, default=-1.2)
+    ap.add_argument("--era", choices=["90s"], help="90s: narrower, less sub, no air, tape (and -11 LUFS)")
+    ap.add_argument("--dj-from", help="our own render of the song: its DJ intro and outro replace the take's")
+    ap.add_argument("--bars", type=int, help="the song's length in bars (for --dj-from)")
+    a = ap.parse_args()
+    print(process(a.src, a.dst, a.bpm, a.lufs, a.ceiling, a.era, a.dj_from, a.bars))

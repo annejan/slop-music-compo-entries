@@ -54,6 +54,30 @@ def fit_gains(full, inst, vox):
     return a, b
 
 
+def process(inst, ourvox, othervox, full, out, bpm, ace=.5, lufs=-9.0):
+    """The whole job (see the module docstring). Returns a one-line report."""
+    inst, _ = master.read(inst)
+    ours, _ = master.read(ourvox)
+    full, _ = master.read(full)
+    other, sr = master.read(othervox)
+    if sr != e.SR:
+        g = np.gcd(sr, e.SR)
+        other = signal.resample_poly(other, e.SR // g, sr // g, axis=0)
+    lag = envelope_lag(other, ours, start=16 * 240 / bpm)
+    other = other[int(round(lag * e.SR)):] if lag >= 0 else np.concatenate([np.zeros((int(round(-lag * e.SR)), 2)), other])
+    n = min(len(inst), len(ours), len(full))
+    other = np.concatenate([other, np.zeros((max(n - len(other), 0), 2))])[:n]
+    inst, ours, full = inst[:n], ours[:n], full[:n]
+    other = gate(other, ours)
+    other *= np.sqrt(np.mean(ours ** 2) / (np.mean(other ** 2) + 1e-12))     # the same loudness as our vocals
+    ka, kb = fit_gains(full, inst, ours)
+    mix = master.master(ka * inst + kb * ((1 - ace) * ours + ace * other), lufs)
+    master.write(out, mix)
+    tp = 20 * np.log10(e.true_peak(mix).max())
+    return (f"wrote {out}: other take {lag * 1000:+.0f} ms, vocals {ace:.0%} other, {e.integrated_lufs(mix):.1f} LUFS, "
+            f"{tp:+.1f} dBTP")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     for name in ("inst", "ourvox", "othervox", "full", "out"):
@@ -62,25 +86,4 @@ if __name__ == "__main__":
     ap.add_argument("--ace", type=float, default=.5, help="share of the other take in the vocals, 0..1")
     ap.add_argument("--lufs", type=float, default=-9.0)
     a = ap.parse_args()
-    inst, _ = master.read(a.inst)
-    ours, _ = master.read(a.ourvox)
-    full, _ = master.read(a.full)
-    other, sr = master.read(a.othervox)
-    if sr != e.SR:
-        g = np.gcd(sr, e.SR)
-        other = signal.resample_poly(other, e.SR // g, sr // g, axis=0)
-    lag = envelope_lag(other, ours, start=16 * 240 / a.bpm)
-    other = other[int(round(lag * e.SR)):] if lag >= 0 else np.concatenate([np.zeros((int(round(-lag * e.SR)), 2)), other])
-    n = min(len(inst), len(ours), len(full))
-    other = np.concatenate([other, np.zeros((max(n - len(other), 0), 2))])[:n]
-    inst, ours, full = inst[:n], ours[:n], full[:n]
-    other = gate(other, ours)
-    other *= np.sqrt(np.mean(ours ** 2) / (np.mean(other ** 2) + 1e-12))     # the same loudness as our vocals
-    ka, kb = fit_gains(full, inst, ours)
-    vox = (1 - a.ace) * ours + a.ace * other
-    mix = ka * inst + kb * vox
-    mix = master.master(mix, a.lufs)
-    master.write(a.out, mix)
-    tp = 20 * np.log10(e.true_peak(mix).max())
-    print(f"wrote {a.out}: other take {lag * 1000:+.0f} ms, vocals {a.ace:.0%} other, {e.integrated_lufs(mix):.1f} LUFS, "
-          f"{tp:+.1f} dBTP")
+    print(process(a.inst, a.ourvox, a.othervox, a.full, a.out, a.bpm, a.ace, a.lufs))
