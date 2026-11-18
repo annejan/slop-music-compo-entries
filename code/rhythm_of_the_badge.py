@@ -269,7 +269,7 @@ CHORUS = [
 # the MC: half a line a bar, so the words come out stiff and on the beat
 RAP = ["Plug it in, U S B,", "let the firm ware flow!",
        "From the C six to the P four,", "here we go!",
-       "Badge link, app store,", "upload complete.",
+       "Badgelink, app store,", "upload complete.",
        "Now the whole tent is moving", "to the beat!"]
 SAFETY = ["Warning. That is the C six.", "Do not flash the C six."]
 PROGRESS = ["Uploading.", "Fifty percent.", "Ninety nine percent.", "Upload complete!"]
