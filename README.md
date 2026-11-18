@@ -220,6 +220,13 @@ What we found:
   words per section it lost words on three of four songs (Low Pass Love 39 to
   32 %, Race Condition 55 to 48 %, Packet Loss 65 to 57 %; the Badge 81 to
   84 %). Off by default.
+- Text to music, small against big (the same words and seed, two songs, by
+  ear, 18 November): the 1.7B LM with the turbo DiT came out clean, the 4B LM
+  with the base DiT (50 steps) "a lot messier and fuller, as if you listen
+  half way through the process" in both songs, at 2.4 times the time. The
+  base DiT is the raw pretrained model, and acestep.cpp's base preset runs
+  it without CFG; the tuned 50-step model is SFT, which is not installed.
+  So: turbo for text to music.
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
   model, about 5 minutes with the base model. Bigger VAE tiles than the
   default (`--vae-chunk 2048` or `4096`) crash the GPU (`vk::DeviceLostError`),
