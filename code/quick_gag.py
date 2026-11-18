@@ -5,6 +5,7 @@ For a laugh in the group chat, not for the DJ.
 
 quick_gag.py "Nederlands carnavalsliedje over dat alle updates gedraaid zijn"
 quick_gag.py "Dubstep, English, time to take the bus" [--nerd] [--seed 2] [--best] [--keep]
+quick_gag.py 'Rockabilly about a bug, the hook "BuggyWuggy, boogie woogie"' --nerd   (quoted words go in as written)
 
 The song is about the request and nothing else; --nerd bends it towards the hardware-hacker crowd (badges,
 soldering, firmware, servers, updates), as the first version always did ("Bus Stop Drop" got a badge, a server rack
@@ -52,7 +53,8 @@ the words in that language, with [Verse], [Chorus], [Bridge] and [Outro] tags ea
 per line (at most 8 words, never two sentences on one line), easy to sing; a catchy chorus that comes back at least twice; specific, funny details about the topic; about 16
 to 24 lines in all
 
-Write the words yourself; do not quote existing songs.
+Words in quotes in the request go into the lyrics exactly as written, as the hook of the chorus.
+Write the other words yourself; do not quote existing songs.
 
 An example of the form (a different song; yours is longer):
 
@@ -123,6 +125,16 @@ NERD = ("The chat is a crowd of hardware hackers and nerds: bend the topic towar
         "firmware, servers, updates) where it is funny.")
 
 
+def quoted(request):
+    """The phrases in quotes ("...", '...', or curly quotes) that must appear in the words as written."""
+    return [m.strip() for m in re.findall(r'["\u201c\u201e]([^"\u201c\u201d\u201e]+)["\u201d]|\'([^\']+)\'', request)
+            for m in m if m.strip()]
+
+
+def plain(x):
+    return re.sub(r"[^a-z0-9]+", " ", x.lower()).strip()
+
+
 def ask(request, seed, nerd=False):
     system = SYSTEM.replace("{nerd}", NERD if nerd else "Do not add other subjects (no computers or technology unless "
                                                           "the request is about them).")
@@ -145,6 +157,9 @@ def ask(request, seed, nerd=False):
         if len(again.split()) >= .8 * len(song["lyrics"].split()):
             song["lyrics"] = again
     song["lyrics"] = tidy(song["lyrics"])
+    missing = [q for q in quoted(request) if plain(q) not in plain(song["lyrics"])]
+    if missing:
+        raise ValueError(f"the words leave out {missing}")
     song["lang"] = song["lang"].lower() if song["lang"].lower() in LANGS else "en"
     song["bpm"] = int(min(max(int(song["bpm"]), 60), 300))
     song["seconds"] = int(min(max(int(song.get("seconds", 90)), 45), 150))
@@ -177,7 +192,10 @@ def tidy(lyrics, width=8):
                 cur = cur[width:]
         if cur:
             out.append(" ".join(cur))
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
+    lines = "\n".join(out).strip().splitlines()    # blank lines only before a [Tag] (Qwen sometimes leaves one after
+    keep = [x for i, x in enumerate(lines)            # every line, which ACE-Step reads as a pause)
+            if x.strip() or (i + 1 < len(lines) and lines[i + 1].startswith("["))]
+    return "\n".join(keep)
 
 
 def main():
