@@ -12,6 +12,8 @@ projects/rhythm_of_the_badge.toml:
     strength = 0.85          # cover: how closely ACE-Step follows our render (1 = closely)
     model = "base"           # base (50 steps) or turbo (8)
     seed = 1
+    noise = 0.65             # cover: start from our render, noised, instead of pure noise: ACE-Step only polishes
+                             # (turbo: 0.65 and up is one step of eight, 0.5 two, 0.35 three)
 
     [[section]]              # then section by section, in order
     name = "rap"
@@ -28,6 +30,9 @@ projects/rhythm_of_the_badge.toml:
     auto = true              # before the sections above: for every sung section of the lyric sheet, the ear
                              # compares our render and the take, and the one with more words heard goes in
                              # (ours only when it wins by `auto_margin`, default 0.1)
+    ref = [43, 57, 100.3]    # ACE-Step's timbre reference: 10 s of our render from each of these seconds
+                             # ("sung": where the most words are; off by default, see the README)
+    native_tags = true       # ACE-Step's own section tags ([Verse], [Chorus], ...) instead of the sheet's names
     match = 0.7              # at the end: the tonal balance and stereo width of our render (0 off .. 1 fully)
     era = "90s"              # at the end: master.py's 90s stage (narrower, less sub, no air, tape)
     lufs = -10.0             # the loudness (default -9 for eurodance and drum and bass, -10 for house)
@@ -106,14 +111,37 @@ class Producer:
         os.makedirs(self.cache, exist_ok=True)
         self.ours_path = ace.render(song, self.wav)
         self.ours, _ = master.read(self.ours_path)
-        self.lyrics = ace.ace_lyrics(self.n)
+        self.native = bool(self.p.get("native_tags"))           # ACE-Step's own section tags (ace.native_tag)
+        self.ref = None                                          # set in run() (ref_audio)
+        self.lyrics = ace.ace_lyrics(self.n, native=self.native)
         sheets = [f for f in os.listdir(share.LYRICS) if f.startswith(f"{self.n:02d}-")]
         self.sheet = os.path.join(share.LYRICS, sheets[0]) if sheets else None
+
+    def ref_audio(self):
+        """ref = "sung" in the project: 30 s of our render where the most words are sung (three 10 s stretches) as
+        ACE-Step's timbre reference. Hand-picked stretches (ref = [43, 57, 100.3], start seconds) took the Badge
+        cover from 78 % to 87 % of the words; "sung" lost words on three of four songs (see the README)."""
+        ref = self.p.get("ref")
+        if not ref:
+            return None
+        if ref == "sung":
+            starts = []
+            for t0, t1, want in sorted(section_words(self.sheet, self.bpm), key=lambda w: -len(w[2])):
+                if want and all(abs(t0 - t) >= 10 for t in starts):
+                    starts.append(t0)
+                if len(starts) == 3:
+                    break
+        else:
+            starts = [float(t) for t in ref]
+        part = np.concatenate([self.ours[int(t * e.SR):int((t + 10) * e.SR)] for t in sorted(starts)])
+        return self.write_tmp(part, "ref.wav")
 
     def synth(self, req, src, align=True):
         """An ACE-Step result for this request and source file, cached; returned at 44.1 kHz, lined up with ours
         (align=False: as it comes, only resampled, for a cropped window)."""
         src_hash = hashlib.sha1(open(src, "rb").read()).hexdigest()[:12]
+        if self.ref:
+            src_hash += hashlib.sha1(open(self.ref, "rb").read()).hexdigest()[:12]
         key = hashlib.sha1((json.dumps(req, sort_keys=True) + src_hash).encode()).hexdigest()[:16]
         out = os.path.join(self.cache, key + ".wav")
         if not os.path.exists(out):
@@ -122,7 +150,8 @@ class Producer:
             log = os.path.join(self.cache, key + ".log")
             with open(log, "w") as fh:
                 r = subprocess.run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS,
-                                    "--request", path, "--src-audio", src, "--device", "Vulkan0"],
+                                    "--request", path, "--src-audio", src, "--device", "Vulkan0",
+                                    *(["--ref-audio", self.ref] if self.ref else [])],
                                    stdout=fh, stderr=subprocess.STDOUT)
             if r.returncode:
                 sys.exit(f"ACE-Step failed, see {log}")
@@ -165,11 +194,16 @@ class Producer:
         return path
 
     def run(self):
+        self.ref = self.ref_audio()
         take = self.p.get("take", "cover")
         if take == "cover":
-            x = self.synth(self.request(task_type="cover-nofsq", audio_cover_strength=self.p.get("strength", .85)),
-                           self.ours_path)
-            print(f"take: ACE-Step cover, strength {self.p.get('strength', .85)}", flush=True)
+            extra = {}
+            if "noise" in self.p:      # start from our render, noised: ACE-Step only polishes (see the README)
+                extra["cover_noise_strength"] = float(self.p["noise"])
+            x = self.synth(self.request(task_type="cover-nofsq", audio_cover_strength=self.p.get("strength", .85),
+                                        **extra), self.ours_path)
+            print(f"take: ACE-Step cover, strength {self.p.get('strength', .85)}"
+                  + (f", from our render noised ({self.p['noise']})" if extra else ""), flush=True)
         else:
             x = self.ours.copy()
             print("take: ours", flush=True)
@@ -190,7 +224,8 @@ class Producer:
                 src = self.write_tmp(x[i0:i1], "current.wav")
                 extra = {}
                 if sec.get("lyrics") == "section":
-                    extra["lyrics"] = ace.ace_lyrics(self.n, c0 * self.bar, (c1 or self.bars) * self.bar)
+                    extra["lyrics"] = ace.ace_lyrics(self.n, c0 * self.bar, (c1 or self.bars) * self.bar,
+                                                     native=self.native)
                 if "noise" in sec:
                     extra["cover_noise_strength"] = float(sec["noise"])
                 for seed in sec.get("seeds", [2, 3]):
@@ -264,10 +299,14 @@ class Producer:
         if not self.sheet:
             return "no lyric sheet: no ear report"
         lines = [f"ear per section ({os.path.basename(path)}):"]
+        hit = total = 0
         for t0, t1, want in section_words(self.sheet, self.bpm):
             if want:
                 s = section_score(path, t0, min(t1, t0 + 60), want)
                 lines.append(f"  bar {t0 / self.bar:5.1f}: {s:4.0%}  {' '.join(want[:8])}...")
+                hit, total = hit + round(s * len(want)), total + len(want)
+        lines.append(f"{os.path.basename(path)}: {hit}/{total} lyric words heard ({hit / max(total, 1):.0%}), "
+                     "section by section")
         return "\n".join(lines)
 
 

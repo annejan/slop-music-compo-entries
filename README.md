@@ -171,7 +171,10 @@ What we found:
   tonal balance and stereo width of our own render: one static zero-phase EQ
   from the two long-term spectra per third octave (at most 8 dB either way),
   and the sides scaled. At 0.7 the Badge and Packet Loss covers land on our
-  centroid and width; Warm Boot moves about half way.
+  centroid and width; Warm Boot moves about half way. The words do not change
+  with it (the ear: Badge +17, Race Condition +5, Packet Loss -1, Low Pass
+  Love -10 points, about the ear's own spread); `--era 90s` on top cost the
+  Badge 24 points, the others nothing.
 - In covers, ACE-Step does not keep the 16 bars of drums at each end, so
   `master.py --dj-from` splices ours back in.
 - `lego` on the Badge was "an esoteric mess", but interesting: ACE-Step sang
@@ -181,7 +184,15 @@ What we found:
 - ACE-Step reads the lyrics itself, not through eSpeak: `ace.py` respells them
   (`ACE_SPELL`): "badge-link", "C six", "U S B". `--native-tags` maps our sheet's
   section names to the tags ACE-Step was trained on (`[Verse]`, `[Rap]`,
-  `[Chorus]`, `[Break]`, `[Instrumental]`).
+  `[Chorus]`, `[Break]`, `[Instrumental]`); measured, they lose words (Low
+  Pass Love 39 to 36 %, Race Condition 55 to 53 %, Packet Loss 65 to 57 %),
+  so the default stays our own names.
+- A timbre reference of 30 s of our render where the words are sung
+  (`ref = "sung"` in produce.py): with three stretches picked by hand the
+  Badge cover went from 78 % to 87 % of the words, but picked by the most
+  words per section it lost words on three of four songs (Low Pass Love 39 to
+  32 %, Race Condition 55 to 48 %, Packet Loss 65 to 57 %; the Badge 81 to
+  84 %). Off by default.
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
   model, about 5 minutes with the base model. Bigger VAE tiles than the
   default (`--vae-chunk 2048` or `4096`) crash the GPU (`vk::DeviceLostError`),
@@ -202,9 +213,9 @@ name = "verse"
 bars = [24, 32]
 use = "repaint"       # ACE-Step makes these bars again, once per seed; the ear keeps the best,
                       # and only if it beats what is there
-window = 4            # repaint only this section plus 4 bars of context (not yet tested on the GPU)
+window = 4            # repaint only this section plus 4 bars of context
 lyrics = "section"    # with only the lines sung in that window
-noise = 0.35          # starting from a noised copy of the take, so the words are already there
+noise = 0.65          # starting from a noised copy of the take, so the words are already there
 seeds = [2, 3]
 
 [[section]]
@@ -219,9 +230,22 @@ use = "ours"          # our own render here: the machine flow
 ```
 
 Every ACE-Step result is cached by its request, so changing one section only
-redoes that section. Found so far: a `repaint` of a sung section comes back
-without words (ACE-Step does not know which lines belong there), so the ear
-keeps the take; `use = "ours"` works. The DJ intro and outro are always ours. The result is in
+redoes that section. A `repaint` from pure noise (`noise = 0`) comes back
+without words. From the take noised, it polishes: on the Badge verse (65 % of
+the words in the take) `noise` 0.35 gave 18-59 %, 0.5 gave 76 %, 0.65 gave
+82 %. The turbo model has 8 steps, so `noise` snaps to its schedule: 0.65 and
+up is one step of ACE-Step on the take, 0.5 two, 0.35 three.
+
+`noise` at the top of a project does the same to the whole song, starting
+from our own render instead of a cover: ACE-Step only cleans up, it adds no
+parts and no words of its own. Words heard, section by section:
+
+| Song | Our render | 1 step (`noise = 0.65`) | 2 steps (`noise = 0.5`) |
+|---|---|---|---|
+| Packet Loss | 29 % | **43 %** | 37 % |
+| The Rhythm Of The Badge | 73 % | **77 %** | 72 % |
+| Segfault | 14 % | 15 % | **34 %** |
+| Low Pass Love | 17 % | 15 % | 16 % | The DJ intro and outro are always ours. The result is in
 `renders/produce/<song>/`, with a radio edit and an ear report per section.
 
 What the ear (`asr.py`) hears of the lyrics in our full mixes: The Rhythm Of
