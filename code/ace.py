@@ -2,7 +2,7 @@
 """One command for the ACE-Step route: our song script -> our render (and stems) -> ACE-Step -> mastered for the
 DJ -> a radio edit and a DJ version as MP3.
 
-ace.py SONG [--mode cover|vocals|lego|text] [--strength 0.85] [--model base|turbo] [--ref] [--ace 1.0] [--era 90s]
+ace.py SONG [--mode cover|vocals|lego|text] [--strength 0.85] [--model base|turbo] [--ref] [--ace 1.0] [--era 90s] [--match 0.7]
             [--seed 1] [--caption "..."] [--tag NAME] [--check]
 
   SONG      a song script without .py, e.g. rhythm_of_the_badge (it must be in share.SONGS)
@@ -177,6 +177,7 @@ def main():
     ap.add_argument("--ref", action="store_true", help="our audio as the timbre reference too")
     ap.add_argument("--ace", type=float, default=1.0, help="vocals mode: ACE-Step's share of the vocals")
     ap.add_argument("--era", choices=["90s"])
+    ap.add_argument("--match", type=float, default=0.0, help="cover, lego: 0-1, the tonal balance of our render")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--caption", help="replace the song's caption")
     ap.add_argument("--lyrics", help="a text file with the lyrics (ACE-Step format, [Section] tags) instead of the sheet")
@@ -190,6 +191,8 @@ def main():
                     else f"{a.mode}-s{a.seed}")
     if a.era:
         tag += f"-{a.era}"
+    if a.match:
+        tag += f"-m{a.match:g}"
     out = os.path.join(share.RENDERS, "ace", a.song)
     os.makedirs(out, exist_ok=True)
     t0 = time.time()
@@ -229,7 +232,7 @@ def main():
 
     final = base + ".wav"
     if a.mode in ("cover", "lego"):
-        print(master.process(raw, final, bpm, era=a.era, dj_from=full, bars=bars))
+        print(master.process(raw, final, bpm, era=a.era, dj_from=full, bars=bars, match=a.match))
     elif a.mode == "vocals":
         print(weave.process(inst, vox, raw, full, final, bpm, ace=a.ace))
     else:

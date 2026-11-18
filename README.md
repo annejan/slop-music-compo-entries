@@ -54,7 +54,8 @@ produce   produce.py: ACE-Step re-plays it, section by section (projects/<song>.
           or ace.py: one ACE-Step pass (cover, vocals, lego, text)
 master    master.py / weave.py: on the grid, our DJ intro and outro, -9/-10 LUFS, -1.2 dBTP
 check     asr.py: which words come through
-deliver   share.py (radio edit + DJ version as MP3), dj.py (the USB stick)
+deliver   share.py (radio edit + DJ version as MP3), dj.py (the USB stick),
+          mix.py (a day as the DJ would play it: to hear that the songs mix)
 ```
 
 1. **The code track.** The script writes a 44.1 kHz, 16-bit stereo WAV. The
@@ -103,10 +104,11 @@ Optional parts, outside this repository:
 | [parts.py](code/parts.py), [template.py](code/template.py) | ready parts and a whole song to start from, for the surprise themes |
 | [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3 |
 | [produce.py](code/produce.py) | a song section by section from a project file: an ACE-Step take of the whole song, then per section our own render, the take, or a `repaint` with several seeds of which the ear picks the best; everything cached |
-| [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s` |
+| [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s`; `--match 0.7` our render's tonal balance and width |
 | [weave.py](code/weave.py) | our instrumental, unchanged, under a blend of our vocals and another generator's take of them |
 | [asr.py](code/asr.py) | a speech recognizer (faster-whisper) checks which words of the lyrics can be heard |
 | [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
+| [mix.py](code/mix.py) | a day's songs as one DJ set: one tempo (varispeed), each song over the 16-bar outro of the one before, the lows swapped 4 bars before the end, the keys checked on the Camelot wheel; `--order auto` for the fewest key clashes, `--use` for produced versions |
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
 
 Render options (environment variables):
@@ -162,7 +164,14 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
 What we found:
 
 - ACE-Step's own songs (`text`) sound good but too modern for the 90s themes.
-  `--era 90s` (narrower, less sub, no air, tape) helps a little.
+  `--era 90s` (narrower, less sub, no air, tape) helps a little. Measured, the
+  "modern" is a darker, wider sound than our code makes (Warm Boot: centroid
+  251 Hz against our 356 Hz, sides -11.7 dB against -17.8 dB).
+  `--match 0.7` (master.py, ace.py, `match` in produce.py) gives the take the
+  tonal balance and stereo width of our own render: one static zero-phase EQ
+  from the two long-term spectra per third octave (at most 8 dB either way),
+  and the sides scaled. At 0.7 the Badge and Packet Loss covers land on our
+  centroid and width; Warm Boot moves about half way.
 - In covers, ACE-Step does not keep the 16 bars of drums at each end, so
   `master.py --dj-from` splices ours back in.
 - `lego` on the Badge was "an esoteric mess", but interesting: ACE-Step sang
@@ -174,7 +183,9 @@ What we found:
   section names to the tags ACE-Step was trained on (`[Verse]`, `[Rap]`,
   `[Chorus]`, `[Break]`, `[Instrumental]`).
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
-  model, about 5 minutes with the base model.
+  model, about 5 minutes with the base model. Bigger VAE tiles than the
+  default (`--vae-chunk 2048` or `4096`) crash the GPU (`vk::DeviceLostError`),
+  so the decode stays at about 40 s a song.
 
 ## Producing section by section
 
@@ -200,6 +211,11 @@ seeds = [2, 3]
 name = "rap"
 bars = [48, 56]
 use = "ours"          # our own render here: the machine flow
+
+# at the end (top-level keys, before the first [[section]]):
+# match = 0.7         # the tonal balance and width of our render (master.match_tone)
+# era = "90s"         # master.py's 90s stage
+# lufs = -10.0        # default -9 for eurodance, -10 for house
 ```
 
 Every ACE-Step result is cached by its request, so changing one section only

@@ -28,6 +28,9 @@ projects/rhythm_of_the_badge.toml:
     auto = true              # before the sections above: for every sung section of the lyric sheet, the ear
                              # compares our render and the take, and the one with more words heard goes in
                              # (ours only when it wins by `auto_margin`, default 0.1)
+    match = 0.7              # at the end: the tonal balance and stereo width of our render (0 off .. 1 fully)
+    era = "90s"              # at the end: master.py's 90s stage (narrower, less sub, no air, tape)
+    lufs = -10.0             # the loudness (default -9 for eurodance and drum and bass, -10 for house)
 
 The DJ intro and outro (16 bars of drums at each end) are always ours. The result is mastered like ours (-9 LUFS
 for eurodance and drum and bass, -10 for house, -1.2 dBTP), and asr.py reports per section how many words come
@@ -208,8 +211,14 @@ class Producer:
                 else:
                     x = self.splice(x, best[1], b0, b1)
             print(f"section {sec.get('name', '')} (bars {b0}-{b1}): {use}", flush=True)
+        if self.p.get("match"):                                 # the colour of our render (master.match_tone)
+            body = (int(16 * self.bar * e.SR), int((self.bars - 16) * self.bar * e.SR))
+            x, tone = master.match_tone(x, self.ours, float(self.p["match"]), body=body)
+            print(tone, flush=True)
         x = master.splice_dj(x, self.ours, self.bpm, self.bars)
-        lufs = -10.0 if "house" in self.day else -9.0
+        if self.p.get("era") == "90s":
+            x = master.era_90s(x)
+        lufs = self.p.get("lufs", -10.0 if "house" in self.day else -9.0)
         x = master.master(x, lufs)
         name = self.song + (f"-{self.tag}" if self.tag else "")
         out = os.path.join(self.dir, f"{name}.wav")

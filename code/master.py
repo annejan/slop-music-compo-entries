@@ -3,6 +3,7 @@
 the beat grid moved to sample 0, 44.1 kHz, the loudness target under a true-peak ceiling, 16-bit with dither.
 
 master.py IN.wav OUT.wav --bpm 120 [--lufs -10] [--ceiling -1.2] [--era 90s] [--dj-from OURS.wav --bars 120]
+          [--match 0.7]
 
 The beat is found from the onsets (40-8000 Hz), folded onto one beat (see beat_phase). The start is cut to the
 first beat (a few ms fade in), so the grid starts at sample 0, as in our own renders.
@@ -102,6 +103,45 @@ def era_90s(x):
     return np.tanh(drive * x / peak) / np.tanh(drive) * peak       # tape: the peaks rounded off, a little warmth
 
 
+THIRDS = 1000 * 2 ** (np.arange(-16, 13) / 3)                    # third-octave centres, 25 Hz to 16 kHz
+
+
+def _thirds_db(m):
+    """The level of a mono signal per third-octave band (dB, long-term average)."""
+    f, p = signal.welch(m.astype(np.float32), e.SR, nperseg=16384)
+    return np.array([10 * np.log10(p[(f >= c * 2 ** (-1 / 6)) & (f < c * 2 ** (1 / 6))].sum() + 1e-20)
+                     for c in THIRDS])
+
+
+def _side_db(x):
+    """How loud the sides are against the middle above 150 Hz (dB): the width of the stereo image."""
+    hp = e.highpass(x, 150)
+    return 10 * np.log10(np.mean((hp[:, 0] - hp[:, 1]) ** 2) / (np.mean((hp[:, 0] + hp[:, 1]) ** 2) + 1e-20) + 1e-20)
+
+
+def match_tone(x, ref, strength=.7, max_db=8.0, body=None):
+    """Give x the tonal balance and stereo width of ref: the difference of their long-term spectra per third octave
+    (smoothed, at most max_db either way, times strength) as one static zero-phase EQ, and the sides scaled to the
+    reference width. For a take of ACE-Step against our own render of the song: the arrangement and the voices from
+    the take, the colour of the code (ACE-Step adds deep sub, a dark top and a wide image: the "too modern" sound).
+    body: (i0, i1) samples to measure in (not the DJ intro and outro). Returns (y, report)."""
+    i0, i1 = body or (0, min(len(x), len(ref)))
+    a, b = x[i0:i1], ref[i0:i1]
+    d = _thirds_db(b.mean(1)) - _thirds_db(a.mean(1))
+    d = np.convolve(np.r_[d[0], d, d[-1]], np.ones(3) / 3, "valid")    # smooth over three bands
+    d = np.clip(d - np.median(d), -max_db, max_db) * strength          # the shape only: the loudness comes later
+    f = np.fft.rfftfreq(len(x), 1 / e.SR)
+    g = 10 ** (np.interp(np.log(np.maximum(f, 1)), np.log(THIRDS), d) / 20)
+    y = np.stack([np.fft.irfft(np.fft.rfft(x[:, c]) * g, len(x)) for c in range(2)], 1)
+    w = np.clip(_side_db(b) - _side_db(a), -9, 3) * strength
+    mid, side = (y[:, 0] + y[:, 1]) / 2, (y[:, 0] - y[:, 1]) / 2 * 10 ** (w / 20)
+    y = np.stack([mid + side, mid - side], 1)
+    at = lambda hz: d[np.argmin(np.abs(THIRDS - hz))]
+    report = (f"tone matched: 31 Hz {at(31):+.1f} dB, 62 Hz {at(62):+.1f}, 250 Hz {at(250):+.1f}, "
+              f"1 kHz {at(1000):+.1f}, 4 kHz {at(4000):+.1f}, 10 kHz {at(10000):+.1f}; sides {w:+.1f} dB")
+    return y, report
+
+
 def master(x, lufs=-10.0, ceiling_db=-1.2):
     ceiling = 10 ** (ceiling_db / 20)
     level = e.integrated_lufs(x)
@@ -126,9 +166,10 @@ def write(path, x):
         w.writeframes(out.tobytes())
 
 
-def process(src, dst, bpm, lufs=None, ceiling=-1.2, era=None, dj_from=None, bars=None):
-    """The whole job: read, line up (with our render, else by the kick), 44.1 kHz, the DJ intro and outro from our
-    render, the era, the loudness, write. lufs None: -10, or -11 with era 90s. Returns a one-line report."""
+def process(src, dst, bpm, lufs=None, ceiling=-1.2, era=None, dj_from=None, bars=None, match=0.0):
+    """The whole job: read, line up (with our render, else by the kick), 44.1 kHz, the tone of our render (match,
+    0-1), the DJ intro and outro from our render, the era, the loudness, write. lufs None: -10, or -11 with era 90s.
+    Returns a one-line report."""
     x, sr = read(src)
     ours = None
     if dj_from:
@@ -147,6 +188,11 @@ def process(src, dst, bpm, lufs=None, ceiling=-1.2, era=None, dj_from=None, bars
         x = signal.resample_poly(x, e.SR // g, sr // g, axis=0)
     k = int(.004 * e.SR)
     x[:k] *= np.linspace(0, 1, k)[:, None]
+    tone = ""
+    if match and ours is not None:
+        body = (int(16 * 240 / bpm * e.SR), int((bars - 16) * 240 / bpm * e.SR))
+        x, tone = match_tone(x, ours, match, body=body)
+        tone = "; " + tone
     if ours is not None:
         x = splice_dj(x, ours, bpm, bars)
     if era == "90s":
@@ -158,7 +204,7 @@ def process(src, dst, bpm, lufs=None, ceiling=-1.2, era=None, dj_from=None, bars
     tp = 20 * np.log10(e.true_peak(x).max())
     m, s = divmod(len(x) / e.SR, 60)
     return (f"wrote {dst}: {int(m)}:{s:04.1f}, grid moved {phase * 1000:.0f} ms, "
-            f"{e.integrated_lufs(x):.1f} LUFS, {tp:+.1f} dBTP")
+            f"{e.integrated_lufs(x):.1f} LUFS, {tp:+.1f} dBTP{tone}")
 
 
 if __name__ == "__main__":
@@ -171,5 +217,7 @@ if __name__ == "__main__":
     ap.add_argument("--era", choices=["90s"], help="90s: narrower, less sub, no air, tape (and -11 LUFS)")
     ap.add_argument("--dj-from", help="our own render of the song: its DJ intro and outro replace the take's")
     ap.add_argument("--bars", type=int, help="the song's length in bars (for --dj-from)")
+    ap.add_argument("--match", type=float, default=0.0,
+                    help="0-1: give the take the tonal balance and width of our render (needs --dj-from)")
     a = ap.parse_args()
-    print(process(a.src, a.dst, a.bpm, a.lufs, a.ceiling, a.era, a.dj_from, a.bars))
+    print(process(a.src, a.dst, a.bpm, a.lufs, a.ceiling, a.era, a.dj_from, a.bars, a.match))
