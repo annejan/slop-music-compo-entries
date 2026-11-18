@@ -19,8 +19,11 @@ import master
 import share
 
 OUT = os.path.join(share.RENDERS, "dj")
-CAMELOT = {"Am": "8A", "Em": "9A", "Bm": "10A", "F#m": "11A", "Dm": "7A", "Gm": "6A", "Cm": "5A", "Fm": "4A",
-           "C": "8B", "G": "9B", "D": "10B", "A": "11B", "E": "12B", "F": "7B"}
+CAMELOT = {   # all 24 keys, with the enharmonic spellings
+    "Abm": "1A", "G#m": "1A", "Ebm": "2A", "D#m": "2A", "Bbm": "3A", "A#m": "3A", "Fm": "4A", "Cm": "5A", "Gm": "6A",
+    "Dm": "7A", "Am": "8A", "Em": "9A", "Bm": "10A", "F#m": "11A", "Gbm": "11A", "C#m": "12A", "Dbm": "12A",
+    "B": "1B", "Cb": "1B", "F#": "2B", "Gb": "2B", "Db": "3B", "C#": "3B", "Ab": "4B", "G#": "4B", "Eb": "5B",
+    "D#": "5B", "Bb": "6B", "A#": "6B", "F": "7B", "C": "8B", "G": "9B", "D": "10B", "A": "11B", "E": "12B"}
 # songs that end in another key (a key change for the last chorus)
 END_KEY = {"segfault": "Bm", "blinky": "E", "rhythm_of_the_badge": "F#m"}
 

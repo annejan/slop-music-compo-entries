@@ -88,7 +88,22 @@ def song_info(script):
     sys.exit(f"{script}: not in share.SONGS (add the song there first)")
 
 
-def ace_lyrics(n, t0=None, t1=None):
+# ACE-Step was trained on plain structure tags: our sheet's section names and roles mapped onto them (--native-tags)
+NATIVE = [(r"intro", "Intro"), (r"outro", "Outro"), (r"pre.?chorus", "Pre-Chorus"), (r"chorus|hook|refrain", "Chorus"),
+          (r"verse", "Verse"), (r"rap|mc|rapper", "Rap"), (r"bridge", "Bridge"), (r"build", "Build-up"),
+          (r"break", "Break"), (r"drop", "Drop"), (r"spoken|system|computer|voice|robot|sanitizer", "Spoken"),
+          (r"diva|her|him|singer|choir|vocal", "Verse")]
+
+
+def native_tag(section):
+    low = section.lower()
+    for pat, tag in NATIVE:
+        if re.search(pat, low):
+            return tag
+    return "Instrumental"
+
+
+def ace_lyrics(n, t0=None, t1=None, native=False):
     """The lyric sheet as ACE-Step lyrics: [Section] tags, the sung words without the roles, respelled. With t0 and
     t1 (seconds): only the sections that start inside that stretch, or sing into it."""
     sheets = glob.glob(os.path.join(share.LYRICS, f"{n:02d}-*.txt"))
@@ -127,6 +142,9 @@ def ace_lyrics(n, t0=None, t1=None):
             out.append(line.split(":", 1)[1].strip())
     text = "\n".join(out).strip()
     text = re.sub(r"[ \t]*\([^)]*\)", "", text)          # stage directions in the sheet: "(in the echo)"
+    if native:
+        text = re.sub(r"\[([^\]]+)\]", lambda m: f"[{native_tag(m.group(1))}]", text)
+        text = re.sub(r"(\[Instrumental\]\n*)+(?=\[Instrumental\])", "", text)   # one tag for a run of them
     for pat, rep in ACE_SPELL:
         text = re.sub(pat, rep, text)
     return re.sub(r"\n{3,}", "\n\n", text)
@@ -162,6 +180,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--caption", help="replace the song's caption")
     ap.add_argument("--lyrics", help="a text file with the lyrics (ACE-Step format, [Section] tags) instead of the sheet")
+    ap.add_argument("--native-tags", action="store_true", help="map the sheet's sections to ACE-Step's own tags")
     ap.add_argument("--tag", help="the output's name (default: mode, model, strength, seed)")
     ap.add_argument("--check", action="store_true", help="the speech recognizer over the result")
     a = ap.parse_args()
@@ -185,7 +204,7 @@ def main():
         sys.exit("lego needs the base model (--model base)")
 
     caption = a.caption or (VOCALS_CAPTION if a.mode == "vocals" else CAPTIONS.get(a.song, day.split(": ")[1]))
-    lyrics = open(a.lyrics, encoding="utf-8").read() if a.lyrics else ace_lyrics(n)
+    lyrics = open(a.lyrics, encoding="utf-8").read() if a.lyrics else ace_lyrics(n, native=a.native_tags)
     req = {"caption": caption, "lyrics": lyrics, "bpm": bpm, "keyscale": KEYS.get(key, key),
            "timesignature": "4", "vocal_language": "en", "seed": a.seed, "output_format": "wav16", **SYNTH[a.model]}
     base = os.path.join(out, tag)

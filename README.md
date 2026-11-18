@@ -170,7 +170,9 @@ What we found:
 - For the vocals, the base model is the faithful one: it puts 9 % of its sound
   where our voices are silent, the turbo model 48 %.
 - ACE-Step reads the lyrics itself, not through eSpeak: `ace.py` respells them
-  (`ACE_SPELL`): "badge-link", "C six", "U S B".
+  (`ACE_SPELL`): "badge-link", "C six", "U S B". `--native-tags` maps our sheet's
+  section names to the tags ACE-Step was trained on (`[Verse]`, `[Rap]`,
+  `[Chorus]`, `[Break]`, `[Instrumental]`).
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
   model, about 5 minutes with the base model.
 
