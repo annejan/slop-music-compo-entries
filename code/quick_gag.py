@@ -4,7 +4,11 @@ key, language), ACE-Step 1.5 sings and plays it (the 1.7B LM and the turbo DiT: 
 For a laugh in the group chat, not for the DJ.
 
 quick_gag.py "Nederlands carnavalsliedje over dat alle updates gedraaid zijn"
-quick_gag.py "Dubstep, English, time to take the bus" [--seed 2] [--best] [--keep]
+quick_gag.py "Dubstep, English, time to take the bus" [--nerd] [--seed 2] [--best] [--keep]
+
+The song is about the request and nothing else; --nerd bends it towards the hardware-hacker crowd (badges,
+soldering, firmware, servers, updates), as the first version always did ("Bus Stop Drop" got a badge, a server rack
+and a CPU core).
 
 --best: the 4B LM and the SFT DiT (about 2.5 minutes for 2 minutes of music, by ear the best; default: about 70 s).
 --keep: leave the Qwen server running for the next gag (the first start takes about 8 s). It holds about 6 GB of
@@ -31,8 +35,9 @@ URL = f"http://127.0.0.1:{PORT}/v1"
 LANGS = ("ar az bg bn ca cs da de el en es fa fi fr he hi hr ht hu id is it ja ko la lt ms ne nl no pa pl pt ro ru "
          "sa sk sr sv sw ta te th tl tr uk ur vi yue zh").split()        # ACE-Step's vocal languages
 
-SYSTEM = """You write short, funny songs for the group chat of a crowd of hardware hackers and nerds (badges,
-soldering, firmware, servers, updates). Given a request (a genre, a language, a topic, in any mix), write one song.
+SYSTEM = """You write short, funny songs for a group chat. Given a request (a genre, a language, a topic, in any mix),
+write one song about exactly that topic: its jokes and details come from the topic itself.
+{nerd}
 Answer in exactly this form, nothing before or after it:
 
 TITLE: the song's title, in the song's language
@@ -44,10 +49,50 @@ KEY: a key like G major or A minor
 SECONDS: the length, 60 to 120
 LYRICS:
 the words in that language, with [Verse], [Chorus], [Bridge] and [Outro] tags each on their own line; one short line
-per line (at most 8 words, never two sentences on one line), easy to sing; a catchy chorus that comes back at least twice; specific, funny details from the request; about 16
+per line (at most 8 words, never two sentences on one line), easy to sing; a catchy chorus that comes back at least twice; specific, funny details about the topic; about 16
 to 24 lines in all
 
-Write the words yourself; do not quote existing songs."""
+Write the words yourself; do not quote existing songs.
+
+An example of the form (a different song; yours is longer):
+
+TITLE: Monday Morning Coffee
+LANG: en
+STYLE: 1970s funk, slap bass, horn section, wah guitar, a cheerful male singer, sunny mood
+BPM: 104
+KEY: E minor
+SECONDS: 90
+LYRICS:
+[Verse]
+The alarm goes off at seven
+I hit snooze and dream of heaven
+[Chorus]
+Coffee, coffee, save my day
+Pour it in and I'm okay
+[Outro]
+Pour it in and I'm okay"""
+
+REFORMAT = """Put these song lyrics in lines, as a lyric sheet: each [Tag] on its own line; one short sung line per line,
+at most 8 words; split long lines where a sentence or phrase ends. Do not change, add or drop any words. Answer with
+only the lyrics."""
+
+
+def messy(lyrics):
+    """True when the words are not in sung lines: a tag inside a line, or a line of more than 12 words."""
+    for line in lyrics.splitlines():
+        line = line.strip()
+        if re.search(r".\[[A-Za-z]", line) or len(line.split()) > 12:
+            return True
+    return False
+
+
+def chat(system, user, seed, max_tokens=1500):
+    body = {"model": MODEL, "temperature": .8, "seed": seed, "max_tokens": max_tokens,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    req = urllib.request.Request(URL + "/chat/completions", json.dumps(body).encode(),
+                                 {"Content-Type": "application/json"})
+    text = json.load(urllib.request.urlopen(req, timeout=300))["choices"][0]["message"]["content"]
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.S)          # a reasoning model's thoughts, if any
 
 
 def up():
@@ -74,13 +119,14 @@ def start_server():
     sys.exit(f"flm serve {MODEL} did not answer on port {PORT} in 90 s")
 
 
-def ask(request, seed):
-    body = {"model": MODEL, "temperature": .8, "seed": seed, "max_tokens": 1500,
-            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": request}]}
-    req = urllib.request.Request(URL + "/chat/completions", json.dumps(body).encode(),
-                                 {"Content-Type": "application/json"})
-    text = json.load(urllib.request.urlopen(req, timeout=300))["choices"][0]["message"]["content"]
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.S)          # a reasoning model's thoughts, if any
+NERD = ("The chat is a crowd of hardware hackers and nerds: bend the topic towards their world (badges, soldering, "
+        "firmware, servers, updates) where it is funny.")
+
+
+def ask(request, seed, nerd=False):
+    system = SYSTEM.replace("{nerd}", NERD if nerd else "Do not add other subjects (no computers or technology unless "
+                                                          "the request is about them).")
+    text = chat(system, request, seed)
     text = text.replace("**", "")
     song = {}
     for k in ("title", "lang", "style", "bpm", "key", "seconds"):
@@ -93,6 +139,12 @@ def ask(request, seed):
         if not song.get(k):
             raise ValueError(f"the answer has no {k.upper()}: {text[:300]}")
     song["bpm"] = re.sub(r"[^0-9]", "", song["bpm"]) or "120"
+    if messy(song["lyrics"]):                  # Qwen puts its own words in lines (once), the regex only as a last resort
+        print("Qwen: the words are not in lines; asking it to set them as a lyric sheet", file=sys.stderr)
+        again = chat(REFORMAT, song["lyrics"], seed).strip()
+        if len(again.split()) >= .8 * len(song["lyrics"].split()):
+            song["lyrics"] = again
+    song["lyrics"] = tidy(song["lyrics"])
     song["lang"] = song["lang"].lower() if song["lang"].lower() in LANGS else "en"
     song["bpm"] = int(min(max(int(song["bpm"]), 60), 300))
     song["seconds"] = int(min(max(int(song.get("seconds", 90)), 45), 150))
@@ -101,12 +153,41 @@ def ask(request, seed):
     return song
 
 
+def tidy(lyrics, width=8):
+    """The words as ACE-Step wants them: each [Tag] on its own line with a blank line before it, and no line longer
+    than about `width` words (Qwen sometimes writes a whole song on one line). Splits at punctuation when it can."""
+    text = re.sub(r"\s*(\[[A-Za-z][A-Za-z0-9 \-]*\])\s*", r"\n\n\1\n", lyrics).strip()
+    out = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("[") or len(line.split()) <= width + 2:
+            out.append(line)
+            continue
+        # sentences: after punctuation, or where a capital follows a lower-case word ("old cheese My lunchbox")
+        parts = [x.strip() for x in re.split(r"(?<=[.!?,;])\s+|(?<=[a-z])\s+(?=[A-Z])", line) if x.strip()]
+        cur = []
+        for part in parts:                         # short parts back together, up to width + 1 words a line;
+            words = part.split()                   # a capital starts a new line once the line has 4 words
+            if cur and (len(cur) + len(words) > width + 1 or (words[0][:1].isupper() and len(cur) >= 4)):
+                out.append(" ".join(cur))
+                cur = []
+            cur += words
+            while len(cur) > width + 2:            # still too long: cut at about `width` words
+                out.append(" ".join(cur[:width]))
+                cur = cur[width:]
+        if cur:
+            out.append(" ".join(cur))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("request", help="one line: the genre, the language and the topic")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--best", action="store_true", help="the 4B LM and the SFT DiT: slower, by ear better")
     ap.add_argument("--keep", action="store_true", help="leave the Qwen server running")
+    ap.add_argument("--nerd", action="store_true", help="bend the song towards the hardware-hacker crowd (badges, "
+                                                        "soldering, firmware, servers)")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -114,7 +195,7 @@ def main():
     try:
         for attempt in range(3):
             try:
-                song = ask(a.request, a.seed + attempt)
+                song = ask(a.request, a.seed + attempt, a.nerd)
                 break
             except ValueError as err:
                 print(f"Qwen, try {attempt + 1}: {err}", file=sys.stderr)

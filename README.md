@@ -116,7 +116,7 @@ Optional parts, outside this repository:
 | [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
 | [mix.py](code/mix.py) | a day's songs as one DJ set: one tempo (varispeed), each song over the 16-bar outro of the one before, the lows swapped 4 bars before the end, the keys checked on the Camelot wheel; `--order auto` for the fewest key clashes, `--use` for produced versions |
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
-| [quick_gag.py](code/quick_gag.py) | a gag from one line ("Dubstep, English, time to take the bus"): Qwen 3.5 9B on the NPU (FastFlowLM, its own server) writes the title, words, style, tempo, key and language, ACE-Step's 1.7B LM and turbo make it; about 2 minutes. `--best` for the 4B LM and SFT |
+| [quick_gag.py](code/quick_gag.py) | a gag from one line ("Dubstep, English, time to take the bus"): Qwen 3.5 9B on the NPU (FastFlowLM, its own server) writes the title, words, style, tempo, key and language, ACE-Step's 1.7B LM and turbo make it; about 2 minutes, all on this laptop (no internet). About the request only; `--nerd` bends it towards the hardware-hacker crowd. When Qwen's words are not in sung lines, Qwen sets them itself in a second pass. `--best` for the 4B LM and SFT |
 | [gag.py](code/gag.py) | a quick ACE-Step song from words and a style, for the group chat (not for the DJ): the 4B LM and the SFT DiT, about 2.5 minutes for 2 minutes of music; `--fast` about 70 s |
 
 Render options (environment variables):
