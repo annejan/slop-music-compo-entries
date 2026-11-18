@@ -80,8 +80,9 @@ def score(heard, want):
 
 
 class Producer:
-    def __init__(self, song, project):
+    def __init__(self, song, project, tag=None):
         self.song = song
+        self.tag = tag
         self.p = project
         self.n, self.wav, self.title, self.day, self.bpm, self.key, self.bars = ace.song_info(song)
         self.bar = 240 / self.bpm
@@ -178,9 +179,11 @@ class Producer:
         x = master.splice_dj(x, self.ours, self.bpm, self.bars)
         lufs = -10.0 if "house" in self.day else -9.0
         x = master.master(x, lufs)
-        out = os.path.join(self.dir, f"{self.song}.wav")
+        name = self.song + (f"-{self.tag}" if self.tag else "")
+        out = os.path.join(self.dir, f"{name}.wav")
         master.write(out, x)
-        share.encode(out, os.path.join(self.dir, f"{self.title} (produced, radio edit).mp3"),
+        label = "produced" + (f", {self.tag}" if self.tag else "")
+        share.encode(out, os.path.join(self.dir, f"{self.title} ({label}, radio edit).mp3"),
                      ["-metadata", f"title={self.title}", "-metadata", "artist=sunA"], [],
                      share.radio_window(self.bpm, self.bars))
         print(self.report(out))
@@ -213,6 +216,7 @@ def main():
     ap.add_argument("song")
     ap.add_argument("--project", help="default projects/<song>.toml (or just a cover take)")
     ap.add_argument("--map", action="store_true", help="print the sections and their bars, then stop")
+    ap.add_argument("--tag", help="a name for this variant: renders/produce/<song>/<song>-<tag>.wav")
     a = ap.parse_args()
     if a.map:
         n, wav, title, day, bpm, key, bars = ace.song_info(a.song)
@@ -227,7 +231,7 @@ def main():
         return
     path = a.project or os.path.join(HERE, "projects", a.song + ".toml")
     project = tomllib.load(open(path, "rb")) if os.path.exists(path) else {}
-    Producer(a.song, project).run()
+    Producer(a.song, project, a.tag).run()
 
 
 if __name__ == "__main__":

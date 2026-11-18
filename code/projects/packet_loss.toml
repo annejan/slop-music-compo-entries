@@ -1,0 +1,10 @@
+# Packet Loss (Of Love): ACE-Step re-plays our render; the break with the terminal voice stays ours.
+take = "cover"
+strength = 0.85
+model = "turbo"
+seed = 1
+
+[[section]]
+name = "break: 64 bytes from your heart"
+bars = [64, 72]
+use = "ours"
