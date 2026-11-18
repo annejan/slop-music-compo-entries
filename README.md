@@ -32,7 +32,8 @@ sounds and voices it uses. The lyric sheets are in [lyrics/](lyrics/).
 Claude writes every song as a Python script: every note and every sound is in
 the source, with no samples and no loops. Warm Boot and Segfault are our
 entries; the other five are the other takes from `suno/`, made as code tracks
-for fun, and Race Condition is a rehearsal for the surprise themes.
+for fun, and Race Condition and S.D.I.O. are rehearsals for the surprise
+themes.
 
 | Script | Theme | Tempo, key | Length |
 |---|---|---|---|
@@ -44,6 +45,7 @@ for fun, and Race Condition is a rehearsal for the surprise themes.
 | [blinky.py](code/blinky.py) | eurodance | 132 BPM, D major, then E major | 3:26 |
 | [rhythm_of_the_badge.py](code/rhythm_of_the_badge.py) | eurodance | 134 BPM, E minor, then F# minor | 3:37 |
 | [race_condition.py](code/race_condition.py) | rehearsal: drum and bass | 174 BPM, F minor | 3:21 |
+| [sdio_love.py](code/sdio_love.py) | rehearsal: Italo disco | 120 BPM, D minor, then E minor | 3:46 |
 
 ## How a song is made
 
@@ -115,7 +117,7 @@ Render options (environment variables):
 
 | Variable | Effect |
 |---|---|
-| `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen |
+| `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen; it synthesises the whole song's voices, so it is not faster yet |
 | `STEMS=1` | print the loudness of each bus |
 | `SOLO=vox` | render only these buses (comma separated), dry: for auditions |
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
@@ -133,6 +135,11 @@ section, 18 November): Segfault 16 to 53 %, The Rhythm Of The Badge 70 to
 Condition 38 to 41 %, Low Battery Lullaby 8 to 26 %. Alone, UNMASK 6 gave 31 %
 on average, UNMASK 9 35 %, VOXCHAIN 38 %, both 40 % (none: 26 %).
 
+A render with `PREVIEW`, `SOLO`, `MUTE` or `GAIN` that would go to `renders/`
+goes to `renders/scratch/` instead, with the settings in its name: a test never
+replaces the song's render, which `share.py`, `dj.py` and `produce.py` use.
+`dj.py` flags a file whose length does not match the song's bars.
+
 ## Voices
 
 [voice.py](code/voice.py) uses [Piper](https://github.com/OHF-Voice/piper1-gpl),
@@ -148,7 +155,16 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
 - **Spelling.** Piper reads through eSpeak. Check new syllables with
   `espeak-ng -v en-us -q --ipa "..."`: "Ay" is "eye", "Eff" is E-F-F.
   Spelled-out letters work best as single capitals with "!" (`S! E! G!`), one
-  per beat. `asr.py` checks the result by ear.
+  per beat. `asr.py` checks the result by ear. Sung letters need room: in
+  S.D.I.O. they came through only with the choir at 0.15 or less under them,
+  the voice at 1.3-1.4 and no lead synth doubling them.
+- **Men who can sing.** A male verse with spelled letters, sung an octave under
+  the diva with no music, words heard of 39 (18 November): `en_GB-alan-medium`
+  32, `en_US-bryce-medium` 30, `en_US-john-medium` 30, `en_US-joe-medium` 14,
+  `en_US-ryan-high` 7 (5 at -12), `en_US-norman-medium` 5. Ryan and Norman are
+  fine for rap and speech, not for singing.
+- **The formant robot** (`engine.robot`, the vocoder sound) is for hooks
+  without words: the ear has never heard a word it sang.
 - **DiffSinger.** [ds.py](code/ds.py) lets a DiffSinger voicebank sing a whole
   part on our notes, through [warble](https://github.com/erz0r/warble) (MIT,
   ONNX on the CPU). Hoshino Hanami (Lotte V; any use with credit, vocoder CC
@@ -283,23 +299,49 @@ are within the ear's noise, so the mix is as clear as these numbers can show.
 
 ## Surprise theme (two hours)
 
-1. Copy [code/template.py](code/template.py), set the tempo, chords, groove
-   and voices, write the words and the melody. `DIVA=ds:hanami` lets the
-   DiffSinger voice sing the whole diva part (`parts.Band`, then
-   `P.finish()` before the mixdown); `ds_words=` where her words differ from
-   the Piper spelling. She sings an octave above the Piper diva, in the keys'
-   range, so she sits at twice the level (`DS_GAIN`, default 2.0): at 1.0 the
-   ear heard none of the template's verse words in the mix, at 2.0 to 2.5
-   more than with Piper. A whole song with her takes 46 s (Piper: 29 s).
-2. `PREVIEW=48-64 .venv/bin/python my_song.py` for a quick listen (under 20 s).
-3. Add the song to `share.SONGS` and write its lyric sheet in `lyrics/`.
-4. Render it; `asr.py` checks the words; optionally `ace.py` for ACE-Step.
-5. `share.py` and `dj.py`, then copy `renders/dj/` to the USB stick.
+1. Copy [code/template.py](code/template.py) to `code/<name>.py` (`<name>` in
+   lowercase with `_`, like `sdio_love`). Set the
+   knobs (`TITLE`, `DAY`, `BPM`, `KEY`, chords, groove, bass, keys, voices),
+   write the words and the melody. Grooves for the likely genres are in
+   `parts.GROOVES` (`disco`, `italo`, `house`, `eurodance`, `techno`, ...);
+   `BASS = "octave"` is the Italo and Hi-NRG gallop. Give the words room:
+   Blinky's chorus (four or five short syllables in three quarters of a bar
+   at 132 BPM) is hard to hear even with no music.
+   `DIVA=ds:hanami` lets the DiffSinger voice sing the whole diva part
+   (`parts.Band`, then `P.finish()` before the mixdown); `ds_words=` where
+   her words differ from the Piper spelling. She sings an octave above the
+   Piper diva, in the keys' range, so she sits at twice the level (`DS_GAIN`,
+   default 2.0): at 1.0 the ear heard none of the template's verse words in
+   the mix, at 2.0 to 2.5 more than with Piper. A whole song with her takes
+   46 s (Piper: 29 s).
+2. Render it. The template prints the line for `share.SONGS`: add it at the
+   end of the list, and write the lyric sheet as `lyrics/NN-<name>.txt` (NN:
+   its row number) with `[m:ss]` times (a bar is 240/BPM seconds). If the last
+   chorus changes key, `KEY_CHANGE` is enough: `dj.py` and `mix.py` read it.
+3. The ear, section by section: `produce.py <name> --project
+   <file with take = "ours"> --tag ours`. A section moves up to about 20
+   points between two renders of the same thing: act on bigger changes, or on
+   what the voices alone (`MUTE=drums,perc,bass,pads,keys,lead,fx`) confirm.
+   A test render (`MUTE=`, `GAIN=`, ...) goes to `renders/scratch/`; give it
+   to the ear with `--ours renders/scratch/<file>.wav`.
+4. The polish: `produce.py <name> --project projects/_polish.toml --tag
+   polish` (one ACE-Step step from our render, about 1.5 minutes).
+5. `share.py` and `dj.py` (it only writes `renders/dj/`: safe to run), then
+   copy `renders/dj/` to the USB stick. If the polish is the better one:
+   `dj.py --use <name>=renders/produce/<name>/<name>-polish.wav` (and the same
+   `--use` for `mix.py`).
 6. `mix.py saturday --order auto` to hear the day as the DJ will play it.
 
-A rehearsal (Race Condition, drum and bass) took about 4 minutes from the theme
-to the finished render; with ACE-Step (`ace.py --mode cover`, base model) and
-`dj.py` on top, 4:35 more.
+A timebox for the two hours: the first full render by 0:20, the words frozen
+by 0:45, no more changes after 1:15, `share.py` and `dj.py` by 1:30, the stick
+by 1:40.
+
+Two rehearsals so far. Race Condition (drum and bass) took about 4 minutes
+from the theme to the finished render. S.D.I.O. (Italo disco, drawn at random
+on 18 November) went through the whole line in 32:45: three songwriters
+pitched in parallel and a judge picked one (15:38), the first full render at
+19:08, five renders with ear checks to 27:00, then the polish, `share.py` and
+`dj.py`. Words heard: 56 % ours, 64 % polished.
 
 ## Research: `research/`
 

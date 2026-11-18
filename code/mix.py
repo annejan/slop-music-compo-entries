@@ -53,7 +53,7 @@ def best_order(songs, tempo):
     first listed song stays first: it opens the set)."""
     def keys(row):
         song, semis = dj.script_of(row[0]), round(12 * np.log2(tempo / row[3]))
-        return shifted(dj.CAMELOT[row[4]], semis), shifted(dj.CAMELOT[dj.END_KEY.get(song, row[4])], semis)
+        return shifted(dj.CAMELOT[row[4]], semis), shifted(dj.CAMELOT[dj.end_key(song, row[4])], semis)
     def clashes(order):
         return sum(not camelot_ok(keys(a[1])[1], keys(b[1])[0]) for a, b in zip(order, order[1:]))
     return min(([songs[0], *rest] for rest in itertools.permutations(songs[1:])), key=clashes)
@@ -77,7 +77,7 @@ def build(songs, tempo, use):
         x = varispeed(x, bpm, tempo)[:int(round(bars * bar))]
         semis = 12 * np.log2(tempo / bpm)
         cam = dj.CAMELOT[key]
-        end = dj.CAMELOT[dj.END_KEY.get(song, key)]
+        end = dj.CAMELOT[dj.end_key(song, key)]
         heard_cam = shifted(cam, round(semis))
         if prev is None:
             out = np.zeros((int(sum(r[5] for _, r in songs) * bar) + 1, 2))

@@ -4,8 +4,9 @@ below, write the words and the melody, and shape the arrangement. It renders as 
 
 template.py [OUT.wav]          PREVIEW=48-64 template.py: only bars 48 to 63, for a quick listen
 
-For the rest of the route, add one line for the song to share.SONGS (render name, title, day, BPM, key, bars) and
-write its lyric sheet in lyrics/: then ace.py (ACE-Step), share.py (MP3s) and dj.py (the USB stick) know it.
+For the rest of the route, add the line it prints at the end to share.SONGS (at the end of the list) and write
+its lyric sheet as lyrics/NN-<name>.txt (NN: its row number): then produce.py, share.py and dj.py know it. The
+render is renders/<file name, - for _>_<BPM>bpm_<KEY>.wav (a PREVIEW goes to renders/scratch/).
 
   bars   0-15  intro: drums only (for the DJ)
         16-31  the band comes in
@@ -23,12 +24,14 @@ import parts
 import room
 
 # ---------------------------------------------------------------- the knobs
-TITLE = "template"
+TITLE = "Template"
+DAY = "Rehearsal: test"                # "Saturday: <genre>" or "Sunday: <genre>": the set it plays in
 BPM, BARS = 128, 112
+KEY = "Am"                             # the song's key (the DJ's track list, ACE-Step)
 PROG = ["Am", "F", "C", "G"]           # one chord a bar, repeating
 SCALE = "minor"                        # minor | major (for the choir's thirds)
-GROOVE = parts.GROOVES["four"]         # see parts.GROOVES, or a dict of your own
-BASS = "offbeat"                       # offbeat | root | eighths | reese | dx7
+GROOVE = parts.GROOVES["four"]         # see parts.GROOVES (disco, italo, house, eurodance, ...) or a dict of your own
+BASS = "offbeat"                       # offbeat | root | eighths | octave (Italo, Hi-NRG) | reese | dx7
 KEYS = "piano"                         # piano | epiano | organ | supersaw
 LUFS = -9.0                            # -10 for mellow, -9 for loud
 KEY_CHANGE = 2                         # semitones up for the last chorus (0: none)
@@ -96,6 +99,8 @@ S.put("fx", S.at(64), e.downlifter(S.bar * 2, .3), .5, wet=.3)
 P.finish()   # a DiffSinger diva (DIVA=ds:hanami) sings her whole part here
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 2500), (S.at(72), 2500), (S.at(80) - .02, 12000),
        (S.at(80), 18000), (S.n / e.SR, 18000)]   # the master filter: closed in the break
-S.mixdown(parts.out_path(f"{TITLE}_{BPM}bpm"), {"drums": .95, "perc": .7, "bass": .85, "pads": .8, "keys": 1.0,
-                                                 "lead": 1.0, "vox": 1.4, "fx": .55},
+NAME = f"{os.path.basename(__file__)[:-3].replace('_', '-')}_{BPM}bpm_{KEY}"
+S.mixdown(parts.out_path(NAME), {"drums": .95, "perc": .7, "bass": .85, "pads": .8, "keys": 1.0, "lead": 1.0,
+                                 "vox": 1.4, "fx": .55},
           cut_keys=cut, room=.2, echo_mix=.4, lufs=LUFS, ir=room.impulse_response((9.0, 6.0, 3.5), rt60=1.6))
+print(f"share.SONGS row: (\"{NAME}.wav\", \"{TITLE}\", \"{DAY}\", {BPM}, \"{KEY}\", {BARS}),")

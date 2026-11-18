@@ -5,6 +5,7 @@ writes a 44.1 kHz 16-bit stereo WAV that a DJ can beat-match (the tempo is exact
 """
 import math
 import os
+import re
 import wave
 
 import numpy as np
@@ -692,6 +693,14 @@ class Song:
         q = 1 / 32767
         out = np.round((mix + (rng.random(mix.shape) - rng.random(mix.shape)) * q) * 32767)
         out = np.clip(out, -32767, 32767).astype("<i2")
+        # a test render (a preview, solo, stems, other gains) never replaces the song's render in renders/: share.py,
+        # dj.py and produce.py would take it for the song (it is newer than the script)
+        test = [f"{k.lower()}{os.environ[k]}" for k in ("PREVIEW", "SOLO", "MUTE", "GAIN") if os.environ.get(k)]
+        renders = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renders")
+        if test and os.path.dirname(os.path.abspath(path)) == renders:
+            stem = os.path.splitext(os.path.basename(path))[0]
+            path = os.path.join(renders, "scratch", re.sub(r"[^\w.+-]", "", f"{stem}-{'-'.join(test)}") + ".wav")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
         with wave.open(path, "wb") as w:
             w.setnchannels(2)
             w.setsampwidth(2)

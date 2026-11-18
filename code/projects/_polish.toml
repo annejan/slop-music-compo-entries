@@ -1,0 +1,8 @@
+# The polish for any song (produce.py SONG --project projects/_polish.toml --tag polish):
+# ACE-Step starts from our own render, noised, and takes one turbo step of eight. It invents no parts and no
+# words: on the new mix it added 1 to 10 points of words heard on six of seven songs (README, "Producing").
+take = "cover"
+strength = 0.85
+model = "turbo"
+seed = 1
+noise = 0.65

@@ -1,0 +1,66 @@
+S.D.I.O. (I Love You So)
+Rehearsal: Italo disco · 120 BPM · D minor, E minor in the last chorus · 3:46
+Words by Claude. Voices: HIM (the P4): Alan; HER (the C6): Amy;
+CHOIR: LJSpeech, Kristin, Cori (+ HFC male, Alan in the last chorus);
+COMPUTER: Lessac (through a small speaker); ROBOT: the vocoder
+
+[0:00] Intro (drum machine only)
+
+[0:32] Octave bass and pad
+
+[0:48] DX7 e-piano; the hook on DX7 bells
+ROBOT: S! D! I! O!
+[0:56] ROBOT: S! D! I! O!
+[1:02] ROBOT: Radio
+
+[1:04] Verse (HIM)
+HIM: I'm the P4, I've got the keys,
+HIM: I run the launcher and Doom with ease,
+HIM: but I can't hear the sky, oh no,
+HIM: until you whisper S! D! I! O!
+
+[1:20] Verse (HER)
+HER: I'm the C6, I've got the air,
+HER: WiFi and Bluetooth everywhere,
+HER: but when they open my T! T! Y!
+HER: I go to sleep and you crash. Bye bye.
+
+[1:36] Chorus (x2)
+HIM + CHOIR: S! D! I! O!
+HER + CHOIR: I love you so,
+HER + CHOIR: six little wires
+HER + CHOIR: from me to you.
+HIM + CHOIR: S! D! I! O!
+HER + CHOIR: Don't let me go,
+HER + CHOIR: I am your radio,
+HER + CHOIR: your radio.
+
+[2:08] Break (no kick, the filter closed)
+COMPUTER: Radio update. Stopping WiFi...
+[2:12] COMPUTER: Starting updater...
+[2:16] HIM (close): Ciao, bella. Heart to heart, over UART.
+[2:20] HIM (alone, in the echo): S! D! I! O!
+[2:22] HER (alone): Don't let me go.
+
+[2:24] Build (snare roll, riser)
+COMPUTER: Synchronizing with radio...
+[2:28] COMPUTER: Detecting radio...
+[2:32] COMPUTER: Erasing...
+[2:36] COMPUTER: Radio update completed successfully!
+
+[2:40] Last chorus (x2), a tone up, E minor, the big choir
+HIM + CHOIR: S! D! I! O!
+HER + CHOIR: I love you so,
+HER + CHOIR: six little wires
+HER + CHOIR: from me to you.
+HIM + CHOIR: S! D! I! O!
+HER + CHOIR: Don't let me go,
+HER + CHOIR: I am your radio,
+HER + CHOIR: your radio.
+
+[3:12] Outro (drum machine only)
+
+Notes:
+- The six little wires are the SDIO bus between the P4 and the C6 (ESP-Hosted; CLK, CMD, D0-D3).
+- The COMPUTER lines are the Tanmatsu launcher's own radio-update dialogs (main/radio_ota.c). The P4 flashes the C6 over UART.
+- Opening the C6's ttyACM resets the radio and crashes the badge. Please do not do it.

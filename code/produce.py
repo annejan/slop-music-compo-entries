@@ -100,7 +100,7 @@ def score(heard, want):
 
 
 class Producer:
-    def __init__(self, song, project, tag=None):
+    def __init__(self, song, project, tag=None, ours=None):
         self.song = song
         self.tag = tag
         self.p = project
@@ -109,7 +109,7 @@ class Producer:
         self.dir = os.path.join(share.RENDERS, "produce", song)
         self.cache = os.path.join(self.dir, "cache")
         os.makedirs(self.cache, exist_ok=True)
-        self.ours_path = ace.render(song, self.wav)
+        self.ours_path = os.path.abspath(ours) if ours else ace.render(song, self.wav)   # ours: a test render
         self.ours, _ = master.read(self.ours_path)
         self.native = bool(self.p.get("native_tags"))           # ACE-Step's own section tags (ace.native_tag)
         self.ref = None                                          # set in run() (ref_audio)
@@ -170,7 +170,7 @@ class Producer:
 
     def request(self, **kw):
         return {"caption": self.p.get("caption", ace.CAPTIONS.get(self.song, self.day.split(": ")[1])),
-                "lyrics": self.lyrics, "bpm": self.bpm, "keyscale": ace.KEYS.get(self.key, self.key),
+                "lyrics": self.lyrics, "bpm": self.bpm, "keyscale": ace.keyscale(self.key),
                 "timesignature": "4", "vocal_language": "en", "seed": self.p.get("seed", 1), "output_format": "wav16",
                 **ace.SYNTH[self.p.get("model", "base")], **kw}
 
@@ -316,7 +316,9 @@ def main():
     ap.add_argument("--project", help="default projects/<song>.toml (or just a cover take)")
     ap.add_argument("--map", action="store_true", help="print the sections and their bars, then stop")
     ap.add_argument("--tag", help="a name for this variant: renders/produce/<song>/<song>-<tag>.wav")
+    ap.add_argument("--ours", help="this render of ours instead of renders/<song>.wav (a test: GAIN=, MUTE=, ...)")
     a = ap.parse_args()
+    a.song = ace.script_name(a.song)    # sdio-love works too
     if a.map:
         n, wav, title, day, bpm, key, bars = ace.song_info(a.song)
         sheets = [f for f in os.listdir(share.LYRICS) if f.startswith(f"{n:02d}-")]
@@ -330,7 +332,9 @@ def main():
         return
     path = a.project or os.path.join(HERE, "projects", a.song + ".toml")
     project = tomllib.load(open(path, "rb")) if os.path.exists(path) else {}
-    Producer(a.song, project, a.tag).run()
+    if a.project and not os.path.exists(a.project):
+        sys.exit(f"{a.project}: no such project file")
+    Producer(a.song, project, a.tag, a.ours).run()
 
 
 if __name__ == "__main__":

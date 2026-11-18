@@ -41,6 +41,8 @@ GROOVES = {
     "reggaeton": dict(kick="x...x...x...x...", clap="...x..x....x..x.", hat="x.x.x.x.x.x.x.x."),
     "schlager":  dict(kick="x...x...x...x...", clap="....x.......x...", hat="..x...x...x...x."),
     "halftime":  dict(kick="x.......x.......", clap="........x.......", hat="x.x.x.x.x.x.x.x."),
+    "disco":     dict(kick="x...x...x...x...", clap="....x.......x...", hat="x.o.x.o.x.o.x.o.", open="..x...x...x...x."),
+    "italo":     dict(kick="x...x...x...x...", clap="....x.......x...", hat="xoxoxoxoxoxoxoxo"),   # LinnDrum, DMX
 }
 
 SCALES = {"minor": (0, 2, 3, 5, 7, 8, 10), "major": (0, 2, 4, 5, 7, 9, 11)}
@@ -152,7 +154,7 @@ class Band:
     # ------------------------------------------------------------ bass
     def bass(self, bar, style="offbeat", amp=1.0, lo=33, cut=1100):
         """offbeat (eurodance, trance), root (house: on the beats), eighths (rolling), reese (dnb: one long note),
-        dx7 (FM bass on the offbeats)."""
+        dx7 (FM bass on the offbeats), octave (Italo disco, Hi-NRG: eighths, the octave up on each "and")."""
         S = self.S
         root = e.root_note(self.chord(bar), self.key_of(bar), lo=lo)
         if style == "reese":
@@ -160,10 +162,13 @@ class Band:
             g = e.lowpass(g, 400) * e.gate(e.tt(S.bar), S.bar - .05, .05)
             S.put("bass", S.at(bar), g, .5, .5 * amp, wet=0)
             return
-        steps = {"offbeat": (2, 6, 10, 14), "root": (0, 4, 8, 12), "eighths": tuple(range(0, 16, 2))}.get(style, (2, 6, 10, 14))
+        steps = {"offbeat": (2, 6, 10, 14), "root": (0, 4, 8, 12), "eighths": tuple(range(0, 16, 2)),
+                 "octave": tuple(range(0, 16, 2))}.get(style, (2, 6, 10, 14))
         for k in steps:
             if style == "dx7":
                 g = dx7.note("bass", root, S.step * 1.6, .9, tail=.1)
+            elif style == "octave":
+                g = e.bass_note(root + 12 * (k % 4 == 2), S.step * 1.6, cut=max(cut, 1400), decay=3)
             else:
                 g = e.bass_note(root, S.step * 1.6, cut=cut, decay=3)
             S.put("bass", S.at(bar) + k * S.step, g, .5, .9 * amp, wet=0)

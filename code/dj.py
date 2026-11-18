@@ -4,11 +4,16 @@ and a track list. Copy renders/dj/ to the USB stick (FAT32: the names avoid : ? 
 
 dj.py [--only warm_boot,segfault] [--use rhythm_of_the_badge=renders/ace/rhythm_of_the_badge/x.wav]
 
+--only copies and checks only those songs; the others keep their file and their line in the track list. An older
+file of a song (another name: a new key, title or tempo) is removed, so the stick never holds a song twice.
+
 Checks per song: the true peak (at most -1.0 dBTP), the loudness, the beat grid at sample 0 (the kick on the
-grid), and the 16 bars at each end drums only (little of the 300-3000 Hz band, where keys, pads and voices are).
+grid), the 16 bars at each end drums only (little of the 300-3000 Hz band, where keys, pads and voices are), and
+the length (the bars plus the reverb's tail: a preview or a cut file is flagged).
 """
 import argparse
 import os
+import re
 import shutil
 
 import numpy as np
@@ -24,12 +29,32 @@ CAMELOT = {   # all 24 keys, with the enharmonic spellings
     "Dm": "7A", "Am": "8A", "Em": "9A", "Bm": "10A", "F#m": "11A", "Gbm": "11A", "C#m": "12A", "Dbm": "12A",
     "B": "1B", "Cb": "1B", "F#": "2B", "Gb": "2B", "Db": "3B", "C#": "3B", "Ab": "4B", "G#": "4B", "Eb": "5B",
     "D#": "5B", "Bb": "6B", "A#": "6B", "F": "7B", "C": "8B", "G": "9B", "D": "10B", "A": "11B", "E": "12B"}
-# songs that end in another key (a key change for the last chorus)
+# songs that end in another key (a key change for the last chorus); a song not listed here ends in its key moved by
+# its script's KEY_CHANGE (the template's knob), see end_key
 END_KEY = {"segfault": "Bm", "blinky": "E", "rhythm_of_the_badge": "F#m"}
+NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"]
+PITCH = {"C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8,
+         "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11, "Cb": 11}
 
 
 def script_of(wav):
     return wav.split("_")[0].replace("-", "_")
+
+
+def end_key(song, key):
+    """The key of the song's last chorus: END_KEY, else the key moved by `KEY_CHANGE = n` in code/<song>.py."""
+    if song in END_KEY:
+        return END_KEY[song]
+    here = os.path.dirname(os.path.abspath(__file__))
+    paths = [os.path.join(here, n + ".py") for n in (song, song.replace("_", "-"))]
+    src = next((open(f, encoding="utf-8").read() for f in paths if os.path.exists(f)), None)
+    if src is None:
+        return key
+    m = re.search(r"^KEY_CHANGE\s*=\s*(-?\d+)", src, re.M)
+    if not m or int(m.group(1)) == 0:
+        return key
+    minor = key.endswith("m")
+    return NOTES[(PITCH[key[:-1] if minor else key] + int(m.group(1))) % 12] + ("m" if minor else "")
 
 
 def check(path, bpm, bars):
@@ -48,6 +73,9 @@ def check(path, bpm, bars):
     intro = share_mid(0, 15.5 * bar) / music
     outro = share_mid((bars - 15.5) * bar, bars * bar) / music
     problems = []
+    length = len(x) / sr
+    if not bars * bar - .5 < length < bars * bar + 4:      # the bars plus the reverb's tail (2 s): not a preview
+        problems.append(f"{length:.1f} s long, {bars} bars are {bars * bar:.1f} s")
     if tp > -1.0:
         problems.append(f"true peak {tp:+.1f} dBTP")
     if grid > 10:
@@ -67,24 +95,35 @@ if __name__ == "__main__":
     use = dict(u.split("=", 1) for u in a.use)
     only = set(a.only.split(",")) if a.only else None
     os.makedirs(OUT, exist_ok=True)
+    written = []
+    tracklist = os.path.join(OUT, "tracklist.txt")
+    kept = {}      # --only: the other songs keep their line (and their file)
+    if only and os.path.exists(tracklist):
+        kept = {l[:2]: l for l in open(tracklist, encoding="utf-8").read().splitlines() if l[:2].isdigit()}
     lines = ["Track list for the DJ: 16-bit 44.1 kHz WAV, the beat grid at sample 0, 16 bars of drums at each end.",
              ""]
     for n, (wav, title, day, bpm, key, bars) in enumerate(share.SONGS, 1):
         song = script_of(wav)
         if only and song not in only:
+            if f"{n:02d}" in kept and any(f.startswith(f"{n:02d} ") for f in os.listdir(OUT)):
+                lines.append(kept[f"{n:02d}"])
             continue
         src = use.get(song, os.path.join(share.RENDERS, wav))
         if not os.path.exists(src):
             print(f"skip {title}: {src} not rendered")
+            if f"{n:02d}" in kept and any(f.startswith(f"{n:02d} ") for f in os.listdir(OUT)):
+                lines.append(kept[f"{n:02d}"])                  # --only: its old file stays, so its line does too
             continue
         cam = CAMELOT.get(key, key)
         keys = f"{cam} {key}"
-        if song in END_KEY:
-            keys += f" to {CAMELOT[END_KEY[song]]} {END_KEY[song]}"
+        end = end_key(song, key)
+        if end != key:
+            keys += f" to {CAMELOT[end]} {end}"
         safe = "".join(c for c in title if c not in ':?*"<>|/\\')
         name = f"{n:02d} {safe} - {bpm} BPM - {keys.replace(' to ', ' to ')}.wav"
         dst = os.path.join(OUT, name)
         shutil.copyfile(src, dst)
+        written.append(name)
         c = check(dst, bpm, bars)
         m, s = divmod(c["length"], 60)
         flag = "OK" if not c["problems"] else "CHECK: " + "; ".join(c["problems"])
@@ -92,6 +131,12 @@ if __name__ == "__main__":
                      f"{c['tp']:+.1f} dBTP  {day.split(': ')[1]}  [{flag}]"
                      + (f"  (source: {os.path.relpath(src, share.RENDERS)})" if song in use else ""))
         print(lines[-1], flush=True)
-    with open(os.path.join(OUT, "tracklist.txt"), "w", encoding="utf-8") as fh:
+    # an older file of a song written now (another name: a new key, title or tempo) would be a second copy on the
+    # stick; without --only, every WAV not written now goes
+    for old in os.listdir(OUT):
+        if old.endswith(".wav") and old not in written and (not only or any(old[:3] == w[:3] for w in written)):
+            os.remove(os.path.join(OUT, old))
+            print(f"removed the old {old}")
+    with open(tracklist, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     print(f"\n{OUT}: {sum(os.path.getsize(os.path.join(OUT, f)) for f in os.listdir(OUT)) / 1e6:.0f} MB")

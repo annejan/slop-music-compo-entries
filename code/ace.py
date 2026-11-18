@@ -41,8 +41,9 @@ MODELS = os.path.join(ACESTEP, "models")
 SYNTH = {"turbo": dict(synth_model="acestep-v15-turbo-Q8_0.gguf", inference_steps=8, guidance_scale=1.0, shift=3.0),
          "base": dict(synth_model="acestep-v15-base-Q8_0.gguf", inference_steps=50, guidance_scale=1.0, shift=1.0)}
 LM = "acestep-5Hz-lm-4B-Q8_0.gguf"
-KEYS = {"Am": "A minor", "Fm": "F minor", "Dm": "D minor", "Em": "E minor", "D": "D major", "C": "C major",
-        "G": "G major", "Bm": "B minor"}
+def keyscale(key):
+    """ACE-Step's key name: "F#m" -> "F# minor", "Bb" -> "Bb major"."""
+    return f"{key[:-1]} minor" if key.endswith("m") else f"{key} major"
 
 # ACE-Step reads the lyrics itself: these spellings come out right (found by ear: "Badgelink" gave badge-E-link,
 # "Badglink" bad link)
@@ -74,6 +75,8 @@ CAPTIONS = {
                            "club, key change in the last chorus",
     "race_condition": "90s liquid drum and bass, chopped breakbeat, deep rolling sub bass, jazzy Rhodes chords, "
                       "soulful female vocal, male MC",
+    "sdio_love": "80s Italo disco, male and female vocal duet, vocoder robot, arpeggiated octave synth bass, drum "
+                 "machine, DX7 electric piano stabs and bells, dreamy synth melody, key change up for the last chorus",
 }
 VOCALS_CAPTION = ("a cappella vocals only, no instruments: natural, warm, human voices, the same melody, words and "
                   "timing, 1994 studio recording, expressive, breathing, not robotic")
@@ -157,8 +160,20 @@ def run(cmd, log):
         sys.exit(f"failed: {' '.join(cmd)} (see {log})")
 
 
+TEST_VARS = ("PREVIEW", "SOLO", "MUTE", "GAIN")      # engine.mixdown sends these renders to renders/scratch/
+
+
+def script_name(song):
+    """The song script's name: as given when code/<song>.py exists, else with - for _ (sdio-love: sdio_love)."""
+    return song if os.path.exists(os.path.join(HERE, song + ".py")) else song.replace("-", "_")
+
+
 def render(script, wav, env=None):
     """Our render: the song script, again only when the script is newer than the render."""
+    test = [k for k in TEST_VARS if os.environ.get(k)]
+    if test:
+        sys.exit(f"{', '.join(test)} set: that render goes to renders/scratch/, not to the song's render. Unset it, "
+                 f"or render the test to a file and give it with produce.py --ours FILE")
     out = os.path.join(share.RENDERS, wav) if not os.path.isabs(wav) else wav
     src = os.path.join(HERE, script + ".py")
     if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
@@ -185,6 +200,7 @@ def main():
     ap.add_argument("--tag", help="the output's name (default: mode, model, strength, seed)")
     ap.add_argument("--check", action="store_true", help="the speech recognizer over the result")
     a = ap.parse_args()
+    a.song = script_name(a.song)        # sdio-love works too
 
     n, wav, title, day, bpm, key, bars = song_info(a.song)
     tag = a.tag or (f"{a.mode}-{a.model}-{a.strength:g}-s{a.seed}" if a.mode in ("cover", "vocals")
@@ -208,7 +224,7 @@ def main():
 
     caption = a.caption or (VOCALS_CAPTION if a.mode == "vocals" else CAPTIONS.get(a.song, day.split(": ")[1]))
     lyrics = open(a.lyrics, encoding="utf-8").read() if a.lyrics else ace_lyrics(n, native=a.native_tags)
-    req = {"caption": caption, "lyrics": lyrics, "bpm": bpm, "keyscale": KEYS.get(key, key),
+    req = {"caption": caption, "lyrics": lyrics, "bpm": bpm, "keyscale": keyscale(key),
            "timesignature": "4", "vocal_language": "en", "seed": a.seed, "output_format": "wav16", **SYNTH[a.model]}
     base = os.path.join(out, tag)
     if a.mode in ("text", "lego"):

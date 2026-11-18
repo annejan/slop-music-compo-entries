@@ -30,6 +30,7 @@ SONGS = [
     ("blinky_132bpm_D.wav", "Blinky (The LED Song)", "Sunday: eurodance", 132, "D", 112),
     ("rhythm-of-the-badge_134bpm_Em.wav", "The Rhythm Of The Badge", "Sunday: eurodance", 134, "Em", 120),
     ("race-condition_174bpm_Fm.wav", "Race Condition", "Rehearsal: drum and bass", 174, "Fm", 144),
+    ("sdio-love_120bpm_Dm.wav", "S.D.I.O. (I Love You So)", "Rehearsal: Italo disco", 120, "Dm", 112),
 ]
 
 

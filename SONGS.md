@@ -222,7 +222,7 @@ is a template and a set of ready parts:
   loudness, voices, words and melody. Copy it and change it.
 - [code/parts.py](code/parts.py): drum grooves as 16-step patterns (four on the
   floor, house, garage, techno, eurodance, drum and bass, breakbeat, hip hop,
-  reggaeton, schlager, half-time), basslines, chord stabs, the DX7, a diva with
+  reggaeton, schlager, half-time, disco, Italo), basslines, chord stabs, the DX7, a diva with
   a choir of other voices, a rapper and a spoken voice.
 - `PREVIEW=48-64` renders only those bars, in about 25 seconds.
 
@@ -249,6 +249,38 @@ finished render.
   `en_US-hfc_male-medium` and `en_US-john-medium` in the last chorus, on the
   vowels only; the MC is
   `en_US-norman-medium`; ThreadSanitizer is `en_US-lessac-high` on the phone.
+
+
+### Rehearsal: S.D.I.O. (I Love You So) (code track)
+
+[code/sdio_love.py](code/sdio_love.py). A timed rehearsal on 18 November:
+Italo disco, drawn at random from the genres in
+[research/surprise-genres.md](research/surprise-genres.md). 120 BPM, D minor
+(Dm, Bb, F, C), E minor in the last chorus, 112 bars, 3:46, -10 LUFS. The
+ESP32-P4 and the ESP32-C6 on one Tanmatsu are in love over the six SDIO
+wires. He has the screen and Doom but cannot hear the sky. She hears all the
+WiFi, but when someone opens her ttyACM she resets and he crashes with her.
+In the break he flashes her over UART, "heart to heart", while the
+launcher's own radio-update dialogs read out. Three Claude songwriters
+pitched in parallel, a Claude judge picked this one and wrote the brief, and
+a Claude builder made it from the template in 32:45 from the theme to the
+DJ files.
+
+- **Structure:** intro (the drum machine), octave bass and pad, DX7 e-piano
+  with the hook on DX7 bells and the vocoder robot, his verse, her verse,
+  chorus (his letters, her answers, the choir), break (no kick, the filter
+  closed, the radio update), build (the update's dialogs, snare roll, riser),
+  the last chorus a tone up with the big choir, outro.
+- **Sounds:** a LinnDrum-style machine (four on the floor, 16th hats), the
+  Italo octave bass, the DX7 electric piano and bells, a pad, the engine's
+  formant robot, a simulated room.
+- **Voices (Piper):** HER (the C6) is `en_US-amy-medium`; HIM (the P4) is
+  `en_GB-alan-medium`, an octave under her; the choir is `en_US-ljspeech-high`,
+  `en_US-kristin-medium`, `en_GB-cori-high`, with `en_US-hfc_male-medium` and
+  `en_GB-alan-medium` in the last chorus, on the vowels only; the COMPUTER is
+  `en_US-lessac-high` through a small speaker.
+- **ACE-Step (optional):** one polish step from our render
+  (`projects/_polish.toml`).
 
 ---
 
