@@ -48,9 +48,13 @@ for fun, and Race Condition is a rehearsal for the surprise themes.
 ## How a song is made
 
 ```
-song script (code/*.py) --> render (renders/*.wav, the DJ version)
-                        \-> ace.py: ACE-Step re-plays or re-sings it --> master.py / weave.py
-render or ACE-Step take --> share.py (radio edit + DJ version as MP3) and dj.py (the USB stick)
+compose   song script (code/*.py), PREVIEW per section
+render    renders/*.wav (the DJ version), stems with MUTE
+produce   produce.py: ACE-Step re-plays it, section by section (projects/<song>.toml)
+          or ace.py: one ACE-Step pass (cover, vocals, lego, text)
+master    master.py / weave.py: on the grid, our DJ intro and outro, -9/-10 LUFS, -1.2 dBTP
+check     asr.py: which words come through
+deliver   share.py (radio edit + DJ version as MP3), dj.py (the USB stick)
 ```
 
 1. **The code track.** The script writes a 44.1 kHz, 16-bit stereo WAV. The
@@ -98,6 +102,7 @@ Optional parts, outside this repository:
 | [ds.py](code/ds.py) | a DiffSinger voicebank sings a whole part, through warble |
 | [parts.py](code/parts.py), [template.py](code/template.py) | ready parts and a whole song to start from, for the surprise themes |
 | [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3 |
+| [produce.py](code/produce.py) | a song section by section from a project file: an ACE-Step take of the whole song, then per section our own render, the take, or a `repaint` with several seeds of which the ear picks the best; everything cached |
 | [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s` |
 | [weave.py](code/weave.py) | our instrumental, unchanged, under a blend of our vocals and another generator's take of them |
 | [asr.py](code/asr.py) | a speech recognizer (faster-whisper) checks which words of the lyrics can be heard |
@@ -167,6 +172,39 @@ What we found:
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
   model, about 5 minutes with the base model.
 
+## Producing section by section
+
+`produce.py SONG` reads `code/projects/<song>.toml`:
+
+```toml
+take = "cover"        # the whole song first: ACE-Step re-plays our render ("ours": no ACE-Step)
+strength = 0.85       # how closely it follows our render
+model = "turbo"       # turbo (8 steps) or base (50)
+
+[[section]]
+name = "verse"
+bars = [24, 32]
+use = "repaint"       # ACE-Step makes these bars again, once per seed; the ear keeps the best,
+                      # and only if it beats what is there
+seeds = [2, 3]
+
+[[section]]
+name = "rap"
+bars = [48, 56]
+use = "ours"          # our own render here: the machine flow
+```
+
+Every ACE-Step result is cached by its request, so changing one section only
+redoes that section. Found so far: a `repaint` of a sung section comes back
+without words (ACE-Step does not know which lines belong there), so the ear
+keeps the take; `use = "ours"` works. The DJ intro and outro are always ours. The result is in
+`renders/produce/<song>/`, with a radio edit and an ear report per section.
+
+What the ear (`asr.py`) hears of the lyrics in our full mixes: The Rhythm Of
+The Badge 74 %, Segfault 35 %, Race Condition 32 %, Low Pass Love 19 %, Packet
+Loss 18 %, Low Battery Lullaby 15 %, Blinky 12 % (Warm Boot's robot: 0 %).
+Those are the sections to produce.
+
 ## Surprise theme (two hours)
 
 1. Copy [code/template.py](code/template.py), set the tempo, chords, groove
@@ -177,7 +215,8 @@ What we found:
 5. `share.py` and `dj.py`, then copy `renders/dj/` to the USB stick.
 
 A rehearsal (Race Condition, drum and bass) took about 4 minutes from the theme
-to the finished render.
+to the finished render; with ACE-Step (`ace.py --mode cover`, base model) and
+`dj.py` on top, 4:35 more.
 
 ## Research: `research/`
 

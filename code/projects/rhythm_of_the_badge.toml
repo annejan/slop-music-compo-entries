@@ -1,0 +1,17 @@
+# The Rhythm Of The Badge: ACE-Step re-plays our render; the verse made again until the words come through;
+# the rap stays ours (the machine flow). See produce.py.
+take = "cover"
+strength = 0.85
+model = "turbo"
+seed = 1
+
+[[section]]
+name = "verse"
+bars = [24, 32]
+use = "repaint"
+seeds = [2, 3]
+
+[[section]]
+name = "rap"
+bars = [48, 56]
+use = "ours"

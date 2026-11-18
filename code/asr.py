@@ -36,6 +36,7 @@ def number_words(n):
 
 def words(text):
     text = text.lower().replace("-", " ").replace("%", " percent")
+    text = re.sub(r"(?<=[a-z])(?=\d)|(?<=\d)(?=[a-z])", " ", text)        # "c6" -> "c 6"
     text = re.sub(r"\d+", lambda m: number_words(int(m.group())), text)
     return re.findall(r"[a-z']+|\d+", text)
 
