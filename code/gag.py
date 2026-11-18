@@ -27,6 +27,33 @@ MODELS = {"best": dict(lm_model=ace.LM, **ace.SYNTH["sft"]),
           "fast": dict(lm_model="acestep-5Hz-lm-1.7B-Q8_0.gguf", **ace.SYNTH["turbo"])}
 
 
+def make(title, lyrics, style, bpm, key="A minor", lang="en", seconds=120, seed=1, fast=False, out=None):
+    """The song: the request, the LM, the DiT, the master, the MP3. Returns (mp3, seconds per stage)."""
+    name = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "gag"
+    out = out or os.path.join(GAGS, name)
+    os.makedirs(out, exist_ok=True)
+    req = {"caption": style, "lyrics": lyrics, "bpm": int(bpm), "keyscale": key, "timesignature": "4",
+           "vocal_language": lang, "seed": seed, "output_format": "wav16", "duration": int(seconds),
+           **MODELS["fast" if fast else "best"]}
+    base = os.path.join(out, "request")
+    json.dump(req, open(base + ".json", "w"), indent=1, ensure_ascii=False)
+
+    t0 = time.time()
+    ace.run([os.path.join(ace.ACESTEP, "build", "ace-lm"), "--models", ace.MODELS, "--request", base + ".json",
+             "--device", "Vulkan0"], base + ".lm.log")
+    t1 = time.time()
+    # VAE tiles of 512: 1024 crashed the GPU once while the CPU was busy (the APU shares its memory)
+    ace.run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS, "--request", base + "0.json",
+             "--device", "Vulkan0", "--vae-chunk", "512"], base + ".synth.log")
+    t2 = time.time()
+    wav = os.path.join(out, title.replace("/", "-") + ".wav")
+    print(master.process(base + "00.wav" if os.path.exists(base + "00.wav") else base + "0.wav", wav, int(bpm)))
+    mp3 = wav[:-4] + ".mp3"
+    ace.share.encode(wav, mp3, ["-metadata", f"title={title}", "-metadata", "artist=sunA"], [])
+    t3 = time.time()
+    return mp3, dict(lm=t1 - t0, audio=t2 - t1, master=t3 - t2)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("title")
@@ -39,30 +66,10 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--fast", action="store_true", help="the 1.7B LM and turbo: about 70 s instead of 150 s")
     a = ap.parse_args()
-
-    name = re.sub(r"[^a-z0-9]+", "-", a.title.lower()).strip("-")
-    out = os.path.join(GAGS, name)
-    os.makedirs(out, exist_ok=True)
-    req = {"caption": a.style, "lyrics": open(a.lyrics, encoding="utf-8").read(), "bpm": a.bpm, "keyscale": a.key,
-           "timesignature": "4", "vocal_language": a.lang, "seed": a.seed, "output_format": "wav16",
-           "duration": a.seconds, **MODELS["fast" if a.fast else "best"]}
-    base = os.path.join(out, "request")
-    json.dump(req, open(base + ".json", "w"), indent=1, ensure_ascii=False)
-
-    t0 = time.time()
-    ace.run([os.path.join(ace.ACESTEP, "build", "ace-lm"), "--models", ace.MODELS, "--request", base + ".json",
-             "--device", "Vulkan0"], base + ".lm.log")
-    t1 = time.time()
-    # VAE tiles of 512: 1024 crashed the GPU once while the CPU was busy (the APU shares its memory)
-    ace.run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS, "--request", base + "0.json",
-             "--device", "Vulkan0", "--vae-chunk", "512"], base + ".synth.log")
-    t2 = time.time()
-    wav = os.path.join(out, a.title + ".wav")
-    print(master.process(base + "00.wav" if os.path.exists(base + "00.wav") else base + "0.wav", wav, a.bpm))
-    mp3 = wav[:-4] + ".mp3"
-    ace.share.encode(wav, mp3, ["-metadata", f"title={a.title}", "-metadata", "artist=sunA"], [])
-    t3 = time.time()
-    print(f"LM {t1 - t0:.0f} s, audio {t2 - t1:.0f} s, master and MP3 {t3 - t2:.0f} s: {t3 - t0:.0f} s in all")
+    mp3, t = make(a.title, open(a.lyrics, encoding="utf-8").read(), a.style, a.bpm, a.key, a.lang, a.seconds, a.seed,
+                  a.fast)
+    print(f"LM {t['lm']:.0f} s, audio {t['audio']:.0f} s, master and MP3 {t['master']:.0f} s: {sum(t.values()):.0f} s "
+          f"in all")
     print(mp3)
 
 
