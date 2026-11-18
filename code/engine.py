@@ -584,7 +584,12 @@ class Song:
         """Duck, delay, room, master filter, glue, then a true-peak limiter to the loudness target; write a dithered
         16-bit WAV of the song's length plus the reverb's tail.
 
-        PREVIEW=48-64 (environment): mix only bars 48 to 63, for a quick listen; the loudness is aimed at them."""
+        PREVIEW=48-64 (environment): mix only bars 48 to 63, for a quick listen; the loudness is aimed at them.
+        GAIN=keys:0.5,pads:0.8 (environment): these buses' gains times these factors, for mixing tests."""
+        gains = dict(gains)
+        for kv in filter(None, os.environ.get("GAIN", "").split(",")):
+            k, v = kv.split(":")
+            gains[k] = gains.get(k, 1.0) * float(v)
         preview = os.environ.get("PREVIEW")
         if preview:
             a, b = (int(v) for v in preview.split("-"))

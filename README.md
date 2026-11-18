@@ -119,6 +119,7 @@ Render options (environment variables):
 | `STEMS=1` | print the loudness of each bus |
 | `SOLO=vox` | render only these buses (comma separated), dry: for auditions |
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
+| `GAIN=keys:0.5` | these buses' gains times these factors (comma separated), for mixing tests without editing the song |
 | `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
@@ -274,7 +275,11 @@ The voices alone (`SOLO=vox`, through the same channel strip) against the
 full mix, section by section: Low Battery Lullaby 54 % against 26 %, Low Pass
 Love 44 % against 21 %, Blinky 30 % against 18 %. In these three the music
 hides about half the words; in Blinky the chorus is hard to hear even alone
-(0 to 32 %).
+(0 to 32 %). No one bus is to blame: muting one bus at a time (`MUTE=`) moved
+Blinky and Low Pass Love by at most 3 points. In Low Battery Lullaby muting
+the keys gave 36 %, but turning them down step by step (`GAIN=keys:0.7`, 0.5,
+0.35: 23, 24, 28 %) and UNMASK 9 or 12 (26 %) did not: changes of a few points
+are within the ear's noise, so the mix is as clear as these numbers can show.
 
 ## Surprise theme (two hours)
 
