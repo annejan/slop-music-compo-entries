@@ -277,16 +277,18 @@ def dame_take(seed=2):
     return wav
 
 
+DAME_AMP = float(os.environ.get("DAME_AMP", ".88"))      # -8 dB from the first try (2.2): "too prominent"
 SOUL_FREE = os.environ.get("SOUL_FREE") or (None if os.environ.get("SOUL_PIPER") else "take")
 
 
-def soul_free(bar, amp=2.2, seed=2):
+def soul_free(bar, amp=None, seed=2):
     """ACE-Step's free take, uncut: it starts on the downbeat of `bar` and runs as long as it is (16 s, about 8 bars
     at 124 BPM), only lightly band-limited."""
     if not S.live(bar, 8):
         return
     x = ace_take(dame_take(seed) if SOUL_FREE == "take" else SOUL_FREE, 0)
     x = e.bandpass(x, 120, 8000)
+    amp = DAME_AMP * (amp or 1.0)
     x = x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * .1                # no crackle: the take is clean (its pauses at -55 dB)
     put("vox", S.at(bar), x, .5, amp, wet=.2, echo=.06)
 
@@ -301,13 +303,17 @@ if os.environ.get("SOUL_STEM"):        # write the singer's dry line (bar 36) fo
     raise SystemExit(f"wrote {os.environ['SOUL_STEM']}: {len(b) / SR:.1f} s")
 
 
-def mc(bar, text, bars=2, amp=1.0, voice="en_US-joe-medium"):
-    """The MC, spoken and fitted to the bars, a little distorted (a sample from a mixtape)."""
+MC_VOICE = os.environ.get("MC_VOICE", "en_US-ryan-high")
+
+
+def mc(bar, text, bars=2, amp=1.0, voice=None):
+    """The MC: plain speech at its own pace, clean (the dry, calm narrator of a deploy going wrong). Fitting it to
+    the bars and a distorted layer made it husky and robotic."""
     if not S.live(bar, bars):
         return
-    y = V.rap(text, bars * S.bar * .55, voice=voice, pitch=.95)
-    y = .7 * y + .3 * np.tanh(3 * e.bandpass(y, 250, 5000)) * np.sqrt(np.mean(y ** 2)) / .2
-    put("vox", S.at(bar), y, .5, amp, wet=.1, echo=.15)
+    y = V._finish(V.tts(text, voice or MC_VOICE))
+    y = y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9))
+    put("vox", S.at(bar), y, .5, amp, wet=.1, echo=.12)
 
 
 GANG = [("en_US-joe-medium", .2), ("en_US-john-medium", .8), ("en_GB-alan-medium", .35), ("en_US-bryce-medium", .65),
@@ -353,8 +359,9 @@ def roll(bar0, bars=4, amp=1.0):
 
 
 # ---------------------------------------------------------------- the arrangement
-MC_LINES = {48: "Tests are green. Mostly.", 50: "The reviewer said L G T M.", 52: "It's four fifty-nine, on a Friday.",
-            54: "What could possibly go wrong?"}
+RYAN, LESSAC = "en_US-ryan-high", "en_US-lessac-high"        # the two narrators, taking turns
+MC_LINES = {48: ("Tests are green. Mostly.", RYAN), 50: ("The reviewer said L G T M.", LESSAC),
+            52: ("It's four fifty-nine, on a Friday.", RYAN), 54: ("What could possibly go wrong?", LESSAC)}
 for bar in range(BARS):
     intro, outro = bar < 16, bar >= 96
     if intro or outro:
@@ -393,7 +400,7 @@ for bar in range(BARS):
         if bar >= 56:
             guitar(bar, .8)
         if bar in MC_LINES:
-            mc(bar, MC_LINES[bar])
+            mc(bar, MC_LINES[bar][0], voice=MC_LINES[bar][1])
         if bar >= 56 and bar % 2 == 0:
             hook(bar)
     if 64 <= bar < 72:                                                 # the break: the pager
@@ -401,9 +408,9 @@ for bar in range(BARS):
         if bar in (64, 66):
             pager(bar)
         if bar == 68:
-            mc(bar, "It's on fire.", 1, amp=1.2, voice="en_US-bryce-medium")
+            mc(bar, "It's on fire.", 1, amp=1.2, voice=LESSAC)
         if bar == 70:
-            mc(bar, "Roll it back?", 1, amp=1.1, voice="en_US-bryce-medium")
+            mc(bar, "Roll it back?", 1, amp=1.1, voice=RYAN)
     if 72 <= bar < 80:                                                 # the build: the room wants a rollback
         acid(bar, .8, cutoff=400 + 180 * (bar - 72), reso=7.0)
         if bar in (72, 74):
@@ -426,7 +433,7 @@ for bar in range(BARS):
                 rollback(bar)
         else:
             if bar == 88 and SOUL_FREE:
-                soul_free(bar, amp=1.8, seed=3)                        # she comes back over the drop: take 3
+                soul_free(bar, amp=.82, seed=3)                        # she comes back over the drop: take 3
             if bar in (94,):
                 hook(bar)
     if bar in (16, 32, 48, 80, 88):

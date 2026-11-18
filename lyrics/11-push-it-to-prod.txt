@@ -2,7 +2,7 @@ Push It To Prod
 Rehearsal: big beat · 124 BPM · E minor · 3:39
 Words by Claude. Voices: SHOUT: HFC male (Piper, a distorted copy over it);
 DAME: ACE-Step 1.5 (4B LM + SFT), its own takes of the line (seed 2, and seed 3 over the drop);
-MC: Joe; MC on the phone: Bryce; GANG: Joe, John, Alan, Bryce, Norman
+MC 1: Ryan, MC 2: Lessac (taking turns); GANG: Joe, John, Alan, Bryce, Norman
 
 [0:00] Intro (the break alone)
 
@@ -19,18 +19,18 @@ DAME: On a Friday afternoon
 [1:25] SHOUT: Push it to prod!
 SHOUT: Push it to prod!
 
-[1:33] MC: Tests are green. Mostly.
-[1:37] MC: The reviewer said LGTM.
-[1:41] MC: It's four fifty-nine, on a Friday.
-[1:45] MC: What could possibly go wrong?
+[1:33] MC 1: Tests are green. Mostly.
+[1:37] MC 2: The reviewer said LGTM.
+[1:41] MC 1: It's four fifty-nine, on a Friday.
+[1:45] MC 2: What could possibly go wrong?
 [1:48] SHOUT: Push it to prod!
 SHOUT: Push it to prod!
 SHOUT: Push it to prod!
 SHOUT: Push it to prod!
 
 [2:04] Break (no drums, the filter closed; a pager goes off)
-[2:12] MC: It's on fire.
-[2:15] MC: Roll it back?
+[2:12] MC 2: It's on fire.
+[2:15] MC 1: Roll it back?
 
 [2:19] Build (a snare roll, a riser)
 GANG: Roll... back...
