@@ -1,0 +1,56 @@
+Push It To Prod
+Rehearsal: big beat · 124 BPM · E minor · 3:39
+Words by Claude. Voices: SHOUT: HFC male (Piper, a distorted copy over it);
+DAME: ACE-Step 1.5 (4B LM + SFT), its own takes of the line (seed 2, and seed 3 over the drop);
+MC: Joe; MC on the phone: Bryce; GANG: Joe, John, Alan, Bryce, Norman
+
+[0:00] Intro (the break alone)
+
+[0:31] The 303 behind a filter that opens
+[0:46] SHOUT: Push it! Push it!
+[0:54] SHOUT: Push it! Push it!
+[0:58] SHOUT: Push it to prod!
+
+[1:02] The hook, the wah guitar, the 303
+SHOUT: Push it to prod!
+SHOUT: Push it to prod!
+[1:10] DAME: On a Friday afternoon
+DAME: On a Friday afternoon
+[1:25] SHOUT: Push it to prod!
+SHOUT: Push it to prod!
+
+[1:33] MC: Tests are green. Mostly.
+[1:37] MC: The reviewer said LGTM.
+[1:41] MC: It's four fifty-nine, on a Friday.
+[1:45] MC: What could possibly go wrong?
+[1:48] SHOUT: Push it to prod!
+SHOUT: Push it to prod!
+SHOUT: Push it to prod!
+SHOUT: Push it to prod!
+
+[2:04] Break (no drums, the filter closed; a pager goes off)
+[2:12] MC: It's on fire.
+[2:15] MC: Roll it back?
+
+[2:19] Build (a snare roll, a riser)
+GANG: Roll... back...
+GANG: Roll... back...
+[2:27] GANG: Rollback! Rollback!
+GANG: Rollback! Rollback!
+GANG: Rollback! Rollback! Rollback! Rollback!
+
+[2:35] Drop (the hook backwards between the shouts)
+GANG: Rollback! Rollback!
+GANG: Rollback! Rollback!
+GANG: Rollback! Rollback!
+GANG: Rollback! Rollback!
+[2:50] DAME: On a Friday afternoon
+DAME: On a Friday afternoon
+[3:02] SHOUT: Push it to prod!
+
+[3:06] Outro (the break alone)
+
+Notes
+- A practice round for the surprise theme. Big beat was drawn at random at 16:48 on 18 November.
+- The song was built in short rounds, with the user listening to each one. The DAME is ACE-Step's own take of the line.
+  Her takes were chosen by ear from five seeds.

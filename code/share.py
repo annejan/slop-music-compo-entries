@@ -33,6 +33,7 @@ SONGS = [
     ("race-condition_174bpm_Fm.wav", "Race Condition", "Rehearsal: drum and bass", 174, "Fm", 144),
     ("sdio-love_120bpm_Dm.wav", "S.D.I.O. (I Love You So)", "Rehearsal: Italo disco", 120, "Dm", 112),
     ("flash-the-c6_174bpm_Fm.wav", "Flash The C Six", "Bonus: digital hardcore", 174, "Fm", 144),
+    ("push-it-to-prod_124bpm_Em.wav", "Push It To Prod", "Rehearsal: big beat", 124, "Em", 112),
 ]
 
 
