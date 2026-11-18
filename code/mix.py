@@ -9,11 +9,12 @@ The tempo is the median of the day's tempos unless given; each song is played fa
 as on a turntable or a CDJ without key lock: the pitch moves too). Per transition the report gives the tempo change,
 the pitch change, and whether the keys go together on the Camelot wheel (the same number, or one step around with
 the same letter, or the same number with the other letter). --order auto: the order with the fewest clashes.
-Writes renders/dj/<day> set.mp3.
+Writes renders/sets/<day> set.mp3 (not in renders/dj/, which goes to the USB stick).
 """
 import argparse
 import itertools
 import os
+from fractions import Fraction
 
 import numpy as np
 from scipy import signal
@@ -40,11 +41,11 @@ def shifted(cam, semitones):
     return f"{(n - 1 + 7 * semitones) % 12 + 1}{l}"
 
 
-def varispeed(x, ratio):
-    """x played `ratio` times as fast (shorter, higher)."""
-    up, down = 1000, int(round(1000 * ratio))
-    g = np.gcd(up, down)
-    return signal.resample_poly(x, up // g, down // g, axis=0)
+def varispeed(x, bpm, tempo):
+    """x (at bpm) played at tempo: shorter and higher when faster. The exact ratio (a rounded one drifts: 0.03 %
+    is 70 ms after four minutes, a flam at the next join)."""
+    r = Fraction(str(bpm)) / Fraction(str(tempo))
+    return signal.resample_poly(x, r.numerator, r.denominator, axis=0)
 
 
 def best_order(songs, tempo):
@@ -64,31 +65,35 @@ def day_songs(day):
 
 def build(songs, tempo, use):
     """The mix and the report lines. songs: [(n, row)] in playing order."""
-    bar = int(round(240 / tempo * e.SR))
+    bar = 240 / tempo * e.SR                      # samples a bar (not whole: positions are rounded once)
     lows = lambda a: e.lowpass(a, 150, order=4)
-    out, at, lines, prev = None, 0, [], None
+    out, at, lines, prev = None, 0.0, [], None
     for n, (wav, title, day, bpm, key, bars) in songs:
         song = dj.script_of(wav)
         src = use.get(song, os.path.join(share.RENDERS, wav))
         x, sr = master.read(src)
         if sr != e.SR:
             raise ValueError(f"{src}: {sr} Hz, expected {e.SR}")
-        x = varispeed(x, tempo / bpm)[:bars * bar]
+        x = varispeed(x, bpm, tempo)[:int(round(bars * bar))]
         semis = 12 * np.log2(tempo / bpm)
         cam = dj.CAMELOT[key]
         end = dj.CAMELOT[dj.END_KEY.get(song, key)]
         heard_cam = shifted(cam, round(semis))
         if prev is None:
-            out = np.zeros((sum(r[5] for _, r in songs) * bar, 2))
+            out = np.zeros((int(sum(r[5] for _, r in songs) * bar) + 1, 2))
             out[:len(x)] = x
-            at = 0
+            at = 0.0
             lines.append(f"{title}: {bpm} BPM, {tempo / bpm - 1:+.1%} ({semis:+.2f} semitones), {key} {cam}")
         else:
             p_title, p_end, p_bars = prev
             at += (p_bars - DJ_BARS) * bar                          # the next song starts on the outro's first bar
-            ov = DJ_BARS * bar
-            sw = (DJ_BARS - SWAP) * bar
-            prev_part = out[at:at + ov].copy()
+            i = int(round(at))
+            ov = int(round(DJ_BARS * bar))
+            sw = int(round((DJ_BARS - SWAP) * bar))
+            prev_part = out[i:i + ov].copy()
+            beat = 60 / tempo                                       # the kicks of both on the same grid?
+            off = (master.beat_phase(prev_part, e.SR, tempo) - master.beat_phase(x[:ov], e.SR, tempo)) % beat
+            off = min(off, beat - off) * 1000
             new = x[:ov].copy()
             # the lows: the old song's until the swap, then the new song's
             new[:sw] -= lows(new)[:sw]
@@ -97,14 +102,13 @@ def build(songs, tempo, use):
             # the old song fades over the last bars of the overlap, the new song is in from the start
             fade = np.ones(ov)
             fade[sw:] = np.cos(np.linspace(0, np.pi / 2, ov - sw))
-            out[at:at + ov] = prev_part * fade[:, None] + new
-            out[at + ov:at + len(x)] = x[ov:]
+            out[i:i + ov] = prev_part * fade[:, None] + new
+            out[i + ov:i + len(x)] = x[ov:]
             fit = "fits" if camelot_ok(p_end, heard_cam) else "CLASH"
             lines.append(f"  -> {title}: {bpm} BPM, {tempo / bpm - 1:+.1%} ({semis:+.2f} semitones), "
-                         f"{key} {cam} (heard as {heard_cam}); from {p_end}: {fit}")
+                         f"{key} {cam} (heard as {heard_cam}); from {p_end}: {fit}; kicks {off:.1f} ms apart")
         prev = (title, shifted(end, round(semis)), bars)
-    total = at + len(x)
-    return out[:total], lines
+    return out[:int(round(at)) + len(x)], lines
 
 
 if __name__ == "__main__":
@@ -127,7 +131,7 @@ if __name__ == "__main__":
     x, lines = build(songs, tempo, use)
     x = master.master(x, -10.0 if "house" in songs[0][1][2] else -9.0)
     day = songs[0][1][2].split(":")[0]
-    out_dir = os.path.join(share.RENDERS, "dj")
+    out_dir = os.path.join(share.RENDERS, "sets")              # not dj/: that folder goes to the USB stick
     os.makedirs(out_dir, exist_ok=True)
     wav = os.path.join(out_dir, f"{day} set{a.tag}.wav")
     master.write(wav, x)
