@@ -534,6 +534,17 @@ class Song:
         self.send = np.zeros((self.n, 2), np.float32)    # to the room
         self.echo = np.zeros((self.n, 2), np.float32)    # to the dotted-eighth delay
         self.kicks = []
+        p = os.environ.get("PREVIEW")
+        self.window = tuple(int(v) for v in p.split("-")) if p else None
+
+    def live(self, bar, bars=1):
+        """False when a part from `bar` lasting `bars` bars cannot be heard in the PREVIEW window: then the part
+        need not be made (parts.Band skips it), so a preview takes seconds. One bar of margin before the window,
+        for what rings into it."""
+        if not self.window:
+            return True
+        a, b = self.window
+        return bar + bars > a - 1 and bar < b
 
     def at(self, bar, beat=0.0):
         return bar * self.bar + beat * self.beat
@@ -710,3 +721,9 @@ class Song:
         tp = 20 * np.log10(true_peak(out / 32767).max())
         print(f"wrote {path}: {int(m)}:{s:04.1f}, {self.bars} bars at {self.bpm} BPM, "
               f"{integrated_lufs(out / 32767):.1f} LUFS, {tp:+.1f} dBTP")
+        if test:                         # a test render: an MP3 next to it, small enough for a phone
+            import subprocess
+            mp3 = path[:-4] + ".mp3"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", path, "-c:a", "libmp3lame", "-b:a", "192k", mp3],
+                           check=False)
+            print(f"listen: {mp3}")

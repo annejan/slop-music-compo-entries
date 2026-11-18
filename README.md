@@ -120,7 +120,7 @@ Render options (environment variables):
 
 | Variable | Effect |
 |---|---|
-| `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen; it synthesises the whole song's voices, so it is not faster yet |
+| `PREVIEW=48-64` | render only these bars (here 48 to 63), for a quick listen: `parts.Band` makes only the parts in them, so the template previews in about 8 s (a whole song: 39 s). A song's own parts can skip too: `if not S.live(bar): return` |
 | `STEMS=1` | print the loudness of each bus |
 | `SOLO=vox` | render only these buses (comma separated), dry: for auditions |
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
@@ -139,8 +139,9 @@ Condition 38 to 41 %, Low Battery Lullaby 8 to 26 %. Alone, UNMASK 6 gave 31 %
 on average, UNMASK 9 35 %, VOXCHAIN 38 %, both 40 % (none: 26 %).
 
 A render with `PREVIEW`, `SOLO`, `MUTE` or `GAIN` that would go to `renders/`
-goes to `renders/scratch/` instead, with the settings in its name: a test never
-replaces the song's render, which `share.py`, `dj.py` and `produce.py` use.
+goes to `renders/scratch/` instead, with the settings in its name, and an MP3
+next to it to listen to on a phone: a test never replaces the song's render,
+which `share.py`, `dj.py` and `produce.py` use.
 `dj.py` flags a file whose length does not match the song's bars.
 
 ## Voices
@@ -317,11 +318,16 @@ are within the ear's noise, so the mix is as clear as these numbers can show.
    default 2.0): at 1.0 the ear heard none of the template's verse words in
    the mix, at 2.0 to 2.5 more than with Piper. A whole song with her takes
    46 s (Piper: 29 s).
+   Work in short rounds with someone listening: change a part, render its bars
+   (`PREVIEW=48-64 .venv/bin/python <name>.py`, about 8 s), send the MP3 from
+   `renders/scratch/` to a phone, and let their ears decide; two versions of
+   a part make an A/B. The software ear (step 3) is a check at the end, not
+   what steers the changes.
 2. Render it. The template prints the line for `share.SONGS`: add it at the
    end of the list, and write the lyric sheet as `lyrics/NN-<name>.txt` (NN:
    its row number) with `[m:ss]` times (a bar is 240/BPM seconds). If the last
    chorus changes key, `KEY_CHANGE` is enough: `dj.py` and `mix.py` read it.
-3. The ear, section by section: `produce.py <name> --project
+3. The ear, once the song is done, section by section: `produce.py <name> --project
    <file with take = "ours"> --tag ours`. A section moves up to about 20
    points between two renders of the same thing: act on bigger changes, or on
    what the voices alone (`MUTE=drums,perc,bass,pads,keys,lead,fx`) confirm.

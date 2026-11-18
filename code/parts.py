@@ -115,6 +115,8 @@ class Band:
     # ------------------------------------------------------------ drums
     def drums(self, bar, groove, amp=1.0, kick=True, clap=True, hats=True, crash=False):
         """One bar of a groove from GROOVES (or your own dict of 16-step strings)."""
+        if not self.S.live(bar):
+            return
         S, t0 = self.S, self.S.at(bar)
         swing = groove.get("swing", 0.0) * S.step
 
@@ -143,6 +145,8 @@ class Band:
 
     def roll(self, bar0, bars=4, amp=1.0):
         """A snare roll that climbs to the drop, thirty-seconds in the last bar."""
+        if not self.S.live(bar0, bars):
+            return
         S, total = self.S, bars * 16
         for k in range(total):
             u = k / total
@@ -155,6 +159,8 @@ class Band:
     def bass(self, bar, style="offbeat", amp=1.0, lo=33, cut=1100):
         """offbeat (eurodance, trance), root (house: on the beats), eighths (rolling), reese (dnb: one long note),
         dx7 (FM bass on the offbeats), octave (Italo disco, Hi-NRG: eighths, the octave up on each "and")."""
+        if not self.S.live(bar):
+            return
         S = self.S
         root = e.root_note(self.chord(bar), self.key_of(bar), lo=lo)
         if style == "reese":
@@ -176,6 +182,8 @@ class Band:
     # ------------------------------------------------------------ chords
     def stabs(self, bar, steps=(0, 3, 6, 10, 12), sound="piano", amp=1.0, lo=60, hi=76):
         """Chord stabs on these sixteenths: piano (rave piano), epiano (DX7), organ (M1), supersaw."""
+        if not self.S.live(bar):
+            return
         S = self.S
         notes = e.close_voicing(self.chord(bar), self.key_of(bar), lo=lo, hi=hi)
         for k in steps:
@@ -190,12 +198,16 @@ class Band:
                 S.put("keys", t + j * .003, g, .4 + .1 * j, .3 * amp, wet=.25)
 
     def pad(self, bar, amp=1.0, cut=2500):
+        if not self.S.live(bar):
+            return
         S = self.S
         S.put("pads", S.at(bar), e.pad(e.voicing(self.chord(bar), self.key_of(bar), lo=55), S.bar, cut=cut, a=.3,
                                           r=.6), amp=.45 * amp, wet=.4)
 
     def lead(self, bar, line, amp=1.0, bars=1, sound="lead"):
         """A melody line ("E5 - D5 . ...") on the lead synth, or "epiano" / "bells" / "brass" (DX7)."""
+        if not self.S.live(bar, bars):
+            return
         S = self.S
         for t, m, d in S.notes(bar, line, self.key_of(bar), bars):
             g = e.lead(m, d * .95) if sound == "lead" else dx7.note(sound, m, d * .95, .8, tail=.4)
@@ -208,6 +220,8 @@ class Band:
         and a fifth voice a sixth down as well. The choir sings only the vowels (every voice has its own consonant
         lengths, which would smear hers), with less vibrato. With a DiffSinger diva (ds:...) the line goes into
         her one take, an octave above the Piper diva (her own range); ds_words: the words as DiffSinger reads them."""
+        if not self.S.live(bar, bars):
+            return
         S, key = self.S, self.key_of(bar)
         pairs = words_on(S.notes(bar, line, key, bars), words)
         ds_here = self.ds and not voice
@@ -255,12 +269,16 @@ class Band:
 
     def rap(self, bar, text, bars=1, amp=1.0, voice=None, pitch=.92):
         """A spoken line from the downbeat, fitted to the bars (a sixteenth short, to breathe)."""
+        if not self.S.live(bar, bars):
+            return
         S = self.S
         y = V.rap(text, bars * S.bar - S.step, voice=voice or self.rapper_voice, pitch=pitch)
         S.put("vox", S.at(bar), y, .5, amp, wet=.06, echo=.04)
 
     def say(self, bar, text, voice="en_US-lessac-high", amp=.8, beat=0.0, phone=False):
         """A spoken announcement at its own pace (a computer, an MC); phone=True: through a small speaker."""
+        if not self.S.live(bar, 2):
+            return
         S = self.S
         y = V._finish(V.tts(text, voice))
         y = y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9))
