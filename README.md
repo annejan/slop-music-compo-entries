@@ -115,6 +115,7 @@ Optional parts, outside this repository:
 | [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
 | [mix.py](code/mix.py) | a day's songs as one DJ set: one tempo (varispeed), each song over the 16-bar outro of the one before, the lows swapped 4 bars before the end, the keys checked on the Camelot wheel; `--order auto` for the fewest key clashes, `--use` for produced versions |
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
+| [gag.py](code/gag.py) | a quick ACE-Step song from words and a style, for the group chat (not for the DJ): the 4B LM and the SFT DiT, about 2.5 minutes for 2 minutes of music; `--fast` about 70 s |
 
 Render options (environment variables):
 
@@ -225,8 +226,12 @@ What we found:
   with the base DiT (50 steps) "a lot messier and fuller, as if you listen
   half way through the process" in both songs, at 2.4 times the time. The
   base DiT is the raw pretrained model, and acestep.cpp's base preset runs
-  it without CFG; the tuned 50-step model is SFT, which is not installed.
-  So: turbo for text to music.
+  it without CFG. The tuned 50-step model is SFT
+  (`acestep-v15-sft-Q8_0.gguf`, `--model sft`). Five versions of the same song,
+  by ear: the 4B LM with SFT best, then the 4B LM with turbo and the 1.7B LM
+  with SFT, then the 1.7B LM with turbo; base last. From scratch, for 2
+  minutes of music: 1.7B + turbo 71 s, 4B + turbo 83 s, 1.7B + SFT 136 s,
+  4B + SFT 154 s. `gag.py` uses 4B + SFT.
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
   model, about 5 minutes with the base model. Bigger VAE tiles than the
   default (`--vae-chunk 2048` or `4096`) crash the GPU (`vk::DeviceLostError`),

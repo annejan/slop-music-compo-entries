@@ -39,7 +39,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ACESTEP = os.environ.get("ACESTEP", os.path.expanduser("~/Projects/acestep.cpp"))
 MODELS = os.path.join(ACESTEP, "models")
 SYNTH = {"turbo": dict(synth_model="acestep-v15-turbo-Q8_0.gguf", inference_steps=8, guidance_scale=1.0, shift=3.0),
-         "base": dict(synth_model="acestep-v15-base-Q8_0.gguf", inference_steps=50, guidance_scale=1.0, shift=1.0)}
+         "base": dict(synth_model="acestep-v15-base-Q8_0.gguf", inference_steps=50, guidance_scale=1.0, shift=1.0),
+         # the tuned 50-step DiT: by ear far cleaner than base for text to music (gag.py, 18 November)
+         "sft": dict(synth_model="acestep-v15-sft-Q8_0.gguf", inference_steps=50, guidance_scale=1.0, shift=1.0)}
 LM = "acestep-5Hz-lm-4B-Q8_0.gguf"
 def keyscale(key):
     """ACE-Step's key name: "F#m" -> "F# minor", "Bb" -> "Bb major"."""
@@ -191,7 +193,7 @@ def main():
     ap.add_argument("song")
     ap.add_argument("--mode", choices=["cover", "vocals", "lego", "text"], default="cover")
     ap.add_argument("--strength", type=float, default=.85)
-    ap.add_argument("--model", choices=["base", "turbo"], default="base")
+    ap.add_argument("--model", choices=["base", "turbo", "sft"], default="base")
     ap.add_argument("--ref", action="store_true", help="our audio as the timbre reference too")
     ap.add_argument("--ace", type=float, default=1.0, help="vocals mode: ACE-Step's share of the vocals")
     ap.add_argument("--era", choices=["90s"])
