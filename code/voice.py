@@ -29,6 +29,8 @@ from piper import PiperVoice, SynthesisConfig  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 VOICES = os.path.join(HERE, "voices")
 CACHE = os.path.join(HERE, ".cache")
+# the GPU lock of ace.gpu, for the voice engines that run on the iGPU (qwen:, maya:)
+GPU_LOCK = os.environ.get("ACE_LOCK") or os.path.join(HERE, "renders", ".gpu.lock")
 TTS_SR = 22050
 OUT_SR = 44100
 FRAME = 5.0          # WORLD frame period, ms
@@ -79,6 +81,32 @@ def _classic(engine, name, text, length_scale):
             reg = [f'(voice-location "{name}" "{local}/" "local")'] if os.path.isdir(local) else []
             cmd = ["text2wave", *[a for r in reg for a in ("-eval", r)], "-eval", f"(voice_{name})", "-eval",
                    f"(Parameter.set 'Duration_Stretch {length_scale})", txt, "-o", out]
+        elif engine == "kokoro":
+            # "kokoro:af_bella" or "kokoro:am_fenrir@1.2" (a speed): Kokoro-82M presets on the CPU, in its own venv
+            # (~/Projects/kokoro; the TTS A/B of 19 November: "way better than other options so far")
+            v, _, speed = name.partition("@")
+            k = os.path.expanduser("~/Projects/kokoro")
+            cmd = [f"{k}/.venv/bin/python", f"{k}/scripts/kokoro_say.py", "--voice", v,
+                   "--speed", speed or f"{1 / length_scale:g}", "--out", out, text]
+        elif engine == "qwen":
+            # "qwen:<a voice described in words>" or "...#seed" (default 42; a seed keeps one voice): Qwen3-TTS
+            # 1.7B VoiceDesign through qwentts.cpp on the GPU, behind the ACE-Step GPU lock (~/Projects/qwentts.cpp)
+            desc, seed = (name.rsplit("#", 1) + ["42"])[:2] if "#" in name else (name, "42")
+            q = os.path.expanduser("~/Projects/qwentts.cpp")
+            subprocess.run(["flock", GPU_LOCK, f"{q}/build/qwen-tts", "--model",
+                            f"{q}/models/qwen-talker-1.7b-voicedesign-Q8_0.gguf", "--codec",
+                            f"{q}/models/qwen-tokenizer-12hz-Q8_0.gguf", "--device", "Vulkan0", "--lang", "English",
+                            "--seed", seed, "--max-new", "500", "--instruct", desc.strip(), "-o", out],
+                           input=text.encode(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            return _read_wav(out)
+        elif engine == "maya":
+            # "maya:<a voice described in words>" or "...#seed"; emotion tags go in the text ("<excited> Hands up!",
+            # <whisper>, <angry>, <laugh>, ...): Maya1 through llama.cpp on the GPU (behind the lock) and the SNAC
+            # decoder; slow (a 4 s line takes about 17 s), so every line is cached (~/Projects/maya1)
+            desc, seed = (name.rsplit("#", 1) + ["-1"])[:2] if "#" in name else (name, "-1")
+            m = os.path.expanduser("~/Projects/maya1")
+            cmd = ["flock", GPU_LOCK, f"{m}/.venv/bin/python", f"{m}/maya1_tts.py", "--seed", seed, "--wav", out,
+                   "--description", desc.strip(), "--text", text]
         elif engine == "mimic3":
             exe = shutil.which("mimic3") or os.path.join(HERE, ".venv-mimic3", "bin", "mimic3")
             with open(out, "wb") as fh:

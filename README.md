@@ -91,6 +91,12 @@ mkdir -p voices && cd voices
 # (en_GB-semaine-medium: prudence, spike (angry), obadiah (gloomy), poppy (cheerful); CC BY-NC-SA), and many-speaker
 # models for gang shouts (en_US-libritts_r-medium, 904 speakers; en_GB-vctk-medium, 109; CC BY 4.0). A speaker of a
 # many-speaker model is "voice#speaker", by name or number: en_GB-semaine-medium#spike, en_US-libritts_r-medium#12
+# three more voice engines (19 November; the user: "way better than other options so far"), installed outside
+# this repository (research/toolkit-2026-11-19.md): "kokoro:af_bella" or "kokoro:am_fenrir@1.2" (Kokoro-82M presets,
+# CPU, ~/Projects/kokoro), "qwen:<a voice described in words>#42" (Qwen3-TTS VoiceDesign, GPU, ~/Projects/qwentts.cpp;
+# the seed keeps one voice), "maya:<a voice described in words>#301" with tags like <excited>, <whisper>, <angry> in
+# the text (Maya1, GPU, slow: about 17 s for a 4 s line, ~/Projects/maya1 and ~/Projects/llama.cpp); GPU engines take
+# the ACE-Step GPU lock
 ../.venv/bin/python -m piper.download_voices nl_NL-pim-medium nl_NL-ronnie-medium nl_NL-alex-medium nl_BE-nathalie-medium \
   nl_BE-rdh-medium nl_BE-flemishguy-medium en_GB-semaine-medium en_GB-vctk-medium en_US-libritts_r-medium \
   en_GB-northern_english_male-medium en_US-mike-medium
