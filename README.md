@@ -87,6 +87,13 @@ cd code
 uv venv .venv && uv pip install --python .venv/bin/python piper-tts pyworld 'setuptools<81' numpy scipy faster-whisper
 mkdir -p voices && cd voices
 ../.venv/bin/python -m piper.download_voices en_US-hfc_female-medium en_US-ryan-high   # and the other voices the songs use
+# more voices (19 November): Dutch (nl_NL pim, ronnie, alex; nl_BE nathalie, rdh, flemishguy; CC0), characters
+# (en_GB-semaine-medium: prudence, spike (angry), obadiah (gloomy), poppy (cheerful); CC BY-NC-SA), and many-speaker
+# models for gang shouts (en_US-libritts_r-medium, 904 speakers; en_GB-vctk-medium, 109; CC BY 4.0). A speaker of a
+# many-speaker model is "voice#speaker", by name or number: en_GB-semaine-medium#spike, en_US-libritts_r-medium#12
+../.venv/bin/python -m piper.download_voices nl_NL-pim-medium nl_NL-ronnie-medium nl_NL-alex-medium nl_BE-nathalie-medium \
+  nl_BE-rdh-medium nl_BE-flemishguy-medium en_GB-semaine-medium en_GB-vctk-medium en_US-libritts_r-medium \
+  en_GB-northern_english_male-medium en_US-mike-medium
 cd ..
 .venv/bin/python warm_boot.py      # writes renders/warm-boot_120bpm_Am.wav
 ```

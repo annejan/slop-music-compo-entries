@@ -83,11 +83,11 @@ def diva(bar, seed=DIVA_SEED, amp=1.0):
     put("vox", S.at(bar), x, .5, amp, wet=.25, echo=.12)
 
 
-# ---------------------------------------------------------------- the diva: our own melody (DIVA=ours, the default)
+# ---------------------------------------------------------------- the diva: our own melody (SINGER=ours)
 # The free ACE-Step takes did not fit (the user, 13:40: "messy and don't fit with the music"): sung a cappella, ACE
 # chose its own key (F minor, D minor, B minor for B minor asked) and never heard the chords. So the melody is ours,
 # on the chords (Bm Em A F#, a bar each), two bars a line; ACE-Step may re-sing it (ace.py --mode vocals).
-DIVA = os.environ.get("DIVA", "ace")
+DIVA = os.environ.get("SINGER", "ace")   # SINGER=ours: our diva on the written melody (DIVA is the voice env of parts)
 CHORUS = [  # (melody: one token a sixteenth over two bars, "-" holds, "." rests; the words as the voice says them)
     ("F#5 - F#5 - A5 - B5 - - - - - A5 - F#5 - G5 - - - E5 - G5 - - - - - - - - .",
      "o ver clocked heart run ning way too hot"),
@@ -116,7 +116,7 @@ def our_chorus(bar, first):
         P.diva(bar, line, words, bars=2, amp=1.0)
 
 
-# DIVA=ace: seed 2 (the user's "least bad"), sung by ACE-Step in B minor at 104 BPM (asked for A flat minor) and
+# SINGER=ace (the default): seed 2 (the user's "least bad"), sung by ACE-Step in B minor at 104 BPM (asked for A flat minor) and
 # only sped up to 128 by Rubber Band (no pitch shift). The band follows HER in the choruses: a chord a bar, picked
 # from the notes she sings in that bar (pyworld's f0, the triad of B minor's chords with the most of them).
 DIVA_WAV = os.path.join(TAKES_DIR, "chorus_s2_bm_128.wav") if DIVA_SEED == 2 else None

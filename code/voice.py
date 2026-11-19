@@ -103,8 +103,14 @@ def tts(text, voice, length_scale=1.0, take=0):
         engine, name = voice.split(":", 1)
         x = _classic(engine, name, text, length_scale)
     else:
-        cfg = SynthesisConfig(length_scale=length_scale, noise_scale=.5, noise_w_scale=.6)
-        x = np.concatenate([c.audio_float_array for c in _voice(voice).synthesize(text, cfg)]).astype(np.float64)
+        # "voice#speaker": a speaker of a many-speaker model, by name or number (en_GB-semaine-medium#spike, the
+        # angry one; en_US-libritts_r-medium#12 of its 904; en_GB-vctk-medium#40 of its 109)
+        name, _, spk = voice.partition("#")
+        sid = None
+        if spk:
+            sid = int(spk) if spk.isdigit() else _voice(name).config.speaker_id_map[spk]
+        cfg = SynthesisConfig(speaker_id=sid, length_scale=length_scale, noise_scale=.5, noise_w_scale=.6)
+        x = np.concatenate([c.audio_float_array for c in _voice(name).synthesize(text, cfg)]).astype(np.float64)
     env = np.convolve(np.abs(x), np.ones(110) / 110, "same")
     on = np.nonzero(env > .02 * env.max())[0]
     x = x[max(on[0] - 60, 0):on[-1] + 200] if len(on) else x
