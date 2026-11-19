@@ -168,7 +168,8 @@ a 16-step pattern. In a song: `b = chops.bank(take_wav, {"hold", "on", "tight"})
 
 Every switch in this table except `DIVA` makes a test render: it goes to `renders/scratch/` with the switch in its
 name (`<song>-preview48-64-air1.wav` and an MP3), and never replaces the song's render. So do the song-specific
-A/B switches (`CROWD`, `CHOPS`, `VAMP`, `HARM`, `SINGER`, `NARRATORS`, `DIVA_WAV`, `DIVA_OFFSET`). A choice that
+switches (`CROWD`, `CHOPS`, `VAMP`, `HARM`, `SINGER`, `NARRATORS`, `DIVA_WAV`, `DIVA_OFFSET`, and the songs' own voice
+and sound switches such as `RAPPER`, `SYSTEM`, `MOUTH`, `CHOIR`, `KEYS`; the full list is `engine.AB_VARS`). A choice that
 wins goes into the script; render once more without switches before `share.py` and `dj.py`.
 
 Two leaks to know: with a `ds:` diva, `MUTE=vox` still keeps her last-word echoes; `low_pass_love.py` writes its
