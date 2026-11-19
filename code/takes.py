@@ -7,6 +7,10 @@ the take plays whole from a downbeat (no cutting, no time-fitting).
 takes.py SONG --bar 48 --lines "Segfault in my heart|Tearing me apart" --caption "mid 1990s eurodance, a female diva"
          [--tag Chorus] [--bars 8] [--seeds 1,2,3,4] [--db -8] [--lift 3]
 takes.py --menu [--seeds 1,2,3]      the voice menu: kinds of voice that ACE-Step sings a cappella, one MP3
+takes.py [SONG] --drafts --caption "..." --lines "a|b" --bpm 128 --key "B minor" --chords "Bm Em A F#" [--bars 16]
+         [--lift 3] [--n 4] [--lm-seed 1000] [--name chorus]
+                                     a draft round: 4 tunes from one LM run, turbo, ranked by fit.py, best first
+takes.py --keep DRAFT.json [--guidance 7 --shift 3]    the picked draft again with SFT: same tune, better voice
 
 --caption: the genre and the voice ("a cappella vocals only, no instruments" is added). --lines: the words, one sung
 line per "|" (respelled for ACE-Step: ace.ACE_SPELL). --bars: the length of the take (8 bars: 16 s at 120 BPM).
@@ -127,6 +131,128 @@ def take(caption, lyrics, bpm, key, bars, seed, out, name="take", lang="en", lif
         return None
     os.replace(base + "00.wav", wav)
     return wav
+
+
+# ---------------------------------------------------------------- drafts: several tunes fast, the keeper in SFT
+# (research/toolkit-2026-11-19.md: a take's time is LM decoding and DiT steps, not model loading; the key is a
+# lottery, so make several cheap drafts, rank them with fit.py, and let the ear pick)
+DRAFT = dict(lm_model=ace.LM, **ace.SYNTH["turbo"])
+
+
+def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, lm_seed=1000, lift=0):
+    """`n` takes for the ear to choose from, fast: one ace-lm run makes n tunes (lm_batch_size: one prefill, the
+    KV cache copied, consecutive LM seeds from lm_seed), one ace-synth run renders them all with the turbo DiT
+    (8 steps). Returns [(wav, json, sung_bpm)]; each JSON keeps the LM's codes, so keep() renders a picked tune
+    again with SFT: the same tune and words, the better voice. lift: sung `lift` semitones lower at the tempo
+    divided by LIFT_SPEED (finish() brings it to the song; the shift there comes from fit.py and the ear).
+    Reproducible: lm_seed fixes the tunes (without it ace-lm draws a random LM seed every run). A second of
+    headroom: acestep.cpp cuts the duration to whole seconds and the LM stops about 0.8 s early, which cut the
+    last word of 14 of 137 takes on disk."""
+    sung = round(bpm / LIFT_SPEED) if lift else bpm
+    ask = transpose(key, -lift) if lift else key
+    req = {"caption": f"{caption}, {A_CAPPELLA}", "lyrics": lyrics, "bpm": int(round(sung)), "keyscale": ask,
+           "timesignature": "4", "vocal_language": lang, "output_format": "wav16",
+           "duration": float(int(bars * 240 / sung) + 2), "seed": 1, "lm_seed": int(lm_seed), "lm_batch_size": n,
+           **DRAFT}
+    h = hashlib.sha1(json.dumps(req, sort_keys=True).encode()).hexdigest()[:8]
+    base = os.path.join(out, f"{name}_l{lm_seed}_{h}")
+    got = [(f"{base}_{b}.wav", f"{base}{b}.json", sung) for b in range(n)]
+    if all(os.path.exists(w) for w, _, _ in got):
+        return got
+    os.makedirs(out, exist_ok=True)
+    json.dump(req, open(base + ".json", "w"), indent=1, ensure_ascii=False)
+    build = os.path.join(ace.ACESTEP, "build")
+    if not run([os.path.join(build, "ace-lm"), "--models", ace.MODELS, "--request", base + ".json",
+                "--device", "Vulkan0", "--max-seq", "2048"], base + ".lm.log", 300):
+        return []
+    if not run([os.path.join(build, "ace-synth"), "--models", ace.MODELS, "--request", *[j for _, j, _ in got],
+                "--device", "Vulkan0", "--vae-chunk", ace.VAE_CHUNK], base + ".synth.log", 300):
+        return []
+    for b, (w, _, _) in enumerate(got):
+        os.replace(f"{base}{b}0.wav", w)
+    return got
+
+
+def keep(draft_json, guidance=None, shift=None):
+    """A picked draft rendered again from its JSON with the SFT DiT (50 steps): the same LM codes, so the same tune
+    and words in the better voice. guidance / shift: the SFT preset is guidance 1.0 (CFG off) and shift 1.0; the
+    official docs' guidance on (7.0) with shift 3.0 doubles the DiT time and is an A/B for the ear."""
+    req = json.load(open(draft_json))
+    req.update(ace.SYNTH["sft"])
+    if guidance is not None:
+        req["guidance_scale"] = float(guidance)
+    if shift is not None:
+        req["shift"] = float(shift)
+    base = f"{draft_json[:-5]}_sft_g{req['guidance_scale']:g}_s{req['shift']:g}"
+    wav = base + ".wav"
+    if os.path.exists(wav):
+        return wav
+    json.dump(req, open(base + ".json", "w"), indent=1, ensure_ascii=False)
+    if not run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS, "--request",
+                base + ".json", "--device", "Vulkan0", "--vae-chunk", ace.VAE_CHUNK], base + ".synth.log", 400):
+        return None
+    os.replace(base + "0.wav", wav)
+    return wav
+
+
+def finish(wav, sung, bpm, shift=0):
+    """A take at the song's tempo and key: Rubber Band (R3 engine) from the sung tempo to `bpm` and `shift`
+    semitones up in one pass, formants not kept (the lift A/B of 19 November: the user's pick)."""
+    if sung == bpm and not shift:
+        return wav
+    dst = f"{wav[:-4]}_to{bpm:g}_{shift:+d}.wav"
+    if not os.path.exists(dst):
+        cmd = (["rubberband", "-3", "-q"] + (["-T", f"{sung:g}:{bpm:g}"] if sung != bpm else [])
+               + (["-p", str(shift)] if shift else []) + [wav, dst])
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode:
+            print(f"rubberband failed: {r.stderr.strip()[-300:]}", file=sys.stderr)
+            return None
+    return dst
+
+
+def pin(wav, song, label):
+    """The take a song uses, as a file of its own: renders/ace/takes/<song>/pinned/<label>.wav (with its JSON when
+    there is one). Song scripts read the pinned file and never make their take while rendering: a changed request
+    or a lost WAV would make a different take without a word."""
+    import shutil
+    d = os.path.join(TAKES, song, "pinned")
+    os.makedirs(d, exist_ok=True)
+    dst = os.path.join(d, f"{slug(label)}.wav")
+    shutil.copyfile(wav, dst)
+    for j in (wav[:-4] + ".json", re.sub(r"_(\d+)\.wav$", r"\1.json", wav)):
+        if j != wav and os.path.exists(j):
+            shutil.copyfile(j, dst[:-4] + ".json")
+            break
+    return dst
+
+
+def draft_round(caption, lines, bpm, key, chords, bars=16, tag="Chorus", lift=0, n=4, lm_seed=1000, out=None,
+                name="draft", lang="en"):
+    """The compo-day round: n drafts, ranked by fit.py against the band's chords, each brought to the song's tempo
+    and the measured key shift, one listen file best-first (with the bar offset fit.py liked spoken), and the
+    table. The ear picks; keep() renders the pick in SFT."""
+    import fit
+    out = out or os.path.join(TAKES, "drafts")
+    got = drafts(caption, ace_words(lines, tag), bpm, key, bars, out, name, lang, n, lm_seed, lift)
+    if not got:
+        return None
+    sung = got[0][2]
+    ranked = fit.rank([w for w, _, _ in got], chords, sung)
+    jsons = {w: j for w, j, _ in got}
+    parts, rows = [], []
+    for i, (w, f, cut) in enumerate(ranked):
+        s, o = f["best"]
+        fin = finish(w, sung, bpm, s)
+        b = int(re.search(r"_(\d+)\.wav$", w).group(1))
+        rows.append(f"{i + 1}. draft {b} ({os.path.basename(jsons[w])}): {fit.describe((w, f, cut))}")
+        where = {0: "", -1: ", one bar early", 1: ", one bar late"}.get(o, "")
+        parts += [label(f"Draft {WORDS[b + 1] if b + 1 < len(WORDS) else b + 1}{where}."),
+                  master.master(roomy(e.bandpass(mono(fin), 80, 12000), .15), -16.0), gap(.5)]
+    mp3 = listen(parts, os.path.join(out, f"{name} drafts, best first.mp3"), f"{name}: drafts, best first")
+    open(os.path.join(out, f"{name} drafts.txt"), "w").write("\n".join(rows) + "\n")
+    print("\n".join(rows))
+    return mp3, ranked
 
 
 def mono(path):
@@ -278,7 +404,28 @@ def main():
     ap.add_argument("--db", type=float, default=-8.0, help="the take against the mix there (default -8 dB)")
     ap.add_argument("--lift", type=int, default=0, help="sung N semitones lower and slower, lifted by Rubber Band "
                     "(3: the 90s eurodance voice)")
+    ap.add_argument("--drafts", action="store_true", help="a draft round: --n turbo drafts from one LM run, ranked "
+                    "against --chords, best first (needs --caption, --lines, --bpm, --key, --chords)")
+    ap.add_argument("--bpm", type=float, help="drafts: the song's tempo")
+    ap.add_argument("--key", help='drafts: the song\'s key, "B minor"')
+    ap.add_argument("--chords", help='drafts: the band\'s chords, one a bar, repeating: "Bm Em A F#"')
+    ap.add_argument("--n", type=int, default=4, help="drafts: how many (default 4)")
+    ap.add_argument("--lm-seed", type=int, default=1000, help="drafts: the first LM seed (the tunes)")
+    ap.add_argument("--name", default="draft", help="drafts: the files' name")
+    ap.add_argument("--keep", metavar="JSON", help="render a picked draft's JSON again with SFT")
+    ap.add_argument("--guidance", type=float, help="keep: the DiT's guidance (SFT preset 1.0; docs 7.0)")
+    ap.add_argument("--shift", type=float, help="keep: the schedule shift (SFT preset 1.0; docs 3.0)")
     a = ap.parse_args()
+    if a.keep:
+        print(keep(a.keep, a.guidance, a.shift))
+        return
+    if a.drafts:
+        if not (a.caption and a.lines and a.bpm and a.key and a.chords):
+            ap.error("--drafts needs --caption, --lines, --bpm, --key and --chords")
+        out = os.path.join(TAKES, ace.script_name(a.song)) if a.song else None
+        draft_round(a.caption, a.lines.split("|"), a.bpm, a.key, a.chords.split(), a.bars, a.tag, a.lift, a.n,
+                    a.lm_seed, out, a.name)
+        return
     seeds = [int(s) for s in a.seeds.split(",")] if a.seeds else None
     if a.menu:
         print(menu(seeds or (1, 2, 3)))

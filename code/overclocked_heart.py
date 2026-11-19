@@ -40,6 +40,7 @@ KEY = KIT["key"]                       # Bm
 KEY_CHANGE = 0
 LUFS = KIT["lufs"]
 DIVA_SEED = int(os.environ.get("DIVA_SEED", "2"))
+DIVA_OFFSET = int(os.environ.get("DIVA_OFFSET", "0"))   # whole bars: -1 = the take one bar earlier (fit.py's offset)
 
 e.seed(BPM)
 S = e.Song(bpm=BPM, bars=BARS)
@@ -121,7 +122,12 @@ def our_chorus(bar, first):
 DIVA_WAV = os.path.join(TAKES_DIR, "chorus_s2_bm_128.wav") if DIVA_SEED == 2 else None
 HARM = ["D", "D", "Bm", "F#", "F#", "Em", "Bm", "Bm", "D", "D", "Bm", "Bm", "D", "D", "Bm", None]
 # HARM=1: the band follows her. By ear (the user, 14:00): "the first was nicer", the kit's own chords; so off.
-if DIVA == "ace" and os.environ.get("HARM", "0") == "1":
+# VAMP=1: a slower harmony under the free take, two chords two bars each (research/toolkit-2026-11-19.md: the
+# approved rounds had slower harmony under the take; this take's steady notes are B, D, E and F#)
+VAMP = ["Bm9", "Bm9", "Em9", "Em9"] if os.environ.get("VAMP") == "1" else None
+if VAMP:
+    HARM = VAMP * 4
+if DIVA == "ace" and (os.environ.get("HARM", "0") == "1" or VAMP):
     _kit_chord = P.chord
 
     def _chord(bar):
@@ -175,7 +181,7 @@ for bar in range(BARS):
     elif bar < 64 or 80 <= bar < 96:                                   # the chorus: the diva's whole take
         chorus(bar, last=bar >= 80)
         if DIVA == "ace" and bar in (48, 80):
-            diva(bar)
+            diva(bar + DIVA_OFFSET)
         elif DIVA == "ours":
             our_chorus(bar, 48 if bar < 64 else 80)
     elif bar < 72:                                                     # the break: no kick, the warning
