@@ -30,6 +30,8 @@ MODELS = {"best": dict(lm_model=ace.LM, **ace.SYNTH["sft"]),
 def make(title, lyrics, style, bpm, key="A minor", lang="en", seconds=120, seed=1, fast=False, out=None):
     """The song: the request, the LM, the DiT, the master, the MP3. Returns (mp3, seconds per stage)."""
     name = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "gag"
+    if seed != 1:                    # each seed its own folder and file: the same title used to overwrite seed 1
+        name += f"-seed{seed}"
     out = out or os.path.join(GAGS, name)
     os.makedirs(out, exist_ok=True)
     req = {"caption": style, "lyrics": lyrics, "bpm": int(bpm), "keyscale": key, "timesignature": "4",
@@ -46,7 +48,7 @@ def make(title, lyrics, style, bpm, key="A minor", lang="en", seconds=120, seed=
     ace.run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS, "--request", base + "0.json",
              "--device", "Vulkan0", "--vae-chunk", "512"], base + ".synth.log")
     t2 = time.time()
-    wav = os.path.join(out, title.replace("/", "-") + ".wav")
+    wav = os.path.join(out, title.replace("/", "-") + (f" (seed {seed})" if seed != 1 else "") + ".wav")
     print(master.process(base + "00.wav" if os.path.exists(base + "00.wav") else base + "0.wav", wav, int(bpm)))
     mp3 = wav[:-4] + ".mp3"
     ace.share.encode(wav, mp3, ["-metadata", f"title={title}", "-metadata", "artist=sunA"], [])

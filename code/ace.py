@@ -201,7 +201,8 @@ def run(cmd, log):
         sys.exit(f"failed: {' '.join(cmd)} (see {log})")
 
 
-TEST_VARS = ("PREVIEW", "SOLO", "MUTE", "GAIN")      # engine.mixdown sends these renders to renders/scratch/
+TEST_VARS = ("PREVIEW", "SOLO", "MUTE", "GAIN", "AIR", "CAST", "CROWD", "CHOPS", "VAMP", "HARM", "SINGER",
+             "NARRATORS", "DIVA_WAV", "DIVA_OFFSET")      # engine.AB_VARS: engine.mixdown sends these to renders/scratch/
 
 
 def script_name(song):

@@ -519,6 +519,18 @@ def make_room(music, voice, depth_db=6.0, lo=250, hi=6000, nper=2048):
 # ---------------------------------------------------------------- the song
 BUSES = ("drums", "perc", "bass", "pads", "keys", "lead", "vox", "fx")
 MUTED = set(filter(None, os.environ.get("MUTE", "").split(",")))
+# The switches that make a test render: it goes to renders/scratch/ with the switch in its name, and never replaces
+# the song's render in renders/ (share.py, dj.py and produce.py would take it for the song). The A/B switches of
+# 19 November are here too: a full CROWD=1 render overwrote nothing only by luck (the playbook check).
+AB_VARS = ("PREVIEW", "SOLO", "MUTE", "GAIN", "AIR", "CAST", "CROWD", "CHOPS", "VAMP", "HARM", "SINGER", "NARRATORS",
+           "DIVA_WAV", "DIVA_OFFSET")
+
+
+def _ab_tag(k, v):
+    """A switch and its value for a file name: short values as they are, long ones (voice descriptions) as a hash."""
+    import hashlib
+    v = re.sub(r"[^\w.+-]", "", v)
+    return k.lower() + (v if len(v) <= 24 else hashlib.sha1(v.encode()).hexdigest()[:8])
 
 
 class Song:
@@ -629,14 +641,9 @@ class Song:
             self.bus[k] = highpass(self.bus[k], 100 if k == "vox" else 160).astype(np.float32)   # a man raps
         if os.environ.get("VOXCHAIN", "1" if voxchain else "0") == "1":   # the 1995 channel strip on the voices
             self.bus["vox"] = vocal_chain(self.bus["vox"].astype(np.float64)).astype(np.float32)
-        # the delay: dotted eighths, ping-pong, fading
-        d = int(3 * self.step * SR)
-        echo = np.zeros((n, 2))
-        src = lowpass(highpass(self.echo, 300), 5500)
-        for k in range(1, 6):
-            side = k % 2
-            echo[k * d:, side] += (src[:n - k * d, 0] + src[:n - k * d, 1] * .3) * .5 ** k
-        solo = os.environ.get("SOLO")   # only these buses (comma separated), for auditions
+        # SOLO: only these buses (comma separated), for auditions; dry: cleared before the delay is built (it used to
+        # keep the dotted-eighth delay of every bus, 19 November)
+        solo = os.environ.get("SOLO")
         if solo:
             keep = solo.split(",")
             for k in BUSES:
@@ -645,6 +652,13 @@ class Song:
             self.send[:] = 0
             self.echo[:] = 0
             self.kicks = []
+        # the delay: dotted eighths, ping-pong, fading
+        d = int(3 * self.step * SR)
+        echo = np.zeros((n, 2))
+        src = lowpass(highpass(self.echo, 300), 5500)
+        for k in range(1, 6):
+            side = k % 2
+            echo[k * d:, side] += (src[:n - k * d, 0] + src[:n - k * d, 1] * .3) * .5 ** k
         if os.environ.get("STEMS"):   # how loud each bus is, for mixing by numbers
             for k in BUSES:
                 x = self.bus[k].astype(np.float64) * gains.get(k, 1.0)
@@ -706,7 +720,7 @@ class Song:
         out = np.clip(out, -32767, 32767).astype("<i2")
         # a test render (a preview, solo, stems, other gains) never replaces the song's render in renders/: share.py,
         # dj.py and produce.py would take it for the song (it is newer than the script)
-        test = [f"{k.lower()}{os.environ[k]}" for k in ("PREVIEW", "SOLO", "MUTE", "GAIN") if os.environ.get(k)]
+        test = [_ab_tag(k, os.environ[k]) for k in AB_VARS if os.environ.get(k)]
         renders = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renders")
         if test and os.path.dirname(os.path.abspath(path)) == renders:
             stem = os.path.splitext(os.path.basename(path))[0]
