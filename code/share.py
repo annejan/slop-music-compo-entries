@@ -81,10 +81,20 @@ def encode(src, dst, tags, words, cut=None):
     print(f"{os.path.relpath(dst, OUT)}: {os.path.getsize(dst) / 1e6:.1f} MB")
 
 if __name__ == "__main__":
+    import sys
+    # share.py [--only song,song]: only these songs (their WAV's name, like warm-boot or warm_boot); all by default
+    only = None
+    if "--only" in sys.argv:
+        only = {x.replace("_", "-") for x in sys.argv[sys.argv.index("--only") + 1].split(",")}
+        names = {w.split("_")[0] for w, *_ in SONGS}
+        if only - names:
+            raise SystemExit(f"not in SONGS: {', '.join(sorted(only - names))} (the names: {', '.join(sorted(names))})")
     os.makedirs(os.path.join(OUT, "dj"), exist_ok=True)
     for old in glob.glob(os.path.join(OUT, "* BPM, *).mp3")):     # the DJ versions used to live at the top
         os.remove(old)
     for n, (wav, title, day, bpm, key, bars) in enumerate(SONGS, 1):
+        if only and wav.split("_")[0] not in only:
+            continue
         src = os.path.join(RENDERS, wav)
         if not os.path.exists(src):
             print(f"skip {wav}: not rendered")

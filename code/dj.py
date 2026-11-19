@@ -109,6 +109,10 @@ if __name__ == "__main__":
     a = ap.parse_args()
     use = dict(u.split("=", 1) for u in a.use)
     only = set(a.only.split(",")) if a.only else None
+    known = {script_of(row[0]) for row in share.SONGS}
+    wrong = ((only or set()) | set(use)) - known       # a name not in share.SONGS wrote nothing, without a word
+    if wrong:
+        raise SystemExit(f"not in share.SONGS: {', '.join(sorted(wrong))} (the names: {', '.join(sorted(known))})")
     os.makedirs(OUT, exist_ok=True)
     written = []
     tracklist = os.path.join(OUT, "tracklist.txt")
@@ -140,6 +144,9 @@ if __name__ == "__main__":
         shutil.copyfile(src, dst)
         written.append(name)
         c = check(dst, bpm, bars)
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), song + ".py")
+        if song not in use and os.path.exists(script) and os.path.getmtime(script) > os.path.getmtime(src):
+            c["problems"].append("the render is older than its script (render it again, or touch the WAV)")
         m, s = divmod(c["length"], 60)
         flag = "OK" if not c["problems"] else "CHECK: " + "; ".join(c["problems"])
         lines.append(f"{n:02d}  {title:28s} {bpm} BPM  {keys:14s} {int(m)}:{s:04.1f}  {c['lufs']:5.1f} LUFS  "

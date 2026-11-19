@@ -148,13 +148,9 @@ class Producer:
             path = os.path.join(self.cache, key + ".json")
             json.dump(req, open(path, "w"), indent=1)
             log = os.path.join(self.cache, key + ".log")
-            with open(log, "w") as fh:
-                r = subprocess.run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS,
-                                    "--request", path, "--src-audio", src, "--device", "Vulkan0",
-                                    "--vae-chunk", ace.VAE_CHUNK,
-                                    *(["--ref-audio", self.ref] if self.ref else [])],
-                                   stdout=fh, stderr=subprocess.STDOUT)
-            if r.returncode:
+            if not ace.gpu([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS,
+                            "--request", path, "--src-audio", src, "--device", "Vulkan0",
+                            "--vae-chunk", ace.VAE_CHUNK, *(["--ref-audio", self.ref] if self.ref else [])], log):
                 sys.exit(f"ACE-Step failed, see {log}")
             os.replace(os.path.join(self.cache, key + "0.wav"), out)
         x, sr = master.read(out)

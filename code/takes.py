@@ -60,24 +60,10 @@ def ace_words(lines, tag="Chorus"):
     return text
 
 
-LOCK = os.environ.get("ACE_LOCK")       # a lock file: with several queues, one ACE-Step job on the GPU at a time
-
-
 def run(cmd, log, timeout):
-    """One ACE-Step step; False when it fails or runs past `timeout` s (then it is killed). ACE_LOCK=FILE: wait for
-    the GPU (flock) first."""
-    if LOCK:
-        cmd = ["flock", LOCK, *cmd]
-        timeout += 600                      # the wait for the lock counts too
-    with open(log, "w") as fh:
-        try:
-            r = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            print(f"killed after {timeout} s: {' '.join(cmd[:1])} (see {log})", file=sys.stderr)
-            return False
-    if r.returncode:
-        print(f"failed (exit {r.returncode}): see {log}", file=sys.stderr)
-    return r.returncode == 0
+    """One ACE-Step step through ace.gpu (the GPU lock, ace.GPU_LOCK or ACE_LOCK=FILE; a timeout that counts the
+    wait for the lock; one retry after a VAE crash); False when it failed."""
+    return ace.gpu(cmd, log, timeout + 600)
 
 
 NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]

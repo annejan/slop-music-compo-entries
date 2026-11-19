@@ -117,12 +117,12 @@ Optional parts, outside this repository:
 | [voice.py](code/voice.py) | Piper speaks each word, WORLD puts it on our notes (see Voices) |
 | [ds.py](code/ds.py) | a DiffSinger voicebank sings a whole part, through warble |
 | [parts.py](code/parts.py), [template.py](code/template.py) | ready parts and a whole song to start from, for the surprise themes |
-| [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3 |
+| [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3. `ace.gpu()` is the one GPU door for every ACE-Step step (ace.py, takes.py, produce.py, gag.py): a lock (`ACE_LOCK=FILE`, default `renders/.gpu.lock`) so queues take turns, a timeout that kills the whole job, one retry after a VAE crash |
 | [produce.py](code/produce.py) | a song section by section from a project file: an ACE-Step take of the whole song, then per section our own render, the take, or a `repaint` with several seeds of which the ear picks the best; everything cached |
 | [master.py](code/master.py) | another generator's take to DJ shape: on the beat grid, 44.1 kHz, -10 LUFS, -1.2 dBTP; `--dj-from` splices our DJ intro and outro back in; `--era 90s`; `--match 0.7` our render's tonal balance and width |
 | [weave.py](code/weave.py) | our instrumental, unchanged, under a blend of our vocals and another generator's take of them |
 | [asr.py](code/asr.py) | a speech recognizer ([faster-whisper](https://github.com/SYSTRAN/faster-whisper), OpenAI's [Whisper](https://github.com/openai/whisper) base.en) checks which words of the lyrics can be heard |
-| [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ |
+| [share.py](code/share.py), [dj.py](code/dj.py) | MP3s for sharing; WAVs and a track list for the DJ. `share.py --only warm-boot,segfault` encodes only those; `dj.py --only` and `--use` stop on a name that is not in share.SONGS (it used to write nothing, without a word); a DJ line says when a render is older than its script |
 | [mix.py](code/mix.py) | a day's songs as one DJ set: one tempo (varispeed), each song over the 16-bar outro of the one before, the lows swapped 4 bars before the end, the keys checked on the Camelot wheel; `--order auto` for the fewest key clashes, `--use` for produced versions |
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
 | [quick_gag.py](code/quick_gag.py) | a gag from one line ("Dubstep, English, time to take the bus"): Qwen 3.5 9B on the NPU (FastFlowLM, its own server) writes the title, words, style, tempo, key and language, ACE-Step's 1.7B LM and turbo make it; about 2 minutes, all on this laptop (no internet). About the request only; `--nerd` bends it towards the hardware-hacker crowd. When Qwen's words are not in sung lines, Qwen sets them itself in a second pass. `--best` for the 4B LM and SFT |

@@ -161,10 +161,43 @@ def ace_lyrics(n, t0=None, t1=None, native=False):
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
+# One GPU door (19 November): every ACE-Step step goes through gpu(). The lock (flock on GPU_LOCK) lets several
+# queues share the iGPU one job at a time (other GPU tools can take the same file); a timeout kills the job's whole
+# process group (flock and the step under it); a VAE crash (vk::DeviceLostError) is tried once more. Before this only
+# takes.py had a lock, and nothing had a timeout (research/toolkit-2026-11-19.md).
+GPU_LOCK = os.environ.get("ACE_LOCK") or os.path.join(HERE, "renders", ".gpu.lock")
+
+
+def gpu(cmd, log, timeout=1800, retries=1):
+    """Run one GPU step behind the lock, its output to `log`; True when it worked. `timeout` (s) counts the wait for
+    the lock too."""
+    import signal
+    import time
+    os.makedirs(os.path.dirname(GPU_LOCK), exist_ok=True)
+    for attempt in range(retries + 1):
+        with open(log, "w") as fh:
+            p = subprocess.Popen(["flock", GPU_LOCK, *cmd], stdout=fh, stderr=subprocess.STDOUT,
+                                 start_new_session=True)
+            try:
+                rc = p.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                os.killpg(p.pid, signal.SIGKILL)
+                p.wait()
+                print(f"killed after {timeout} s: {os.path.basename(cmd[0])} (see {log})", file=sys.stderr)
+                return False
+        if rc == 0:
+            return True
+        lost = "DeviceLost" in open(log, errors="replace").read()
+        print(f"{os.path.basename(cmd[0])} failed (exit {rc}{', DeviceLost' if lost else ''}): see {log}",
+              file=sys.stderr)
+        if not lost or attempt == retries:
+            return False
+        time.sleep(5)
+    return False
+
+
 def run(cmd, log):
-    with open(log, "w") as fh:
-        r = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT)
-    if r.returncode:
+    if not gpu(cmd, log):
         sys.exit(f"failed: {' '.join(cmd)} (see {log})")
 
 
