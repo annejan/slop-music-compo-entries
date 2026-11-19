@@ -97,6 +97,10 @@ mkdir -p voices && cd voices
 # the seed keeps one voice), "maya:<a voice described in words>#301" with tags like <excited>, <whisper>, <angry> in
 # the text (Maya1, GPU, slow: about 17 s for a 4 s line, ~/Projects/maya1 and ~/Projects/llama.cpp); GPU engines take
 # the ACE-Step GPU lock
+# the cast (voice.CAST, voice.ROLES): named voices for spoken parts. A song asks for a part by its role, "cast:mc"
+# (mc, narrator, announcer, robot, whisper, diva, angry, dutch; Maya1 by default, the user's pick); CAST="mc=qwen_hype,
+# narrator=piper_ryan" switches voices for one render. Emotion tags in the text reach only Maya. To hear a line in
+# 15 voices, one MP3 (about 3 minutes):  .venv/bin/python voice.py --audition "<excited> Make some noise!" [--voices a,b]
 ../.venv/bin/python -m piper.download_voices nl_NL-pim-medium nl_NL-ronnie-medium nl_NL-alex-medium nl_BE-nathalie-medium \
   nl_BE-rdh-medium nl_BE-flemishguy-medium en_GB-semaine-medium en_GB-vctk-medium en_US-libritts_r-medium \
   en_GB-northern_english_male-medium en_US-mike-medium

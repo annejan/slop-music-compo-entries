@@ -13,6 +13,7 @@ A voice is a Piper voice name ("en_US-ryan-high"), or one of the classic engines
 """
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -120,9 +121,76 @@ def _classic(engine, name, text, length_scale):
         return _read_wav(out)
 
 
+# ---------------------------------------------------------------- the cast: named voices for spoken parts
+# (19 November: the user on the new engines, "way better than other options so far", and in the song test "Maya
+# wins ... for compo would be nice to just be able to switch between voices for parts"). A song asks for a part's
+# voice by its role, "cast:mc"; CAST="mc=qwen_hype,narrator=piper_ryan" switches voices for one render without
+# editing the song; `voice.py --audition "line"` says a line in many voices, one MP3 for the ear. Emotion tags in
+# the text ("<excited> Hands up!", <whisper>, <angry>, <laugh>, <sarcastic>) go to Maya and are left out for the
+# others. Maya's whisper wants a <whisper> before every sentence.
+CAST = {
+    # Maya1 (GPU, about 17 s for a 4 s line; cached): a voice described in words, and a seed
+    "maya_hype": "maya:Realistic male voice in the 20s age with a british accent. Normal pitch, raspy timbre, fast "
+                 "pacing, excited tone delivery at high intensity, entertainment domain, event_host role, casual "
+                 "delivery. A rave MC shouting to the crowd.#301",
+    "maya_narrator": "maya:Realistic male voice in the 40s age with a american accent. Low pitch, deep timbre, slow "
+                     "pacing, dramatic tone delivery at medium intensity, entertainment domain, narrator role.#301",
+    "maya_announcer": "maya:Creative, ai_machine_voice character. Female voice in their 30s with a american accent. "
+                      "Normal pitch, smooth timbre, measured pacing, calm tone delivery at low intensity.#303",
+    "maya_machine": "maya:Creative, ai_machine_voice character. Male voice in their 40s with a american accent. Low "
+                    "pitch, robotic timbre, slow pacing, dry tone at low intensity.#303",
+    "maya_whisper": "maya:Creative, seductively character. Female voice in their 20s with a british accent. Low "
+                    "pitch, smooth timbre, conversational pacing, neutral tone at low intensity. Breathy, intimate "
+                    "whisper.#602",
+    "maya_diva": "maya:Realistic female voice in the 30s age with a american accent. Normal pitch, smooth timbre, slow "
+                 "pacing, sarcastic tone delivery at high intensity, entertainment domain, storyteller role, casual "
+                 "delivery. A sassy, dramatic diva.#304",
+    "maya_angry": "maya:Realistic male voice in the 40s age with a american accent. Low pitch, harsh timbre, fast "
+                  "pacing, angry tone delivery at high intensity. An angry neighbour shouting.#205",
+    # Qwen3-TTS VoiceDesign (GPU, about 3 s a line): a voice described in words; the seed keeps it one voice
+    "qwen_hype": "qwen:Male, young adult, raspy mid-range voice. An energetic rave MC shouting into a microphone over "
+                 "loud music, hyped and excited, loud, fast pace.#42",
+    "qwen_trailer": "qwen:Male, adult, deep warm voice. A dramatic movie-trailer narrator, slow and serious, with "
+                    "gravitas.#7",
+    "qwen_announcer": "qwen:Female, adult, cool smooth voice. A calm computer system announcer, precise and slightly "
+                      "robotic, evenly spaced words.#7",
+    "qwen_robot": "qwen:Male, adult, very deep low-pitched voice. A robotic computer announcer, flat monotone with no "
+                  "emotion, mechanical and evenly spaced words, slow pace.#42",
+    "qwen_whisper": "qwen:Female, young adult, soft low-pitched voice. A late-night 90s house music intro, whispering "
+                    "close to the microphone, breathy and intimate, calm, slow pace.#42",
+    "qwen_diva": "qwen:Female, adult, rich mid-range voice. A sassy, dramatic diva speaking with theatrical flair, "
+                 "confident and haughty, drawn-out vowels, playful, moderate pace.#42",
+    "qwen_angry": "qwen:Male, middle-aged, gruff voice. An angry neighbour shouting in frustration, furious and "
+                  "exasperated, very loud, fast pace.#42",
+    # Kokoro-82M (CPU, about 1 s a line): presets, a speed
+    "kokoro_hype": "kokoro:am_fenrir@1.2", "kokoro_whisper": "kokoro:af_nicole@0.95",
+    "kokoro_deep": "kokoro:am_onyx@0.9", "kokoro_diva": "kokoro:af_bella@0.92", "kokoro_brit": "kokoro:bm_george@1.1",
+    # Piper (CPU, instant): the voices of the songs so far, the characters and the Dutch ones
+    "piper_ryan": "en_US-ryan-high", "piper_lessac": "en_US-lessac-high", "piper_alan": "en_GB-alan-medium",
+    "piper_spike": "en_GB-semaine-medium#spike", "piper_poppy": "en_GB-semaine-medium#poppy",
+    "piper_pim": "nl_NL-pim-medium", "piper_ronnie": "nl_NL-ronnie-medium", "piper_nathalie": "nl_BE-nathalie-medium",
+}
+ROLES = {"mc": "maya_hype", "narrator": "maya_narrator", "announcer": "maya_announcer", "robot": "maya_machine",
+         "whisper": "maya_whisper", "diva": "maya_diva", "angry": "maya_angry", "dutch": "piper_pim"}
+
+
+def resolve(voice):
+    """The voice as the engines know it: "cast:<role>" is the role's voice (ROLES, or CAST="role=name,..." in the
+    environment), a CAST name its voice; anything else stays as it is."""
+    if voice.startswith("cast:"):
+        voice = voice[5:]
+        over = dict(kv.split("=", 1) for kv in os.environ.get("CAST", "").split(",") if "=" in kv)
+        voice = over.get(voice, ROLES.get(voice, voice))
+    return CAST.get(voice, voice)
+
+
 def tts(text, voice, length_scale=1.0, take=0):
     """Speech for a text, 22.05 kHz, the silence at both ends trimmed; cached on disk. Piper's noise is random, so
-    every take is a little different (with the same timing): a double-tracked voice."""
+    every take is a little different (with the same timing): a double-tracked voice. voice: a Piper voice, an
+    "engine:name" voice, a CAST name or "cast:<role>"; emotion tags in the text reach only Maya."""
+    voice = resolve(voice)
+    if not voice.startswith("maya:"):
+        text = re.sub(r"<[a-z_]+>\s*", "", text).strip()
     key = hashlib.sha1(f"{voice}|{length_scale}|{text}|{take}".encode()).hexdigest()[:16]
     path = os.path.join(CACHE, key + ".npy")
     if os.path.exists(path):
@@ -335,3 +403,30 @@ def rap(text, seconds, voice=RAPPER, pitch=.92, level=.14):
     y = pyworld.synthesize(f, np.ascontiguousarray(sp2), np.ascontiguousarray(ap2), TTS_SR, FRAME)
     y = _finish(y)
     return y * (level / (np.sqrt(np.mean(y ** 2)) + 1e-9))
+
+
+def audition(text, names, out=None):
+    """One line said by each voice in `names` (CAST names, "cast:<role>" or voice names), the voice's name spoken
+    before it, one MP3 for the ear in renders/scratch/audition/. Returns the MP3's path."""
+    import takes as T
+    parts = []
+    for n in names:
+        y = _finish(tts(text, n))
+        y = y * (.1 / (np.sqrt(np.mean(y ** 2)) + 1e-9))
+        parts += [T.label(n.replace("cast:", "").replace("_", " ") + "."), np.repeat(y[:, None], 2, axis=1), T.gap(.5)]
+    slug = re.sub(r"[^a-z0-9]+", "-", re.sub(r"<[^>]+>", "", text).lower()).strip("-")[:40] or "line"
+    out = out or os.path.join(HERE, "renders", "scratch", "audition", slug + ".mp3")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    return T.listen(parts, out, f"Audition: {text[:40]}")
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="say a line in many voices, one MP3 for the ear")
+    ap.add_argument("--audition", required=True, metavar="TEXT", help='the line; emotion tags allowed: "<excited> Up!"')
+    ap.add_argument("--voices", help="comma separated: CAST names, cast:<role> or voice names (default: the roles' "
+                    "voices, then the Qwen ones)")
+    a = ap.parse_args()
+    names = (a.voices.split(",") if a.voices else
+             list(dict.fromkeys(list(ROLES.values()) + [k for k in CAST if k.startswith("qwen_")])))
+    print(audition(a.audition, names))
