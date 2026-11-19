@@ -1,0 +1,8 @@
+# The polish with the SFT DiT (produce.py SONG --project projects/_polish_sft.toml --tag nm-sft65): the same as
+# _polish.toml, but the tuned 50-step DiT that sounded best by ear for text to music (gag.py, 18 November) instead
+# of turbo. A test of 19 November: does it polish better than turbo?
+take = "cover"
+strength = 0.85
+model = "sft"
+seed = 1
+noise = 0.65

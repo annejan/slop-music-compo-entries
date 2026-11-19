@@ -120,6 +120,7 @@ Optional parts, outside this repository:
 | [trials.py](code/trials.py) | renders Segfault with many voice pairs, to compare them |
 | [quick_gag.py](code/quick_gag.py) | a gag from one line ("Dubstep, English, time to take the bus"): Qwen 3.5 9B on the NPU (FastFlowLM, its own server) writes the title, words, style, tempo, key and language, ACE-Step's 1.7B LM and turbo make it; about 2 minutes, all on this laptop (no internet). About the request only; `--nerd` bends it towards the hardware-hacker crowd. When Qwen's words are not in sung lines, Qwen sets them itself in a second pass. `--best` for the 4B LM and SFT |
 | [gag.py](code/gag.py) | a quick ACE-Step song from words and a style, for the group chat (not for the DJ): the 4B LM and the SFT DiT, about 2.5 minutes for 2 minutes of music; `--fast` about 70 s |
+| [takes.py](code/takes.py) | research: ACE-Step sings a song's lines a cappella (4B LM and SFT DiT) in several seeds, about 25 s a take; one MP3 with our bars, then each take laid over them at -8 dB, with spoken labels. `--menu`: kinds of voice for surprise day. `ACE_LOCK=FILE` shares the GPU with another queue |
 
 Render options (environment variables):
 
@@ -394,6 +395,7 @@ each file.
 | [local-and-alt-generators.md](research/local-and-alt-generators.md) | open AI music and singing models that run on this laptop |
 | [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
 | [render-speed.md](research/render-speed.md) | how fast the code tracks, DiffSinger and ACE-Step render on this laptop |
+| [night-tests.md](research/night-tests.md) | the night of 19 November: ACE singers for the weekend songs, voices per genre, the SFT polish, VAE stability, genre kits, dry-run rounds (not heard yet) |
 | [suno-tips.md](research/suno-tips.md) | Suno v6 (not used) |
 
 ## Other options we might try
