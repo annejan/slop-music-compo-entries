@@ -44,6 +44,13 @@ STEP = S.step
 SWING = .16 * STEP          # 58 % shuffle on the sixteenths
 
 PROG = ["Am9", "Fmaj9", "Dm9", "Em7"]
+# CHOPS=1 (19 November, an A/B; research/toolkit-2026-11-19.md): the 1990s house vocal stab while the song winds
+# down: words of an ACE-Step house diva (the voice menu's take, a cappella), each tuned to the bar's chord (chops.py)
+CHOPS = os.environ.get("CHOPS") == "1"
+CHOP_TAKE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renders", "ace", "takes", "menu",
+                         "house-diva_s2_46f86529.wav")
+CHOP_PATTERNS = ["hold . . on . . tight . . . night . . . . .",
+                 ". . light . up . . . night . . . hold . on ."]
 
 
 def chord_of(bar):
@@ -208,6 +215,11 @@ for bar in range(120):
         standby(bar, 1.1)
     if bar in (92, 100):
         warm_boot_baby(bar, .7)
+    if CHOPS and 88 <= bar < 104 and bar not in (92, 93, 100, 101):
+        import chops
+        if "BANK" not in globals():
+            BANK = chops.bank(CHOP_TAKE, {"hold", "on", "tight", "night", "light", "up"})
+        chops.play(S, bar, BANK, CHOP_PATTERNS[bar % 2], c, amp=.9, swing=SWING)
 
 # the dust on the record, all the way through (a little louder at the start, before the music comes)
 dust = e.crackle(S.length)
