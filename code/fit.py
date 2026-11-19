@@ -88,11 +88,14 @@ def steady_notes(wav, min_frames=6):
     return notes
 
 
-def band_fit(wav, chords, bpm, shifts=range(-5, 7), offsets=(-1, 0, 1)):
+def band_fit(wav, chords, bpm, shifts=range(-5, 7), offsets=(-2, 0, 2)):
     """How the take's steady notes (weighted by length and loudness) sit on the band. Two measures that must agree:
-    the SCALE fit (on any of the song's notes) picks the key shift, then the CHORD fit (on the tones of the chord of
-    the bar under the note) picks the whole-bar offset at that shift. Returns a dict: best (shift, offset), fit (the
-    chord fit there), as_is (shift 0, offset 0), scale (the scale fit at the shift), table {(s, o): chord fit}."""
+    the SCALE fit (on any of the song's notes) narrows the key shifts to those nearly as good as the best, then the
+    CHORD fit (on the tones of the chord of the bar under the note) picks among them and picks the offset. Returns a dict: best (shift, offset), fit (the
+    chord fit there), as_is (shift 0, offset 0), scale (the scale fit at the shift), table {(s, o): chord fit}.
+    Offsets in whole 2-bar steps: ACE-Step starts its lines every 2 bars, so an odd offset starts every line on an
+    odd bar, off the phrase grid, the crash and the kit's fills (the rehearsal of 19 November played its take one
+    bar late from a fit measured on ACE-Step's bass). offsets=(-1, 0, 1) for the old measure."""
     notes = steady_notes(wav)
     if not notes:
         return dict(best=(0, 0), fit=0.0, as_is=0.0, scale=0.0, table={}, notes=0)
@@ -112,7 +115,15 @@ def band_fit(wav, chords, bpm, shifts=range(-5, 7), offsets=(-1, 0, 1)):
         on_scale[s] = float(wt @ scale[pc])
         for o in offsets:
             table[(s, o)] = float(wt @ member[(bars + o) % len(chords), pc])
-    s = max(on_scale, key=lambda k: on_scale[k] - .015 * abs(k))
+    # the shift: of the shifts about as much on the scale as the best (within 3 points: a related key shares 6 of
+    # its 7 notes), the one whose best offset puts the most on the chord tones, less 4 points a semitone too high. The lab of 19 November: a take sung
+    # in G for a song in F, 98 % on the scale at -2 and at +3, 39 % on the chords at -2 and 63 % at +3.
+    top = max(on_scale[k] - .015 * abs(k) for k in on_scale)
+    near = [k for k in on_scale if on_scale[k] - .015 * abs(k) >= top - .03]
+    med, p90 = register(wav)          # and not into a register too high to sing (rank's 4 points a semitone)
+    score = {k: max(table[(k, o)] - .03 * abs(o) for o in offsets) - .015 * abs(k) - .04 * too_high(med, p90, k)
+             for k in near}
+    s = max(score, key=score.get)
     o = max(offsets, key=lambda k: table[(s, k)] - .03 * abs(k))
     return dict(best=(s, o), fit=table[(s, o)], as_is=table[(0, 0)], scale=on_scale[s], table=table,
                 notes=len(notes))
@@ -213,18 +224,64 @@ def _write(path, y, sr):
         w.writeframes(z.tobytes())
 
 
+# The top of a comfortable register for a lead, after the shift (midi): the loudness- and length-weighted median of
+# the steady notes up to A#4 and their 90th percentile up to G5. Overclocked Heart's diva (take s2: F#4, top E5)
+# lifted 3, the user's pick of 19 November: A4, top G5. The rehearsal's Pull-Up Resistor diva (its voice: A4, top A5)
+# lifted 3: C5, top C6 ("sucks ... mostly the high pitched singing"). A male voice never reaches the limits.
+HIGH = (70, 79)
+NOTE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+
+def note(m):
+    m = int(round(m))
+    return f"{NOTE[m % 12]}{m // 12 - 1}"
+
+
+def register(wav):
+    """(median, 90th percentile) of the take's steady notes as midi, weighted by length and loudness; (None, None)
+    without steady notes. Measure the voice alone (sep.voice): with a band under it, the bass is measured."""
+    notes = steady_notes(wav)
+    if not notes:
+        return None, None
+    p = np.array([n[2] for n in notes], float)
+    w = np.array([n[1] * n[3] for n in notes])
+    o = np.argsort(p)
+    c = np.cumsum(w[o]) / w.sum()
+    return float(p[o][np.searchsorted(c, .5)]), float(p[o][min(np.searchsorted(c, .9), len(p) - 1)])
+
+
+def too_high(med, p90, shift=0):
+    """Semitones above HIGH after the shift, median and top added up (0: comfortable)."""
+    if med is None:
+        return 0.0
+    return max(0.0, med + shift - HIGH[0]) + max(0.0, p90 + shift - HIGH[1])
+
+
 def rank(wavs, chords, bpm, **kw):
-    """The takes best-first: (wav, band_fit dict, cut_end), a cut word costing 5 points of fit."""
-    rows = [(w, band_fit(w, chords, bpm, **kw), cut_end(w)) for w in wavs]
-    return sorted(rows, key=lambda r: -(r[1]["fit"] - .05 * r[2]))
+    """The takes best-first: (wav, band_fit dict, cut_end), a cut word costing 5 points of fit and every semitone
+    above the comfortable register (after the take's shift) 4 points. The dict gets register (median, p90) and high
+    (too_high at the best shift)."""
+    rows = []
+    for w in wavs:
+        f = band_fit(w, chords, bpm, **kw)
+        f["register"] = register(w)
+        f["high"] = too_high(*f["register"], f["best"][0])
+        rows.append((w, f, cut_end(w)))
+    return sorted(rows, key=lambda r: -(r[1]["fit"] - .05 * r[2] - .04 * r[1].get("high", 0)))
 
 
 def describe(r):
     w, f, cut = r
     s, o = f["best"]
-    where = {0: "", -1: ", one bar earlier", 1: ", one bar later"}.get(o, f", {o:+d} bars")
+    where = {0: "", -1: ", one bar earlier", 1: ", one bar later", -2: ", two bars earlier",
+             2: ", two bars later"}.get(o, f", {o:+d} bars")
+    sings = ""
+    if f.get("register", (None,))[0] is not None:
+        med, p90 = f["register"]
+        sings = (f"; {'HIGH: ' if f.get('high') else ''}sings around {note(med + s)}, the top 10 % from "
+                 f"{note(p90 + s)}")
     return (f"fit {f['fit']:.0%} at {s:+d} st{where} (as made {f['as_is']:.0%}; on the scale {f['scale']:.0%})"
-            f"{'; ENDS MID-WORD' if cut else ''}")
+            f"{sings}{'; ENDS MID-WORD' if cut else ''}")
 
 
 def main():

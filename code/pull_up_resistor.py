@@ -65,7 +65,7 @@ LAST_BARS = 11.98
 # The software ear (asr.hear on the full mix, chorus bars): at the template's level it heard none of the diva's
 # words over this kit (0 %, Overclocked Heart's approved choruses: 49 and 53 %); GAIN=vox previews: x1.6 7 %, x2.0
 # 33 %, x2.5 52 %. Not heard by a person yet: DIVA_GAIN is the diva alone (the spoken lines were heard as they are).
-DIVA_GAIN = 2.5
+DIVA_GAIN = float(os.environ.get("DIVA_GAIN", "2.5"))   # a test render with DIVA_GAIN=... goes to renders/scratch
 MC_AMP = 2.0                           # the build's MC shouts: at 1.1 lost under the snare roll and the riser
 HAS_DIVA = os.path.exists(DIVA_WAV)
 if not HAS_DIVA:

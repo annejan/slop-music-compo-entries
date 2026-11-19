@@ -122,16 +122,26 @@ def take(caption, lyrics, bpm, key, bars, seed, out, name="take", lang="en", lif
 # ---------------------------------------------------------------- drafts: several tunes fast, the keeper in SFT
 # (research/toolkit-2026-11-19.md: a take's time is LM decoding and DiT steps, not model loading; the key is a
 # lottery, so make several cheap drafts, rank them with fit.py, and let the ear pick)
-DRAFT = dict(lm_model=ace.LM, **ace.SYNTH["turbo"])
+# The draft round's request (the lab of 19 November, 8 rounds of 4 on the Pull-Up Resistor and Overclocked Heart
+# choruses, every take split by sep.py): the band ACE-Step puts under a take is a low drone (bass and pads, no
+# drums), and the turbo DiT adds it. The same LM codes with turbo: band -4 to -12 dB; with SFT: -9 to -39 dB (two of
+# four clean, two with residue only). The negative prompt and a caption without genre words keep it out of the LM;
+# lm_cfg_scale 3.5 changed nothing. SFT costs about 2 minutes a round instead of 50 s. keep() at the SFT preset then
+# renders the same audio again: keep only for --guidance 7 --shift 3.
+LM_NEGATIVE = ("drums, bass, sub bass, bassline, synth bass, pad, drone, organ, strings, piano, keyboard, guitar, "
+               "synthesizer, chords, beat, instrumental, accompaniment, backing track, full band, music, "
+               "electronic dance music, high pitched, shrill, squeaky, chipmunk, helium voice")
+DRAFT = dict(lm_model=ace.LM, lm_negative_prompt=LM_NEGATIVE, **ace.SYNTH["sft"])
 
 
-def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, lm_seed=1000, lift=0):
-    """`n` takes for the ear to choose from, fast: one ace-lm run makes n tunes (lm_batch_size: one prefill, the
-    KV cache copied, consecutive LM seeds from lm_seed), one ace-synth run renders them all with the turbo DiT
-    (8 steps). Returns [(wav, json, sung_bpm)]; each JSON keeps the LM's codes, so keep() renders a picked tune
+def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, lm_seed=1000, lift=0, extra=None):
+    """`n` takes for the ear to choose from: one ace-lm run makes n tunes (lm_batch_size: one prefill, the KV cache
+    copied, consecutive LM seeds from lm_seed), one ace-synth run renders them all with the SFT DiT (DRAFT: about
+    2 minutes for four; extra={"synth_model": ..., **ace.SYNTH["turbo"]} for the old 50 s turbo round). Returns [(wav, json, sung_bpm)]; each JSON keeps the LM's codes, so keep() renders a picked tune
     again with SFT: the same words and rhythm in the better voice (the key can move: measure the keeper). lift: sung `lift` semitones lower at the tempo
     divided by LIFT_SPEED (finish() brings it to the song; the shift there comes from fit.py and the ear).
-    Reproducible: lm_seed fixes the tunes (without it ace-lm draws a random LM seed every run). A second of
+    extra: more request fields for ace-lm and ace-synth (lm_negative_prompt, lm_cfg_scale, ...). Reproducible:
+    lm_seed fixes the tunes (without it ace-lm draws a random LM seed every run). A second of
     headroom: acestep.cpp cuts the duration to whole seconds and the LM stops about 0.8 s early, which cut the
     last word of 14 of 137 takes on disk."""
     sung = round(bpm / LIFT_SPEED) if lift else bpm
@@ -139,7 +149,7 @@ def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, l
     req = {"caption": f"{caption}, {A_CAPPELLA}", "lyrics": lyrics, "bpm": int(round(sung)), "keyscale": ask,
            "timesignature": "4", "vocal_language": lang, "output_format": "wav16",
            "duration": float(int(bars * 240 / sung) + 2), "seed": 1, "lm_seed": int(lm_seed), "lm_batch_size": n,
-           **DRAFT}
+           **DRAFT, **(extra or {})}
     h = hashlib.sha1(json.dumps(req, sort_keys=True).encode()).hexdigest()[:8]
     base = os.path.join(out, f"{name}_l{lm_seed}_{h}")
     got = [(f"{base}_{b}.wav", f"{base}{b}.json", sung) for b in range(n)]
@@ -214,6 +224,7 @@ def pin(wav, song, label):
     dst = os.path.join(d, f"{slug(label)}.wav")
     shutil.copyfile(wav, dst)
     stem = re.sub(r"_to[\d.]+_[+-]\d+$", "", wav[:-4])      # a finished file: its keeper or draft
+    stem = re.sub(r"_vox$", "", stem)                          # the voice alone (sep.py): its take
     for j in (stem + ".json", re.sub(r"_(\d+)$", r"\1", stem) + ".json"):
         if os.path.exists(j):
             shutil.copyfile(j, dst[:-4] + ".json")
@@ -222,28 +233,34 @@ def pin(wav, song, label):
 
 
 def draft_round(caption, lines, bpm, key, chords, bars=16, tag="Chorus", lift=0, n=4, lm_seed=1000, out=None,
-                name="draft", lang="en"):
-    """The compo-day round: n drafts, ranked by fit.py against the band's chords, each brought to the song's tempo
-    and the measured key shift, one listen file best-first (with the bar offset fit.py liked spoken), and the
-    table. The ear picks; keep() renders the pick in SFT."""
+                name="draft", lang="en", extra=None):
+    """The compo-day round: n drafts, each split from the band ACE-Step may have put under it (sep.voice: the voice
+    alone when the band is louder than sep.CLEAN_DB), ranked by fit.py against the band's chords and by register,
+    each brought to the song's tempo and the measured key shift, one listen file best-first (with the bar offset
+    fit.py liked spoken), and the table. The ear picks; keep() renders the pick in SFT."""
     import fit
+    import sep
     out = out or os.path.join(TAKES, "drafts")
     if len(lines) * 2 < bars - 1:     # the rehearsal of 19 November: 4 lines in 16 bars sang 8 bars, then nothing
         print(f"note: {len(lines)} lines for {bars} bars; ACE-Step sings about one line in 2 bars: repeat the "
               f"chorus ({bars // 2} lines)", file=sys.stderr)
-    got = drafts(caption, ace_words(lines, tag), bpm, key, bars, out, name, lang, n, lm_seed, lift)
+    got = drafts(caption, ace_words(lines, tag), bpm, key, bars, out, name, lang, n, lm_seed, lift, extra)
     if not got:
         return None
     sung = got[0][2]
-    ranked = fit.rank([w for w, _, _ in got], chords, sung)
-    jsons = {w: j for w, j, _ in got}
+    voices = [sep.voice(w) for w, _, _ in got]               # (the WAV to use, the band's level)
+    ranked = fit.rank([v for v, _ in voices], chords, sung)
+    jsons = {v: j for (v, _), (_, j, _) in zip(voices, got)}
+    bands = dict(voices)
     parts, rows = [], []
     for i, (w, f, cut) in enumerate(ranked):
         s, o = f["best"]
         fin = finish(w, sung, bpm, s)
-        b = int(re.search(r"_(\d+)\.wav$", w).group(1))
-        rows.append(f"{i + 1}. draft {b} ({os.path.basename(jsons[w])}): {fit.describe((w, f, cut))}")
-        where = {0: "", -1: ", one bar early", 1: ", one bar late"}.get(o, "")
+        b = int(re.search(r"_(\d+)(?:_vox)?\.wav$", w).group(1))
+        rows.append(f"{i + 1}. draft {b} ({os.path.basename(jsons[w])}): {fit.describe((w, f, cut))}; "
+                    f"{sep.describe(bands[w])}")
+        where = {0: "", -2: ", two bars early", 2: ", two bars late", -1: ", one bar early",
+                 1: ", one bar late"}.get(o, "")
         parts += [label(f"Draft {WORDS[b + 1] if b + 1 < len(WORDS) else b + 1}{where}."),
                   master.master(roomy(e.bandpass(mono(fin), 80, 12000), .15), -16.0), gap(.5)]
     # the LM seed in the names: a second round (another --lm-seed) keeps the first round's table and listen file
@@ -418,11 +435,14 @@ def main():
     a = ap.parse_args()
     if a.keep:
         w = keep(a.keep, a.guidance, a.shift, a.ref)
-        print(w)
+        if w:                         # the keeper sings the draft's codes: a band in the draft is in the keeper too
+            import sep
+            w, band_db = sep.voice(w)
+            print(f"{w} ({sep.describe(band_db)})")
         if w and a.chords:            # the keeper's own fit: SFT can sing the tune in another key than its draft
             import fit
             sung = json.load(open(a.keep))["bpm"]
-            r = (w, fit.band_fit(w, a.chords.split(), sung), fit.cut_end(w))
+            r = fit.rank([w], a.chords.split(), sung)[0]
             print(f"keeper, sung at {sung} BPM: {fit.describe(r)}")
         return
     if a.drafts:

@@ -8,9 +8,10 @@ my_song.py [OUT.wav]                 PREVIEW=48-64 my_song.py: only bars 48 to 6
 CAST="mc=qwen_hype" my_song.py       another voice for a role (a test render, to renders/scratch/)
 
 The diva (WEEKEND.md, "The diva: a draft round"): make drafts with takes.py my_song --drafts ..., pick one by ear,
---keep it, bring it to the song's tempo and key with takes.finish and pin it with
-takes.pin(wav, "my_song", "chorus"): this script plays renders/ace/takes/my_song/pinned/chorus.wav and never makes a
-take itself. DIVA_OFFSET=-1 plays it a bar earlier (fit.py's offset).
+--keep it (it prints the voice alone, <keeper>_vox.wav, when ACE-Step put a band under it), bring it to the song's
+tempo and key with takes.finish and pin it with takes.pin(wav, "my_song", "chorus"): this script plays
+renders/ace/takes/my_song/pinned/chorus.wav and never makes a take itself. DIVA_OFFSET=-1 plays it a bar earlier
+(fit.py's offset, measured on the voice alone).
 
 For delivery: append the line printed at the end to the END of share.SONGS, write the lyric sheet as
 ../lyrics/NN-my_song.txt (NN: its row number), then share.py --only my-song and dj.py --only my_song.
@@ -39,8 +40,9 @@ KIT_NAME = "hi-nrg"                    # kits.py --list: trance, eurobeat, hards
 TITLE = "Kit Template"
 DAY = "Rehearsal: test"                # "Saturday: <genre>" or "Sunday: <genre>": the set it plays in
 CHORUS_LEAD = False                    # the kit's lead and hook (its "lead" bus) under the diva: off
-DIVA_GAIN = 1.0                        # the diva's level: dense kits need more (happy hardcore 2.5: at 1.0 the
-                                       # rehearsal's diva was not heard at all over the band)
+DIVA_GAIN = float(os.environ.get("DIVA_GAIN", "1.0"))   # the diva's level (DIVA_GAIN=2 for a test render, to
+# renders/scratch): dense kits need more. The rehearsal's 2.5 over happy hardcore partly fought the band ACE-Step had
+# put under its take; pin the voice alone (takes.py separates it: sep.py) and start lower
 VOICE_GAIN = 1.0                       # the spoken lines' level (the rehearsal's MC needed 2.0 over the build)
 NARRATOR_A, NARRATOR_B, ANNOUNCER = "cast:narrator", "cast:diva", "cast:announcer"   # voice.CAST roles or names
 
@@ -55,7 +57,7 @@ NAME = f"{SCRIPT.replace('_', '-')}_{BPM}bpm_{KEY}"
 TAKES_DIR = os.path.join(HERE, "renders", "ace", "takes", SCRIPT)
 DIVA_WAV = os.environ.get("DIVA_WAV") or os.path.join(TAKES_DIR, "pinned", "chorus.wav")
 DIVA_BARS = 16
-DIVA_OFFSET = int(os.environ.get("DIVA_OFFSET", "0"))   # whole bars: fit.py's offset, -1 earlier, 1 later
+DIVA_OFFSET = int(os.environ.get("DIVA_OFFSET", "0"))   # whole bars: fit.py's offset, -2 earlier, 2 later
 HAS_DIVA = os.path.exists(DIVA_WAV)
 if not HAS_DIVA:
     print(f"no diva yet: {DIVA_WAV} (pin a take with takes.pin)")
@@ -69,8 +71,10 @@ P = kits.band(KIT_NAME, S)
 VERSE = {32: ("It started as a normal night.", NARRATOR_A), 34: ("Then the music came on.", NARRATOR_B),
          36: ("Nobody was ready.", NARRATOR_A), 38: ("Nobody ever is.", NARRATOR_B),
          40: ("The lights went down.", NARRATOR_A), 42: ("<excited> And the room went up!", NARRATOR_B)}
-BREAK = {66: ("Attention please.", ANNOUNCER), 68: ("This is a test of the template.", ANNOUNCER)}   # from bar 66: the
-# first chorus's take may ring into bar 64
+BREAK = {66: ("Attention please.", ANNOUNCER), 68: ("This is a test of the template.", ANNOUNCER)}
+# The lines sit 2 bars apart: at 150 BPM and up that is under 3.2 s, too short for a slow narrator (the rehearsal's
+# "High, low, nobody knew." ran 0.7 s into the next line at 170 BPM). For fast kits: short MC calls in a fast voice
+# (cast:mc), every 4 bars, not storytelling. say() warns when a line runs past its 2 bars.
 
 
 def say(bar, text, voice, amp=1.0, beat=0.0):
@@ -78,6 +82,9 @@ def say(bar, text, voice, amp=1.0, beat=0.0):
     if not S.live(bar, 2):
         return
     y = V._finish(V.tts(text, voice))
+    if len(y) > (2 - beat) * S.bar * e.SR:
+        print(f"note: bar {bar}: \"{text}\" lasts {len(y) / e.SR:.1f} s, longer than its 2 bars "
+              f"({2 * S.bar:.1f} s): it runs into the next line")
     put("vox", S.at(bar, beat), y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9)), .5, amp * VOICE_GAIN, wet=.12,
         echo=.15)
 
@@ -85,7 +92,8 @@ def say(bar, text, voice, amp=1.0, beat=0.0):
 def diva(bar, limit, amp=1.0):
     """The pinned ACE-Step take, whole, from the downbeat of `bar`, lightly band-limited, DIVA_GAIN louder; cut
     with an 80 ms fade at the quietest 50 ms of the bar before `limit` if it would run past it (drafts are made
-    2 s longer than their bars, and the DJ's outro from bar 96 must stay drums only)."""
+    2 s longer than their bars; the break must start without her: the rehearsal's take ran a bar into the break as
+    the loudest moment of the song, then a dead stop; and the DJ's outro from bar 96 must stay drums only)."""
     if not HAS_DIVA or not S.live(bar, DIVA_BARS):
         return
     import takes
@@ -129,7 +137,7 @@ for bar in range(BARS):
     elif bar < 64 or 80 <= bar < 96:
         chorus(bar)
         if bar in (48, 80):
-            diva(bar + DIVA_OFFSET, limit=65 if bar == 48 else 96)
+            diva(bar + DIVA_OFFSET, limit=64 if bar == 48 else 96)
     elif bar < 72:
         kits.play(KIT_NAME, S, P, bar, "break")
         if bar in BREAK:

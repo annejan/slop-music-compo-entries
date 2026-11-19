@@ -39,7 +39,7 @@ whose findings are in here). Two hours are plenty: the time goes to listening, n
 |---|---|---|
 | 0:00 | The genre | The user tells it, or draw one. `kits.py --list` shows the 11 kits with tempo and key. |
 | 0:02 | Three pitches | Three one-line song ideas; the user picks one. Hardware and badge jokes land with this crowd. |
-| 0:05 | The song script | A kit genre: `cp kit_template.py <name>.py`, set `KIT_NAME`, `TITLE`, `DAY` (a rehearsal: `"Rehearsal: <genre>"`), `DIVA_GAIN` (dense kits like happy hardcore: about 2.5) and the spoken lines. Any other genre: `cp template.py <name>.py` and set its knobs (`parts.GROOVES`). `<name>` in lower case with `_`. |
+| 0:05 | The song script | A kit genre: `cp kit_template.py <name>.py`, set `KIT_NAME`, `TITLE`, `DAY` (a rehearsal: `"Rehearsal: <genre>"`), `DIVA_GAIN` (start near 1.8 with a clean take) and the spoken lines (at 150 BPM and up: short MC calls in a fast voice, not a slow narrator). Any other genre: `cp template.py <name>.py` and set its knobs (`parts.GROOVES`). `<name>` in lower case with `_`. |
 | 0:08 | The diva | A draft round (below): 4 tunes in about 100 s, best first. The user picks one by ear; none good: the next round. |
 | 0:12 | The keeper | `--keep` the pick with `--chords` (about 35 s), use the keeper's own shift, pin it (below). |
 | 0:15 | Spoken parts | The voice cast (below). The first render with Maya voices takes a few minutes more (about 17 s a line, cached after). |
@@ -59,51 +59,58 @@ inserting it anywhere else gives the later songs the wrong lyric sheets and trac
 
 ```sh
 .venv/bin/python takes.py <name> --drafts --name chorus --bars 16 --n 4 \
-    --caption "1980s Hi-NRG, a powerful dramatic female dance diva, soaring, theatrical, clear words" \
+    --caption "An isolated a cappella vocal track, one female singer alone, unaccompanied, a sweet clear warm mid-range voice, euphoric and catchy, clear English words, dry studio vocal recording" \
     --lines "line 1|line 2|line 3|line 4|line 1|line 2|line 3|line 4" \
     --bpm 128 --key "B minor" --chords "Bm Em A F#" --lift 3
 ```
 
-- Give ACE-Step about one line per 2 bars: 8 lines for 16 bars (the chorus twice). With 4 lines in 16 bars the
-  rehearsal's drafts sang 8 bars and then nothing, or noise, or a made-up line; takes.py warns now.
-- One ACE-Step LM run makes 4 tunes, one turbo run renders them: about 80-100 s for all four. ACE-Step's key is a
-  lottery (about 1 take in 5 comes back in the asked key), so `fit.py` measures each take against the chords and
-  the listen file brings each to the song's tempo and measured key, best first:
-  `renders/ace/takes/<name>/chorus drafts l1000, best first.mp3` (l1000: the LM seed). The table is
-  `chorus drafts l1000.txt`: one row per draft with its JSON file, its fit, "at N st" (the shift) and "one bar
-  earlier" or "later" (the offset).
-- None of the four good? Another round with the next four tunes: the same command with `--lm-seed 1004` (and
-  1008, ...). Its files carry the new seed, so the first round's table and MP3 stay.
-- `--lift 3`: ACE-Step is asked to sing 3 semitones lower and sings slower; Rubber Band speeds it up to the song's
-  tempo and moves it by fit.py's measured shift. The user's verdict on the lifted sound: "really 90s eurotrash,
-  love it". Without `--lift` it sings at the song's tempo.
-- The ranking only decides the order. The ear decides the take (an approved take once measured poorly).
+Why the drafts changed (the rehearsal song Pull-Up Resistor, 19 November: "sucks ... mostly the high pitched
+singing, but also some of the rest"): ACE-Step put a band (a drone of bass and pads) under the diva in all four
+drafts, she sang around C5 after the lift, and fit.py measured ACE-Step's bass instead of her voice, so the take
+played one bar off the phrases. Now:
 
-The pick, in the better voice (about 35 s; 45-60 s with guidance on), measured, then to the song and pinned:
+- **The caption describes only the voice.** No genre or era words, no "soaring", "powerful", "bright" or "high":
+  those pulled a band in and the pitch up. The pattern: "An isolated a cappella vocal track, one female singer
+  alone, unaccompanied, <voice> mid-range voice, <mood>, clear English words, dry studio vocal recording". The
+  genre is the band's job. takes.py adds a negative prompt against instruments and shrill voices (takes.LM_NEGATIVE)
+  and renders the drafts with the SFT DiT: about 2 minutes for four (turbo added the drone).
+- **Every draft is split** (sep.py, Mel-Band RoFormer, about 30 s a take): when ACE-Step still put a band under
+  the voice (louder than -25 dB; in the lab about 1 take in 4), the round ranks, finishes and plays the voice
+  alone, `<draft>_vox.wav`. A clean take is used as it is.
+- **The table** (`chorus drafts l1000.txt`) per draft: the fit, the shift ("at N st"), the offset ("two bars
+  earlier"), the register after the shift ("sings around F4, the top 10 % from A4"; **HIGH** above A#4 / G5, and
+  ranked lower), and the band ("clean" or "a band under the voice at -3 dB: separated").
+- Give ACE-Step about one line per 2 bars: 8 lines for 16 bars (the chorus twice). takes.py warns.
+- ACE-Step's key is a lottery (about 1 take in 5 in the asked key), so fit.py picks each take's shift: of the
+  shifts nearly as much on the song's scale as the best, the one with the most notes on the chord tones and not
+  too high. Offsets come only in whole 2-bar steps: ACE-Step starts a line every 2 bars, and an odd offset starts
+  every line off the phrase grid.
+- None of the four good? `--lm-seed 1004` (then 1008, ...) for the next four; the first round's files stay.
+- `--lift 3`: sung 3 semitones lower and slower, Rubber Band brings it up ("really 90s eurotrash, love it"). The
+  table's register shows whether the lift made her too high.
+- The ranking only decides the order. The ear decides the take.
+
+The pick to the song and pinned (the draft is already SFT; `--keep` only for the guidance A/B):
 
 ```sh
-.venv/bin/python takes.py --keep "renders/ace/takes/<name>/<draft>.json" --chords "Bm Em A F#"
-.venv/bin/python -c 'import takes; w = takes.finish("<keeper>.wav", 104, 128, 3); print(takes.pin(w, "<name>", "chorus"))'
+.venv/bin/python -c 'import takes; w = takes.finish("<draft or its _vox>.wav", 104, 128, 3); print(takes.pin(w, "<name>", "chorus"))'
+.venv/bin/python takes.py --keep "renders/ace/takes/<name>/<draft>.json" --guidance 7 --shift 3 --chords "Bm Em A F#"   # optional A/B
 ```
 
-- The keeper keeps the draft's words and rhythm, but NOT always its key: in the rehearsals a draft at +3 st came
-  back at -2 with the SFT preset and at +3 with `--guidance 7 --shift 3` (Overclocked Heart: -1 became +5 and +0).
-  So `--chords` measures the keeper, and its line ("keeper ...: fit N % at S st, one bar later") gives the shift
-  and offset to use. If the keeper's fit dropped far below the draft's, try `--keep ... --guidance 7 --shift 3
-  --chords "..."` (the rehearsal's choice: the draft's key kept, every word heard); the user has not compared
-  the two settings by ear yet.
-- `<keeper>.wav` is the path `--keep` prints. `104` is the tempo it was sung at (the `"bpm"` in the draft's JSON:
-  the song's tempo divided by 1.23 with `--lift`, else the song's tempo), `128` the song's tempo, `3` the shift
-  from the KEEPER's line. `<name>` is the script's name with `_`.
-- `takes.pin` writes `renders/ace/takes/<name>/pinned/chorus.wav` (and its request JSON). A song made from
-  `kit_template.py` plays exactly that file and never makes a take itself. The offset: "one bar earlier" is
-  `DIVA_OFFSET=-1`, "one bar later" `DIVA_OFFSET=1` (a test render; then set it in the script). The template cuts
-  the take before the break and before the drums-only outro, at a quiet moment with a short fade.
-- Other sections in the same voice: `--keep <verse draft>.json --ref <chorus keeper>.wav` (an A/B, not heard yet).
+- Use the file the round played: the draft, or its `_vox.wav` when the table says "separated". `104` is the
+  tempo it was sung at (the `"bpm"` in the draft's JSON), `128` the song's tempo, `3` the shift from the table.
+  `<name>` is the script's name with `_`.
+- `--keep` prints the voice alone when the keeper has a band, and the keeper's own fit: the keeper can come back in
+  another key than its draft (finish it with the keeper's shift).
+- `takes.pin` writes `renders/ace/takes/<name>/pinned/chorus.wav` (and its JSON). A song from `kit_template.py`
+  plays exactly that file. The offset: "two bars earlier" is `DIVA_OFFSET=-2` (a test render; then set it in the
+  script). The template cuts the take before the break (bar 64) and before the drums-only outro.
+- Other sections in the same voice: `--keep <verse draft>.json --ref <chorus take>.wav` (an A/B, not heard yet).
+- Any ACE-Step take with a band under it: `.venv/bin/python sep.py <take>.wav` writes `<take>_vox.wav`.
 
 When a take does not fit the band:
 - Measure it: `.venv/bin/python fit.py <take>.wav --bpm <sung bpm> --chords "Bm Em A F#"` (the fit, the shift and
-  the bar offset). Try the offset first.
+  the bar offset, in 2-bar steps). Measure the voice alone (`sep.py` first when the take has a band).
 - Retune it onto the chords (not heard yet; the Hi-NRG take went from 26 to 55-58 % on the chord tones):
 
   ```sh
@@ -116,10 +123,9 @@ When a take does not fit the band:
 
 ### Is the diva heard? (the first render)
 
-A dense kit buries the diva: in the rehearsal (happy hardcore) Whisper heard none of her words in the chorus at the
-template's level. Raise `DIVA_GAIN` in the script (2.5 there gave 48-55 % of the chorus words in the full mix, as
-much as Overclocked Heart's approved choruses, 49-53 %); `GAIN=vox` would raise the spoken lines too. The ears
-decide; on a day without ears, the software ear per section:
+A dense kit can bury the diva. Set `DIVA_GAIN` in the script; try values with `DIVA_GAIN=1.8 PREVIEW=46-64` (a
+test render). Start near 1.8 with a clean take: the rehearsal's 2.5 partly fought the band ACE-Step had put under
+its take. The ears decide; on a day without ears, the software ear per section:
 
 ```sh
 .venv/bin/python -c 'import asr; print(asr.hear("renders/<song>.wav", 90.0, 112.0))'     # what it hears, seconds 90-112
