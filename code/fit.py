@@ -3,6 +3,7 @@
 tones bar by bar, for key shifts and whole-bar offsets; and whether it ends mid-word. Offline, CPU, about 2 s a take.
 
 fit.py TAKE.wav [TAKE.wav ...] --bpm 104 --chords "Bm Em A F#"
+fit.py TAKE.wav --bpm 128 --chords "Bm Em A F#" --snap natural|hard [--shift 0 --offset 0]   retune onto the chords
 
 Why (research/toolkit-2026-11-19.md): ACE-Step gets the key only as text, so a take comes back in the asked key about
 one time in five (22 % of 166 takes), and an a cappella take never hears the chords. Today's Hi-NRG take sat on the
@@ -128,6 +129,90 @@ def cut_end(wav, tail=.25):
     return float(env[-int(tail * 100):].mean() / loud) > .3
 
 
+def snap(wav, chords, bpm, out, mode="natural", shift=0, offset=0, scale_only=False):
+    """The take retuned onto the band (WORLD: f0 changed, spectral envelope and aperiodicity kept, the length frame-
+    exact, so the take stays on the grid). Each steady note (the nearest semitone of the smoothed f0 held for 30 ms
+    or more) moves to the nearest tone of the chord of the bar under it (a long note) or of the song's scale (a short
+    one, under an eighth), at most 2 semitones; glides between notes follow. mode "natural": the note moves as a
+    whole and keeps its own vibrato and scoops; "hard": the pitch sits flat on the target note and jumps between
+    notes (the "Cher" eurodance effect, retune speed 0). shift: semitones first (fit.py's key shift); offset: whole
+    bars (the take placed that many bars later against the chords). Returns `out`."""
+    from scipy.ndimage import median_filter
+    x, sr = master.read(wav)
+    x = x.mean(1).astype(np.float64)
+    fp = 5.0
+    f0, t = pw.dio(x, sr, f0_floor=90, f0_ceil=1100, frame_period=fp)
+    f0 = pw.stonemask(x, f0, t, sr)
+    sp = pw.cheaptrick(x, f0, t, sr)
+    ap = pw.d4c(x, f0, t, sr)
+    v = f0 > 0
+    m = np.full(len(f0), np.nan)
+    m[v] = 69 + 12 * np.log2(f0[v] / 440) + shift
+    ms = m.copy()
+    if v.any():
+        ms[v] = median_filter(m[v], 9)
+    bar = 240 / bpm
+    member = [chord_pcs(c) for c in chords]
+    scale = set().union(*member)
+    # segments: runs of frames on one nearest semitone (blips of up to 20 ms ignored)
+    segs, i = [], 0
+    while i < len(ms):
+        if np.isnan(ms[i]):
+            i += 1
+            continue
+        cur, j = round(ms[i]), i
+        while j + 1 < len(ms) and not np.isnan(ms[j + 1]) and round(ms[j + 1]) == cur:
+            j += 1
+        segs.append((i, j))
+        i = j + 1
+    delta = np.full(len(ms), np.nan)
+    target = np.full(len(ms), np.nan)
+    eighth = 60 / bpm / 2 * .85
+    for i, j in segs:
+        length = (j - i + 1) * fp / 1000
+        if length < .03:
+            continue
+        centre = float(np.median(m[i:j + 1]))
+        k = (int(t[(i + j) // 2] / bar) + offset) % len(chords)
+        allowed = scale if (length < eighth or scale_only) else member[k]
+        cands = [n for n in range(int(round(centre)) - 2, int(round(centre)) + 3) if n % 12 in allowed]
+        if not cands:
+            continue
+        tgt = min(cands, key=lambda n: abs(n - centre))
+        delta[i:j + 1] = tgt - centre
+        target[i:j + 1] = tgt
+    # frames between segments (glides, short blips) take the delta of their neighbours, interpolated
+    have = ~np.isnan(delta)
+    if have.any():
+        idx = np.arange(len(delta))
+        delta = np.interp(idx, idx[have], delta[have])
+        target_f = np.interp(idx, idx[have], target[have])
+    else:
+        delta = np.zeros(len(ms))
+        target_f = ms
+    if mode == "hard":
+        new = np.where(have, target, np.round(target_f))
+    else:
+        new = m + delta
+    f0n = np.where(v, 440 * 2 ** ((new - 69) / 12), 0.0)
+    y = pw.synthesize(f0n, sp, ap, sr, frame_period=fp)
+    y = np.pad(y, (0, max(0, len(x) - len(y))))[:len(x)]
+    y = y * (np.sqrt(np.mean(x ** 2)) / (np.sqrt(np.mean(y ** 2)) + 1e-9))
+    _write(out, y, sr)
+    return out
+
+
+def _write(path, y, sr):
+    """Mono 16-bit WAV at the take's own rate (master.write writes our 44.1 kHz)."""
+    import wave
+    z = (np.clip(y, -1, 1) * 32767).astype("<i2")
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(z.tobytes())
+
+
 def rank(wavs, chords, bpm, **kw):
     """The takes best-first: (wav, band_fit dict, cut_end), a cut word costing 5 points of fit."""
     rows = [(w, band_fit(w, chords, bpm, **kw), cut_end(w)) for w in wavs]
@@ -147,7 +232,15 @@ def main():
     ap.add_argument("takes", nargs="+")
     ap.add_argument("--bpm", type=float, required=True, help="the tempo the take was sung at")
     ap.add_argument("--chords", required=True, help='one a bar, repeating: "Bm Em A F#"')
+    ap.add_argument("--snap", choices=["natural", "hard"], help="retune each take onto the chords (WORLD), "
+                    "written next to it as <take>_snap_<mode>.wav")
+    ap.add_argument("--shift", type=int, default=0, help="snap: semitones first")
+    ap.add_argument("--offset", type=int, default=0, help="snap: whole bars")
     a = ap.parse_args()
+    if a.snap:
+        for t in a.takes:
+            print(snap(t, a.chords.split(), a.bpm, f"{t[:-4]}_snap_{a.snap}.wav", a.snap, a.shift, a.offset))
+        return
     for r in rank(a.takes, a.chords.split(), a.bpm):
         print(f"{r[0].split('/')[-1]}: {describe(r)}")
 
