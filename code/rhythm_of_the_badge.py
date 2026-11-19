@@ -46,6 +46,13 @@ B = S.beat
 
 DIVA = os.environ.get("DIVA", "en_US-amy-medium")
 RAPPER = os.environ.get("RAPPER", "en_GB-alan-medium")
+# CROWD=1 (19 November, an A/B; research/toolkit-2026-11-19.md): crowd moments. The title in the echo while the riff
+# comes in (the first title came 28 s after the music); the band stops for the bar before the last chorus
+# ("Everybody!"); in the second pass of the last chorus the diva leaves the first line to the room ("Sing it!", 16
+# voices of a many-speaker Piper model over the piano's tune); a punchline before the drums-only outro.
+CROWD = os.environ.get("CROWD") == "1"
+ROOM = [f"en_US-libritts_r-medium#{k}" for k in (3, 17, 41, 58, 102, 140, 199, 237, 301, 355, 412, 480, 533, 610,
+                                                  702, 851)]
 # the choir: left double, right double, a third above; in the last chorus also a man an octave down, and one
 # more voice a sixth down
 CHOIR = os.environ.get("CHOIR", ",".join([
@@ -342,17 +349,30 @@ def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo
             S.put("vox", t + late, y, p, amp * choir * g, wet=.2, echo=.05)
 
 
-def chorus_lines(bar0, big=False):
+def chorus_lines(bar0, big=False, gap=False):
     """The chorus, 8 bars: four lines of two; the piano doubles the tune an octave above the voice, lasers answer
-    "flash me"."""
+    "flash me". gap: the first line is the room's (CROWD)."""
     for i, (line, words) in enumerate(CHORUS):
         bar = bar0 + 2 * i
-        diva(bar, line, words, choir=.45, big=big)
+        if gap and i == 0:
+            room_shout(bar, "Feel the rhythm of the badge!")
+        else:
+            diva(bar, line, words, choir=.45, big=big)
         for t, m, d in S.notes(bar, line, key_of(bar), bars=2):
             S.put("keys", t, pno(m, d * .9, .7), .5, .2, wet=.3, echo=.15)
         if i == 2:
             lasers(bar, steps=(6, 14))
             lasers(bar + 1, steps=(14,), amp=.7)
+
+
+def room_shout(bar, text, bars=2, amp=1.0):
+    """The room shouts a line: the ROOM voices, each fitted to the bars, a little apart in time and pitch, spread
+    left to right."""
+    if not S.live(bar, bars):
+        return
+    for i, v in enumerate(ROOM):
+        y = V.rap(text, bars * S.bar - STEP, voice=v, pitch=.9 + .015 * (i % 8))
+        S.put("vox", S.at(bar) + .006 * (i % 5), y, .15 + .7 * i / (len(ROOM) - 1), amp * .3, wet=.25, echo=.05)
 
 
 def mc(bar, text, bars=1, amp=1.0, wet=.06, echo=.04):
@@ -363,6 +383,11 @@ def mc(bar, text, bars=1, amp=1.0, wet=.06, echo=.04):
 
 # ---------------------------------------------------------------- the arrangement
 for bar in range(120):
+    if CROWD and bar == 79:                     # the band stops for one bar: only the MC
+        if S.live(bar):
+            y = V.rap("Everybody!", S.bar / 2, voice=RAPPER, pitch=.84)
+            S.put("vox", S.at(bar, 1), y, .5, 1.15, wet=.25, echo=.35)
+        continue
     intro, outro = bar < 16, bar >= 104
     chorus = is_chorus(bar)
     riff = 16 <= bar < 24 or 40 <= bar < 48 or 96 <= bar < 104
@@ -416,7 +441,14 @@ for bar in range(120):
     if verse and bar % 2 == 0:
         diva(bar, *VERSE[(bar - 24) // 2], amp=.9)
     if bar in (32, 56, 80, 88):
-        chorus_lines(bar, big=bar >= 80)
+        chorus_lines(bar, big=bar >= 80, gap=CROWD and bar == 88)
+    if CROWD and bar == 87 and S.live(bar):     # the call before the room's line
+        y = V.rap("Sing it!", S.bar / 2, voice=RAPPER, pitch=.84)
+        S.put("vox", S.at(bar, 2), y, .5, 1.1, wet=.15, echo=.3)
+    if CROWD and bar in (20, 22):               # the title early, in the echo, while the riff comes in
+        diva(bar, *CHORUS[0], amp=.55, echo_last=.7)
+    if CROWD and bar == 102:                    # the punchline, before the drums-only outro
+        mc(bar, "Badge updated. Please reboot the dance floor.", bars=2, amp=1.0, wet=.15, echo=.2)
     if rap:
         mc(bar, RAP[bar - 48])
     if bar in (64, 68):                         # the break: "flash me, flash me" alone, in the echo
@@ -442,12 +474,13 @@ if DS:   # the whole diva part in one take, each line at its own level
         if j > i:            # straight into the echo send (centre: cos 45 degrees on each side)
             S.echo[i:j] += (np.stack([y[i:j], y[i:j]], 1) * (echo_last * np.cos(np.pi / 4))).astype(np.float32)
 
-snare_roll(76, 4, 1.1)
-S.put("fx", S.at(76), e.riser(S.bar * 4, .4), .5, wet=.3)
+snare_roll(76, 3 if CROWD else 4, 1.1)
+S.put("fx", S.at(76), e.riser(S.bar * (3 if CROWD else 4), .4), .5, wet=.3)
 S.put("fx", S.at(64), e.downlifter(S.bar * 2, .3), .5, wet=.3)
 S.put("fx", S.at(102), e.downlifter(S.bar * 2, .25), .5, wet=.3)   # out before the drums-only outro
 # the big laser sweep into the last chorus
-S.put("fx", S.at(79, 2), laser(.5, 3000, 90, d=B * 2), .5, wet=.4, echo=.4)
+if not CROWD:
+    S.put("fx", S.at(79, 2), laser(.5, 3000, 90, d=B * 2), .5, wet=.4, echo=.4)
 
 # the master filter: closed down in the break, opening through the build
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 2800), (S.at(72), 3000), (S.at(80) - .02, 12000),

@@ -159,10 +159,12 @@ def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, l
     return got
 
 
-def keep(draft_json, guidance=None, shift=None):
+def keep(draft_json, guidance=None, shift=None, ref=None):
     """A picked draft rendered again from its JSON with the SFT DiT (50 steps): the same LM codes, so the same tune
     and words in the better voice. guidance / shift: the SFT preset is guidance 1.0 (CFG off) and shift 1.0; the
-    official docs' guidance on (7.0) with shift 3.0 doubles the DiT time and is an A/B for the ear."""
+    official docs' guidance on (7.0) with shift 3.0 doubles the DiT time and is an A/B for the ear. ref: a WAV whose
+    timbre the voice takes (--ref-audio; about 3 s to encode): the chosen chorus take, so that verse, chorus and rap
+    sound like one singer."""
     req = json.load(open(draft_json))
     req.update(ace.SYNTH["sft"])
     if guidance is not None:
@@ -170,12 +172,15 @@ def keep(draft_json, guidance=None, shift=None):
     if shift is not None:
         req["shift"] = float(shift)
     base = f"{draft_json[:-5]}_sft_g{req['guidance_scale']:g}_s{req['shift']:g}"
+    if ref:
+        base += "_ref" + hashlib.sha1(open(ref, "rb").read()).hexdigest()[:6]
     wav = base + ".wav"
     if os.path.exists(wav):
         return wav
     json.dump(req, open(base + ".json", "w"), indent=1, ensure_ascii=False)
     if not run([os.path.join(ace.ACESTEP, "build", "ace-synth"), "--models", ace.MODELS, "--request",
-                base + ".json", "--device", "Vulkan0", "--vae-chunk", ace.VAE_CHUNK], base + ".synth.log", 400):
+                base + ".json", "--device", "Vulkan0", "--vae-chunk", ace.VAE_CHUNK,
+                *(["--ref-audio", ref] if ref else [])], base + ".synth.log", 400):
         return None
     os.replace(base + "0.wav", wav)
     return wav
@@ -401,9 +406,10 @@ def main():
     ap.add_argument("--keep", metavar="JSON", help="render a picked draft's JSON again with SFT")
     ap.add_argument("--guidance", type=float, help="keep: the DiT's guidance (SFT preset 1.0; docs 7.0)")
     ap.add_argument("--shift", type=float, help="keep: the schedule shift (SFT preset 1.0; docs 3.0)")
+    ap.add_argument("--ref", help="keep: a WAV for the voice's timbre (--ref-audio), e.g. the chosen chorus take")
     a = ap.parse_args()
     if a.keep:
-        print(keep(a.keep, a.guidance, a.shift))
+        print(keep(a.keep, a.guidance, a.shift, a.ref))
         return
     if a.drafts:
         if not (a.caption and a.lines and a.bpm and a.key and a.chords):
