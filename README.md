@@ -400,6 +400,7 @@ each file.
 | [sound-design-and-dj.md](research/sound-design-and-dj.md) | synth recipes, harmonic mixing, file format and loudness for the DJ |
 | [render-speed.md](research/render-speed.md) | how fast the code tracks, DiffSinger and ACE-Step render on this laptop |
 | [night-tests.md](research/night-tests.md) | the night of 19 November: ACE singers for the weekend songs, voices per genre, the SFT polish, VAE stability, genre kits, dry-run rounds (not heard yet) |
+| [toolkit-2026-11-19.md](research/toolkit-2026-11-19.md) | what more to prepare before the weekend: ACE-Step's key is a lottery (22 % of 166 takes in the asked key), take drafts with `lm_batch_size` and turbo, band fit and slower harmony under a free take, singing voice conversion through audio.cpp (Seed-VC, SoulX-Singer) with ACE takes as the voice, Piper's Dutch and many-speaker voices, voices designed from text (Qwen3-TTS, Maya1); fact-checked, nothing installed or heard yet |
 | [suno-tips.md](research/suno-tips.md) | Suno v6 (not used) |
 
 ## Other options we might try
