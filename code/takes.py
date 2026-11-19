@@ -5,12 +5,14 @@ Uptime Fever): the 4B LM and the SFT DiT sing the lines a cappella, several seed
 the take plays whole from a downbeat (no cutting, no time-fitting).
 
 takes.py SONG --bar 48 --lines "Segfault in my heart|Tearing me apart" --caption "mid 1990s eurodance, a female diva"
-         [--tag Chorus] [--bars 8] [--seeds 1,2,3,4] [--db -8]
+         [--tag Chorus] [--bars 8] [--seeds 1,2,3,4] [--db -8] [--lift 3]
 takes.py --menu [--seeds 1,2,3]      the voice menu: kinds of voice that ACE-Step sings a cappella, one MP3
 
 --caption: the genre and the voice ("a cappella vocals only, no instruments" is added). --lines: the words, one sung
 line per "|" (respelled for ACE-Step: ace.ACE_SPELL). --bars: the length of the take (8 bars: 16 s at 120 BPM).
 --db: the take's level against the mix in those bars (-8: a layer, as in Push It To Prod).
+--lift 3: ACE-Step sings 3 semitones lower and slower (the tempo / LIFT_SPEED), Rubber Band lifts the take to the
+song's tempo and key: the sped-up voice of 90s eurodance (needs rubberband-cli).
 
 Writes renders/ace/takes/<song>/ (the takes, cached by their request) and "<title>, ACE takes at bar N.mp3" there;
 the song's render is not changed. A take is about 20 s of work on the iGPU (the 4B LM and the SFT DiT load each
@@ -74,9 +76,38 @@ def run(cmd, log, timeout):
     return r.returncode == 0
 
 
-def take(caption, lyrics, bpm, key, bars, seed, out, name="take", lang="en"):
+NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+SAME = {"Db": "C#", "D#": "Eb", "Gb": "F#", "G#": "Ab", "A#": "Bb"}
+# The lift (19 November): ACE-Step sings slower and lower, Rubber Band brings the take up to the song's tempo and key.
+# By ear "really 90s eurotrash"; an A/B of a trance take from 138 to 170 BPM: 3 semitones up, formants NOT kept, beat
+# a plain speed-up, the same pitch, and 3 up with the formants kept.
+LIFT_SPEED = 170 / 138
+
+
+def transpose(keyscale, semis):
+    """ACE-Step's key name moved by `semis` semitones: transpose("F major", -3) -> "D major"."""
+    note, mode = keyscale.split()
+    return f"{NOTES[(NOTES.index(SAME.get(note, note)) + semis) % 12]} {mode}"
+
+
+def take(caption, lyrics, bpm, key, bars, seed, out, name="take", lang="en", lift=0):
     """One take, `bars` long at `bpm`: the WAV's path, or None when ACE-Step failed. Cached by the request (the same
-    request and seed give the same audio)."""
+    request and seed give the same audio).
+    lift (semitones, 0 = off): ACE-Step sings `lift` semitones lower at the tempo divided by LIFT_SPEED, then Rubber
+    Band (R3 engine, `rubberband-cli`) brings the take up to `bpm` and `key`: the sped-up voice of 90s eurodance."""
+    if lift:
+        slow = round(bpm / LIFT_SPEED)
+        src = take(caption, lyrics, slow, transpose(key, -lift), bars, seed, out, name, lang)
+        if not src:
+            return None
+        dst = f"{src[:-4]}_lift{lift}_{bpm:g}.wav"
+        if not os.path.exists(dst):
+            r = subprocess.run(["rubberband", "-3", "-q", "-T", f"{slow}:{bpm:g}", "-p", str(lift), src, dst],
+                               capture_output=True, text=True)
+            if r.returncode:
+                print(f"rubberband failed: {r.stderr.strip()[-300:]}", file=sys.stderr)
+                return None
+        return dst
     req = {"caption": f"{caption}, {A_CAPPELLA}", "lyrics": lyrics, "bpm": int(round(bpm)), "keyscale": key,
            "timesignature": "4", "vocal_language": lang, "output_format": "wav16",
            "duration": round(bars * 240 / bpm, 2), "seed": seed, **MODEL}
@@ -165,13 +196,16 @@ def listen(parts, mp3, title):
     return mp3
 
 
-def song_takes(name, bar, lines, caption, tag="Chorus", bars=8, seeds=(1, 2, 3, 4), db=-8.0):
+def song_takes(name, bar, lines, caption, tag="Chorus", bars=8, seeds=(1, 2, 3, 4), db=-8.0, lift=0):
     """The takes for one song's lines and the listen file: ours, then each seed laid over ours."""
     song = ace.script_name(name)
     n, wav, title, day, bpm, key, nbars = ace.song_info(song)
     out = os.path.join(TAKES, song)
     lyrics = ace_words(lines, tag)
-    got = [(s, take(caption, lyrics, bpm, ace.keyscale(key), bars, s, out, f"{tag.lower()}{bar}")) for s in seeds]
+    got = [(s, take(caption, lyrics, bpm, ace.keyscale(key), bars, s, out, f"{tag.lower()}{bar}", lift=lift))
+           for s in seeds]
+    if lift:
+        tag = f"{tag}, lifted {lift}"
     x, _ = master.read(os.path.join(share.RENDERS, wav))
     parts = [label("Ours."), lay(x, None, bpm, bar, bars), gap()]
     for s, w in got:
@@ -242,6 +276,8 @@ def main():
     ap.add_argument("--bars", type=int, default=8)
     ap.add_argument("--seeds", default=None, help="for example 1,2,3,4 (default: 1-4, the menu 1-3)")
     ap.add_argument("--db", type=float, default=-8.0, help="the take against the mix there (default -8 dB)")
+    ap.add_argument("--lift", type=int, default=0, help="sung N semitones lower and slower, lifted by Rubber Band "
+                    "(3: the 90s eurodance voice)")
     a = ap.parse_args()
     seeds = [int(s) for s in a.seeds.split(",")] if a.seeds else None
     if a.menu:
@@ -249,7 +285,8 @@ def main():
         return
     if not (a.song and a.bar is not None and a.lines and a.caption):
         ap.error("a song needs --bar, --lines and --caption (or use --menu)")
-    print(song_takes(a.song, a.bar, a.lines.split("|"), a.caption, a.tag, a.bars, seeds or (1, 2, 3, 4), a.db))
+    print(song_takes(a.song, a.bar, a.lines.split("|"), a.caption, a.tag, a.bars, seeds or (1, 2, 3, 4), a.db,
+                     a.lift))
 
 
 if __name__ == "__main__":
