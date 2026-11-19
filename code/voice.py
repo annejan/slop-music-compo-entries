@@ -181,8 +181,25 @@ def _hz(m):
     return 440.0 * 2 ** ((np.asarray(m, dtype=float) - 69) / 12)
 
 
+def air(y, sr=OUT_SR, lo=5000.0, hi=11000.0, amount=.35):
+    """Made-up highs for speech that stops at 11-12 kHz (Piper's 22.05 kHz, and the 24 kHz of Kokoro, Qwen3-TTS
+    and Maya1): the lo..hi band through a rectifier and a soft clipper, whose harmonics land above `hi`; only what
+    lies above `hi` is kept and mixed in, `amount` times the band's level."""
+    band = signal.sosfiltfilt(signal.butter(4, [lo, hi], btype="band", fs=sr, output="sos"), y)
+    peak = np.abs(band).max() + 1e-9
+    h = np.abs(band) + .5 * np.tanh(3 * band / peak) * peak
+    h = signal.sosfiltfilt(signal.butter(8, hi, btype="high", fs=sr, output="sos"), h)
+    rb, rh = np.sqrt(np.mean(band ** 2)), np.sqrt(np.mean(h ** 2)) + 1e-12
+    return y + h * (amount * rb / rh)
+
+
+AIR = os.environ.get("AIR") == "1"      # air() on every voice (an A/B; off: the approved renders stay as they are)
+
+
 def _finish(y, gain_db=0.0):
     y = signal.resample_poly(y, OUT_SR // TTS_SR, 1)
+    if AIR:
+        y = air(y)
     k = int(.004 * OUT_SR)
     if len(y) > 2 * k:
         y[:k] *= np.linspace(0, 1, k)

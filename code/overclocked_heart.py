@@ -140,6 +140,8 @@ if DIVA == "ace" and (os.environ.get("HARM", "0") == "1" or VAMP):
 
 # ---------------------------------------------------------------- the narrators
 RYAN, LESSAC = "en_US-ryan-high", "en_US-lessac-high"
+if os.environ.get("NARRATORS"):        # "voice|voice": other narrators, e.g. qwen: or maya: voices (an A/B)
+    RYAN, LESSAC = os.environ["NARRATORS"].split("|")
 
 
 def say(bar, text, voice, amp=1.0, beat=0.0):

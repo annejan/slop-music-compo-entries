@@ -149,6 +149,7 @@ Render options (environment variables):
 | `SOLO=vox` | render only these buses (comma separated), dry: for auditions |
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
 | `GAIN=keys:0.5` | these buses' gains times these factors (comma separated), for mixing tests without editing the song |
+| `AIR=1` | made-up highs above 11 kHz on every voice (voice.air: harmonics of the 5-11 kHz band): all our speech stops at 11-12 kHz (Piper is 22.05 kHz; Kokoro, Qwen3-TTS and Maya1 make 24 kHz) against about 20 kHz for the music. An A/B, off by default |
 | `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
 | `VOX_HUMAN=1` | a sung voice as a singer instead of a tuner (0..1, default 0: hard tuned, the robot diva): scoops into the notes, a slow drift, a vibrato of its own, a swell on long notes, breath at their end (`voice._humanise`) |
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
