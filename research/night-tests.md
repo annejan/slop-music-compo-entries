@@ -40,4 +40,32 @@ heard and approved yet: the user listens in the morning and decides. The scripts
 Memory, from the queue's log: a 16 s take with the 4B LM and the SFT DiT needs about 25 s and at most about 5 GB of
 RAM and 5.6 GB of GPU memory (GTT); free RAM never fell under 11.4 GB in the first queue (it starts at about 19 GB).
 
-The rest follows when the night is over.
+**VAE stability (5).** The first soak, 30 runs of a 115 s turbo synth with a song render and a numpy load on the
+CPU: tiles of 512 passed 15 of 15 runs (76 s a run), tiles of 1024 crashed 15 of 15 (`vk::DeviceLostError`, 47 s
+to the crash). Two of the seven SFT polishes crashed the same way (produce.py used the default 1024); with 512 both
+went through. ace.py and produce.py now pass `--vae-chunk 512` (`ace.VAE_CHUNK`), as gag.py and takes.py already
+did. The long soak until 07:00 runs only 512 (a crash at 1024 resets the GPU, the desktop's too).
+
+**Genre kits (6).** `code/kits.py` has 11 kits, built by six agents one genre group at a time between 01:40 and
+02:55: trance (138, Gm), eurobeat (155, Cm), hardstyle (150, F#m), gabber (180, Am), happy hardcore (170, F),
+chiptune (130, Em), techno (132, Fm), acid house (124, Am), synthwave (118, Dm), Hi-NRG (128, Bm), carnaval (140,
+Bb). Each sketch renders in about 8 to 13 s, at about -9 LUFS and -1.2 dBTP, on the beat grid (0.4 to 1.5 ms), with
+only drums in its first 8 bars. Found on the way: in hardstyle and gabber the distorted kick's ripples fooled the
+beat finder (17 to 20 ms off the grid); a kick sweep that drifts a little from beat to beat fixed it. A song that
+adds a loud sustained part to those kits needs dj.py's grid check again. Nobody has heard the kits yet.
+
+**Dry-run rounds (7).** Three whole surprise rounds by agents alone, each to a DJ file with no problems in dj.check:
+
+| Genre | Song | Start to DJ file | Where the time went |
+|---|---|---|---|
+| synthwave | Outrun The Watchdog (`outrun_the_watchdog.py`) | 32 min | 29 min for three ACE takes, of it about 25 waiting for the GPU lock held by a 5-8 minute ace.py job of the other queue |
+| hardstyle | Hard Reset (`hard_reset.py`) | 17 min | 14 min for the takes, again mostly the lock |
+| gabber | Solder Harder (`solder_harder.py`) | 5 min | 3 min for the takes (44-48 s each, no wait); full render 29 s |
+
+With the kit ready and the GPU free, a round without the user takes about 5 minutes; the song script is written
+while the takes run. On compo day the time is the user's listening rounds, not the machine. The software ear picked
+each round's take seed (the most words heard); the user picks by ear. None of the three is in share.SONGS.
+
+Still running at the time of writing: ACE-Step re-singing our vocal stems at 0.95 and 1.0 (question 1, after the
+user's verdict at 01:58 that a free take over our voices "improvises like an idiot"), the voices per genre, and the
+long soak.

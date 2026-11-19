@@ -121,6 +121,8 @@ Optional parts, outside this repository:
 | [quick_gag.py](code/quick_gag.py) | a gag from one line ("Dubstep, English, time to take the bus"): Qwen 3.5 9B on the NPU (FastFlowLM, its own server) writes the title, words, style, tempo, key and language, ACE-Step's 1.7B LM and turbo make it; about 2 minutes, all on this laptop (no internet). About the request only; `--nerd` bends it towards the hardware-hacker crowd. When Qwen's words are not in sung lines, Qwen sets them itself in a second pass. `--best` for the 4B LM and SFT |
 | [gag.py](code/gag.py) | a quick ACE-Step song from words and a style, for the group chat (not for the DJ): the 4B LM and the SFT DiT, about 2.5 minutes for 2 minutes of music; `--fast` about 70 s |
 | [takes.py](code/takes.py) | research: ACE-Step sings a song's lines a cappella (4B LM and SFT DiT) in several seeds, about 25 s a take; one MP3 with our bars, then each take laid over them at -8 dB, with spoken labels. `--menu`: kinds of voice for surprise day. `ACE_LOCK=FILE` shares the GPU with another queue |
+| [kits.py](code/kits.py) | research: genre kits for the 11 untried surprise genres (trance, eurobeat, hardstyle, gabber, happy hardcore, chiptune, techno, acid house, synthwave, Hi-NRG, carnaval): tempo, key, chords and the band, one bar at a time (`kits.play(name, S, P, bar, part)`); `kits.py NAME` renders a 24-bar sketch. Built by agents on the night of 19 November, not heard yet |
+| [outrun_the_watchdog.py](code/outrun_the_watchdog.py), [hard_reset.py](code/hard_reset.py), [solder_harder.py](code/solder_harder.py) | research: three dry-run surprise rounds (synthwave, hardstyle, gabber) made by agents alone and timed (research/night-tests.md); not heard yet, not in share.SONGS |
 
 Render options (environment variables):
 
@@ -239,9 +241,10 @@ What we found:
   minutes of music: 1.7B + turbo 71 s, 4B + turbo 83 s, 1.7B + SFT 136 s,
   4B + SFT 154 s. `gag.py` uses 4B + SFT.
 - Speed on the Radeon 860M: a 3:30 song in about 2 minutes with the turbo
-  model, about 5 minutes with the base model. Bigger VAE tiles than the
-  default (`--vae-chunk 2048` or `4096`) crash the GPU (`vk::DeviceLostError`),
-  so the decode stays at about 40 s a song.
+  model, about 5 minutes with the base model. The VAE decode runs in tiles of
+  512 latent frames (`ace.VAE_CHUNK`, in every tool): with the CPU busy, the
+  default 1024 crashed the GPU (`vk::DeviceLostError`) in 15 of 15 runs of a
+  soak, 512 in none (research/night-tests.md); 2048 and 4096 crash always.
 
 ## Producing section by section
 

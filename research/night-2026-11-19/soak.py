@@ -58,7 +58,9 @@ try:
     for i in range(RUNS):
         if UNTIL and past(UNTIL):
             break
-        chunk = 512 if i % 2 == 0 else 1024
+        # the first soak (30 runs, 02:42) crashed 1024 in 15 of 15 runs and 512 in none: the long soak runs only 512,
+        # to see whether it holds over many runs (each crash resets the GPU, the desktop's too)
+        chunk = 512 if (UNTIL or i % 2 == 0) else 1024
         log = os.path.join(D, f"run{i:03d}_{chunk}.log")
         cmd = [f"{ACE}/build/ace-synth", "--models", f"{ACE}/models", "--request", REQ, "--device", "Vulkan0",
                "--vae-chunk", str(chunk)]

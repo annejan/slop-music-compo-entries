@@ -43,6 +43,9 @@ SYNTH = {"turbo": dict(synth_model="acestep-v15-turbo-Q8_0.gguf", inference_step
          # the tuned 50-step DiT: by ear far cleaner than base for text to music (gag.py, 18 November)
          "sft": dict(synth_model="acestep-v15-sft-Q8_0.gguf", inference_steps=50, guidance_scale=1.0, shift=1.0)}
 LM = "acestep-5Hz-lm-4B-Q8_0.gguf"
+# VAE tiles of 512 latent frames: the default 1024 crashed the GPU (vk::DeviceLostError) in 15 of 15 runs with
+# the CPU busy, 512 in none of 15 (the soak of 19 November, research/night-tests.md)
+VAE_CHUNK = "512"
 def keyscale(key):
     """ACE-Step's key name: "F#m" -> "F# minor", "Bb" -> "Bb major"."""
     return f"{key[:-1]} minor" if key.endswith("m") else f"{key} major"
@@ -247,7 +250,7 @@ def main():
         synth_req = base + ".json"
         cmd = ["--src-audio", src] + (["--ref-audio", src] if a.ref else [])
     run([os.path.join(ACESTEP, "build", "ace-synth"), "--models", MODELS, "--request", synth_req, *cmd,
-         "--device", "Vulkan0"], base + ".synth.log")
+         "--device", "Vulkan0", "--vae-chunk", VAE_CHUNK], base + ".synth.log")
     raw = synth_req[:-5] + "0.wav"
     print(f"ACE-Step: {time.time() - t0:.0f} s", flush=True)
 
