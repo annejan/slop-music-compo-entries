@@ -66,6 +66,27 @@ With the kit ready and the GPU free, a round without the user takes about 5 minu
 while the takes run. On compo day the time is the user's listening rounds, not the machine. The software ear picked
 each round's take seed (the most words heard); the user picks by ear. None of the three is in share.SONGS.
 
-Still running at the time of writing: ACE-Step re-singing our vocal stems at 0.95 and 1.0 (question 1, after the
-user's verdict at 01:58 that a free take over our voices "improvises like an idiot"), the voices per genre, and the
-long soak.
+**ACE-Step on our melody (1).** After the user's verdict at 01:58 (a free ACE take over our voices "improvises like
+an idiot": its voice is nicer, its melody is its own), ace.py `--mode vocals --model sft` re-sang the vocal stems of
+six songs at cover strength 0.95 and 1.0 (0.85 was there already), all 12 runs without a crash, 4 to 8 minutes each
+(with the lock). The listen file puts ours, 0.85, 0.95 and 1.0 of each song in a row. Not heard yet.
+
+**Voices per genre (3).** 16 genres, 4 seeds each, in 26 minutes; one listen file per genre and one for all
+(`renders/ace/takes/genres/`, the captions in `genres.txt`). Not heard yet.
+
+**VAE stability, the long soak (5).** From 04:11 to 07:00 with tiles of 512 and no load of our own: 240 of 240 runs
+passed, no `vk::DeviceLostError`, 39 s a run. With the first soak, tiles of 512 are now 255 of 255 and tiles of 1024
+0 of 15 under load. 512 is the setting.
+
+**Memory over the night.** Free RAM was never under 11.2 GB (of about 19 GB at the start, 23 GB in the second
+queue); swap was not used; GTT at most 5.7 GB (the 4B LM with the SFT DiT). No job was skipped or killed by the
+memory guard. The machine can run one ACE-Step job next to a song render with room to spare; two ACE-Step jobs at
+once were never tried and stay out (the GPU lock).
+
+## For the user to decide
+
+- ACE-Step re-singing our melody: which strength, if any, for which songs.
+- The voice for each surprise genre: a seed per genre from the voices file.
+- The polish: ours, turbo or SFT, per song.
+- The kits: which sound right for their genre, which need work.
+- The dry-run songs: research only, unless one is worth keeping.
