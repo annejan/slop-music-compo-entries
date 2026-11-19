@@ -38,7 +38,10 @@ import voice as V
 KIT_NAME = "hi-nrg"                    # kits.py --list: trance, eurobeat, hardstyle, gabber, happy hardcore, ...
 TITLE = "Kit Template"
 DAY = "Rehearsal: test"                # "Saturday: <genre>" or "Sunday: <genre>": the set it plays in
-CHORUS_LEAD = False                    # the kit's lead line in the choruses (trance, Hi-NRG) under the diva: off
+CHORUS_LEAD = False                    # the kit's lead and hook (its "lead" bus) under the diva: off
+DIVA_GAIN = 1.0                        # the diva's level: dense kits need more (happy hardcore 2.5: at 1.0 the
+                                       # rehearsal's diva was not heard at all over the band)
+VOICE_GAIN = 1.0                       # the spoken lines' level (the rehearsal's MC needed 2.0 over the build)
 NARRATOR_A, NARRATOR_B, ANNOUNCER = "cast:narrator", "cast:diva", "cast:announcer"   # voice.CAST roles or names
 
 KIT = kits.KITS[KIT_NAME]
@@ -52,7 +55,7 @@ NAME = f"{SCRIPT.replace('_', '-')}_{BPM}bpm_{KEY}"
 TAKES_DIR = os.path.join(HERE, "renders", "ace", "takes", SCRIPT)
 DIVA_WAV = os.environ.get("DIVA_WAV") or os.path.join(TAKES_DIR, "pinned", "chorus.wav")
 DIVA_BARS = 16
-DIVA_OFFSET = int(os.environ.get("DIVA_OFFSET", "0"))   # whole bars: -1 = the take one bar earlier
+DIVA_OFFSET = int(os.environ.get("DIVA_OFFSET", "0"))   # whole bars: fit.py's offset, -1 earlier, 1 later
 HAS_DIVA = os.path.exists(DIVA_WAV)
 if not HAS_DIVA:
     print(f"no diva yet: {DIVA_WAV} (pin a take with takes.pin)")
@@ -66,7 +69,8 @@ P = kits.band(KIT_NAME, S)
 VERSE = {32: ("It started as a normal night.", NARRATOR_A), 34: ("Then the music came on.", NARRATOR_B),
          36: ("Nobody was ready.", NARRATOR_A), 38: ("Nobody ever is.", NARRATOR_B),
          40: ("The lights went down.", NARRATOR_A), 42: ("<excited> And the room went up!", NARRATOR_B)}
-BREAK = {64: ("Attention please.", ANNOUNCER), 66: ("This is a test of the template.", ANNOUNCER)}
+BREAK = {66: ("Attention please.", ANNOUNCER), 68: ("This is a test of the template.", ANNOUNCER)}   # from bar 66: the
+# first chorus's take may ring into bar 64
 
 
 def say(bar, text, voice, amp=1.0, beat=0.0):
@@ -74,24 +78,40 @@ def say(bar, text, voice, amp=1.0, beat=0.0):
     if not S.live(bar, 2):
         return
     y = V._finish(V.tts(text, voice))
-    put("vox", S.at(bar, beat), y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9)), .5, amp, wet=.12, echo=.15)
+    put("vox", S.at(bar, beat), y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9)), .5, amp * VOICE_GAIN, wet=.12,
+        echo=.15)
 
 
-def diva(bar, amp=1.0):
-    """The pinned ACE-Step take, whole, from the downbeat of `bar`, lightly band-limited."""
+def diva(bar, limit, amp=1.0):
+    """The pinned ACE-Step take, whole, from the downbeat of `bar`, lightly band-limited, DIVA_GAIN louder; cut
+    with an 80 ms fade at the quietest 50 ms of the bar before `limit` if it would run past it (drafts are made
+    2 s longer than their bars, and the DJ's outro from bar 96 must stay drums only)."""
     if not HAS_DIVA or not S.live(bar, DIVA_BARS):
         return
     import takes
     x = e.bandpass(takes.mono(DIVA_WAV), 120, 10000)
-    put("vox", S.at(bar), x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * .1, .5, amp, wet=.25, echo=.12)
+    x = x / (np.sqrt(np.mean(x ** 2)) + 1e-9) * .1 * DIVA_GAIN
+    n = int((limit - bar) * S.bar * e.SR)
+    if len(x) > n:
+        a, w = max(0, n - int(S.bar * e.SR)), int(.05 * e.SR)
+        env = np.convolve(np.abs(x[a:n]), np.ones(w) / w, "valid")
+        cut = a + int(np.argmin(env)) + w // 2 if len(env) else n
+        f = min(int(.08 * e.SR), cut)
+        x = x[:cut].copy()
+        x[len(x) - f:] *= np.linspace(1, 0, f)
+    put("vox", S.at(bar), x, .5, amp, wet=.25, echo=.12)
 
 
 def chorus(bar):
-    """The kit's chorus; its lead line (trance, Hi-NRG) stays out while the diva sings, unless CHORUS_LEAD."""
+    """The kit's chorus; its "lead" bus (the lead line or hook of every kit: trance, Hi-NRG, happy hardcore,
+    eurobeat, ...) stays out while the diva sings, unless CHORUS_LEAD."""
     if HAS_DIVA and not CHORUS_LEAD:
-        keep, P.lead = P.lead, (lambda *a, **k: None)
-        kits.play(KIT_NAME, S, P, bar, "chorus")
-        P.lead = keep
+        put0 = S.put
+        S.put = lambda bus, *a, **k: None if bus == "lead" else put0(bus, *a, **k)
+        try:
+            kits.play(KIT_NAME, S, P, bar, "chorus")
+        finally:
+            del S.put                  # back to the Song's own put
     else:
         kits.play(KIT_NAME, S, P, bar, "chorus")
 
@@ -109,7 +129,7 @@ for bar in range(BARS):
     elif bar < 64 or 80 <= bar < 96:
         chorus(bar)
         if bar in (48, 80):
-            diva(bar + DIVA_OFFSET)
+            diva(bar + DIVA_OFFSET, limit=65 if bar == 48 else 96)
     elif bar < 72:
         kits.play(KIT_NAME, S, P, bar, "break")
         if bar in BREAK:

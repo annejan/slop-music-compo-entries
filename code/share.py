@@ -78,7 +78,7 @@ def encode(src, dst, tags, words, cut=None):
         af = ["-af", f"afade=t=in:d=0.01,afade=t=out:st={length - fade:.4f}:d={fade:.4f}"]
     subprocess.run(["ffmpeg", "-v", "error", "-y", *pre, "-i", src, *af, "-c:a", "libmp3lame", "-b:a", "320k",
                     *tags, *words, "-id3v2_version", "3", dst], check=True)
-    print(f"{os.path.relpath(dst, OUT)}: {os.path.getsize(dst) / 1e6:.1f} MB")
+    print(f"{os.path.relpath(dst, os.path.dirname(os.path.abspath(__file__)))}: {os.path.getsize(dst) / 1e6:.1f} MB")
 
 if __name__ == "__main__":
     import sys

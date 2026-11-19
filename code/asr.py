@@ -96,6 +96,8 @@ if __name__ == "__main__":
     arg = sys.argv[2] if len(sys.argv) > 2 else None
     if arg and os.path.exists(arg):
         text = sheet_text(arg) if arg.endswith(".txt") else open(arg).read()
+        if not text.strip():          # a plain words file named .txt (no [m:ss] lines): its words as they are
+            text = open(arg).read()
     elif arg:
         import share
         n = next(i for i, row in enumerate(share.SONGS, 1) if row[0].startswith(arg.replace("_", "-") + "_"))

@@ -32,17 +32,18 @@ All commands run in `code/` with the project's Python: `cd code`, then `.venv/bi
 ## The surprise round, step by step
 
 The target times are from the rehearsals (S.D.I.O. 33 min, Push It To Prod 26, disco 24 for two songs,
-Overclocked Heart 30). Two hours are plenty: the time goes to listening, not to the machine.
+Overclocked Heart 30, and Pull-Up Resistor 25: happy hardcore made by an agent alone from this playbook on 19 November,
+whose findings are in here). Two hours are plenty: the time goes to listening, not to the machine.
 
 | When | What | How |
 |---|---|---|
 | 0:00 | The genre | The user tells it, or draw one. `kits.py --list` shows the 11 kits with tempo and key. |
 | 0:02 | Three pitches | Three one-line song ideas; the user picks one. Hardware and badge jokes land with this crowd. |
-| 0:05 | The song script | A kit genre: `cp kit_template.py <name>.py`, set `KIT_NAME`, `TITLE`, `DAY` and the spoken lines. Any other genre: `cp template.py <name>.py` and set its knobs (`parts.GROOVES`). `<name>` in lower case with `_`. |
-| 0:08 | The diva | A draft round (below): 4 tunes in about 100 s, best first. The user picks one by ear. |
-| 0:12 | The keeper | `--keep` the pick (about 35 s), bring it to the song, pin it (below). |
+| 0:05 | The song script | A kit genre: `cp kit_template.py <name>.py`, set `KIT_NAME`, `TITLE`, `DAY` (a rehearsal: `"Rehearsal: <genre>"`), `DIVA_GAIN` (dense kits like happy hardcore: about 2.5) and the spoken lines. Any other genre: `cp template.py <name>.py` and set its knobs (`parts.GROOVES`). `<name>` in lower case with `_`. |
+| 0:08 | The diva | A draft round (below): 4 tunes in about 100 s, best first. The user picks one by ear; none good: the next round. |
+| 0:12 | The keeper | `--keep` the pick with `--chords` (about 35 s), use the keeper's own shift, pin it (below). |
 | 0:15 | Spoken parts | The voice cast (below). The first render with Maya voices takes a few minutes more (about 17 s a line, cached after). |
-| 0:20 | First full render | `.venv/bin/python <name>.py` (20-45 s). Then append its `share.SONGS` row and write its lyric sheet now (below): `takes.py --bar`, `produce.py` and `share.py` need them. |
+| 0:20 | First full render | `.venv/bin/python <name>.py` (20-45 s; with new Maya lines about 17 s more a line: the rehearsal's first render took 3 minutes). Check the diva is heard (below). Then append its `share.SONGS` row and write its lyric sheet now (below): `takes.py --bar`, `produce.py` and `share.py` need them. |
 | 0:20-1:15 | Rounds | Previews of one section: `PREVIEW=48-64 .venv/bin/python <name>.py` (8-10 s), the MP3 from `renders/scratch/` to the phone. |
 | 0:45 | Words frozen | |
 | 1:15 | No more changes | |
@@ -59,34 +60,45 @@ inserting it anywhere else gives the later songs the wrong lyric sheets and trac
 ```sh
 .venv/bin/python takes.py <name> --drafts --name chorus --bars 16 --n 4 \
     --caption "1980s Hi-NRG, a powerful dramatic female dance diva, soaring, theatrical, clear words" \
-    --lines "first line|second line|third line|fourth line" \
+    --lines "line 1|line 2|line 3|line 4|line 1|line 2|line 3|line 4" \
     --bpm 128 --key "B minor" --chords "Bm Em A F#" --lift 3
 ```
 
-- One ACE-Step LM run makes 4 tunes, one turbo run renders them: about 100 s for all four. ACE-Step's key is a
+- Give ACE-Step about one line per 2 bars: 8 lines for 16 bars (the chorus twice). With 4 lines in 16 bars the
+  rehearsal's drafts sang 8 bars and then nothing, or noise, or a made-up line; takes.py warns now.
+- One ACE-Step LM run makes 4 tunes, one turbo run renders them: about 80-100 s for all four. ACE-Step's key is a
   lottery (about 1 take in 5 comes back in the asked key), so `fit.py` measures each take against the chords and
   the listen file brings each to the song's tempo and measured key, best first:
-  `renders/ace/takes/<name>/chorus drafts, best first.mp3`. The table is `chorus drafts.txt`: one row per draft
-  with its JSON file, its fit, "at N st" (the shift) and "one bar earlier" or "later" (the offset).
+  `renders/ace/takes/<name>/chorus drafts l1000, best first.mp3` (l1000: the LM seed). The table is
+  `chorus drafts l1000.txt`: one row per draft with its JSON file, its fit, "at N st" (the shift) and "one bar
+  earlier" or "later" (the offset).
+- None of the four good? Another round with the next four tunes: the same command with `--lm-seed 1004` (and
+  1008, ...). Its files carry the new seed, so the first round's table and MP3 stay.
 - `--lift 3`: ACE-Step is asked to sing 3 semitones lower and sings slower; Rubber Band speeds it up to the song's
   tempo and moves it by fit.py's measured shift. The user's verdict on the lifted sound: "really 90s eurotrash,
   love it". Without `--lift` it sings at the song's tempo.
 - The ranking only decides the order. The ear decides the take (an approved take once measured poorly).
 
-The pick, in the better voice (the same tune, about 35 s), then to the song and pinned:
+The pick, in the better voice (about 35 s; 45-60 s with guidance on), measured, then to the song and pinned:
 
 ```sh
-.venv/bin/python takes.py --keep "renders/ace/takes/<name>/<draft>.json"
-.venv/bin/python -c 'import takes; w = takes.finish("<keeper>.wav", 104, 128, -1); print(takes.pin(w, "<name>", "chorus"))'
+.venv/bin/python takes.py --keep "renders/ace/takes/<name>/<draft>.json" --chords "Bm Em A F#"
+.venv/bin/python -c 'import takes; w = takes.finish("<keeper>.wav", 104, 128, 3); print(takes.pin(w, "<name>", "chorus"))'
 ```
 
+- The keeper keeps the draft's words and rhythm, but NOT always its key: in the rehearsals a draft at +3 st came
+  back at -2 with the SFT preset and at +3 with `--guidance 7 --shift 3` (Overclocked Heart: -1 became +5 and +0).
+  So `--chords` measures the keeper, and its line ("keeper ...: fit N % at S st, one bar later") gives the shift
+  and offset to use. If the keeper's fit dropped far below the draft's, try `--keep ... --guidance 7 --shift 3
+  --chords "..."` (the rehearsal's choice: the draft's key kept, every word heard); the user has not compared
+  the two settings by ear yet.
 - `<keeper>.wav` is the path `--keep` prints. `104` is the tempo it was sung at (the `"bpm"` in the draft's JSON:
-  the song's tempo divided by 1.23 with `--lift`, else the song's tempo), `128` the song's tempo, `-1` the shift
-  from the draft's row in `chorus drafts.txt`. `<name>` is the script's name with `_`.
-- `takes.pin` writes `renders/ace/takes/<name>/pinned/chorus.wav`. A song made from `kit_template.py` plays exactly
-  that file and never makes a take itself. If the table said "one bar earlier": `DIVA_OFFSET=-1` for a test,
-  then set `DIVA_OFFSET` in the script.
-- `--keep ... --guidance 7 --shift 3` is the docs' setting (twice the DiT time; an A/B, not heard yet).
+  the song's tempo divided by 1.23 with `--lift`, else the song's tempo), `128` the song's tempo, `3` the shift
+  from the KEEPER's line. `<name>` is the script's name with `_`.
+- `takes.pin` writes `renders/ace/takes/<name>/pinned/chorus.wav` (and its request JSON). A song made from
+  `kit_template.py` plays exactly that file and never makes a take itself. The offset: "one bar earlier" is
+  `DIVA_OFFSET=-1`, "one bar later" `DIVA_OFFSET=1` (a test render; then set it in the script). The template cuts
+  the take before the break and before the drums-only outro, at a quiet moment with a short fade.
 - Other sections in the same voice: `--keep <verse draft>.json --ref <chorus keeper>.wav` (an A/B, not heard yet).
 
 When a take does not fit the band:
@@ -101,6 +113,21 @@ When a take does not fit the band:
   The result is `<take>_snap_natural.wav`.
 - A slower harmony under the take, two chords two bars each (`VAMP=1` in Overclocked Heart; not heard yet).
 - Do NOT re-harmonize the band to the take: the user preferred the kit's chords.
+
+### Is the diva heard? (the first render)
+
+A dense kit buries the diva: in the rehearsal (happy hardcore) Whisper heard none of her words in the chorus at the
+template's level. Raise `DIVA_GAIN` in the script (2.5 there gave 48-55 % of the chorus words in the full mix, as
+much as Overclocked Heart's approved choruses, 49-53 %); `GAIN=vox` would raise the spoken lines too. The ears
+decide; on a day without ears, the software ear per section:
+
+```sh
+.venv/bin/python -c 'import asr; print(asr.hear("renders/<song>.wav", 90.0, 112.0))'     # what it hears, seconds 90-112
+.venv/bin/python asr.py renders/<song>.wav words.txt     # the share of the words heard (a plain words file works)
+```
+
+Read Whisper's made-up phrases ("Thanks for watching", the same word looped) as "not heard". On a whole song it can
+skip a whole chorus; per section it does not.
 
 ### Spoken parts: the voice cast
 

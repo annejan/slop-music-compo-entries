@@ -10,7 +10,7 @@ takes.py --menu [--seeds 1,2,3]      the voice menu: kinds of voice that ACE-Ste
 takes.py [SONG] --drafts --caption "..." --lines "a|b" --bpm 128 --key "B minor" --chords "Bm Em A F#" [--bars 16]
          [--lift 3] [--n 4] [--lm-seed 1000] [--name chorus]
                                      a draft round: 4 tunes from one LM run, turbo, ranked by fit.py, best first
-takes.py --keep DRAFT.json [--guidance 7 --shift 3]    the picked draft again with SFT: same tune, better voice
+takes.py --keep DRAFT.json [--guidance 7 --shift 3] [--chords "Bm Em A F#"]   the pick again with SFT; --chords measures it
 
 --caption: the genre and the voice ("a cappella vocals only, no instruments" is added). --lines: the words, one sung
 line per "|" (respelled for ACE-Step: ace.ACE_SPELL). --bars: the length of the take (8 bars: 16 s at 120 BPM).
@@ -129,7 +129,7 @@ def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, l
     """`n` takes for the ear to choose from, fast: one ace-lm run makes n tunes (lm_batch_size: one prefill, the
     KV cache copied, consecutive LM seeds from lm_seed), one ace-synth run renders them all with the turbo DiT
     (8 steps). Returns [(wav, json, sung_bpm)]; each JSON keeps the LM's codes, so keep() renders a picked tune
-    again with SFT: the same tune and words, the better voice. lift: sung `lift` semitones lower at the tempo
+    again with SFT: the same words and rhythm in the better voice (the key can move: measure the keeper). lift: sung `lift` semitones lower at the tempo
     divided by LIFT_SPEED (finish() brings it to the song; the shift there comes from fit.py and the ear).
     Reproducible: lm_seed fixes the tunes (without it ace-lm draws a random LM seed every run). A second of
     headroom: acestep.cpp cuts the duration to whole seconds and the LM stops about 0.8 s early, which cut the
@@ -160,8 +160,10 @@ def drafts(caption, lyrics, bpm, key, bars, out, name="draft", lang="en", n=4, l
 
 
 def keep(draft_json, guidance=None, shift=None, ref=None):
-    """A picked draft rendered again from its JSON with the SFT DiT (50 steps): the same LM codes, so the same tune
-    and words in the better voice. guidance / shift: the SFT preset is guidance 1.0 (CFG off) and shift 1.0; the
+    """A picked draft rendered again from its JSON with the SFT DiT (50 steps): the same LM codes, so the same words
+    and rhythm in the better voice; but not always the same key (the rehearsals of 19 November: a draft at +3
+    semitones came back at -2 with guidance 1 and at +3 with guidance 7; Overclocked Heart's -1 at +5 and +0), so
+    measure the keeper (takes.py --keep JSON --chords "...") before takes.finish. guidance / shift: the SFT preset is guidance 1.0 (CFG off) and shift 1.0; the
     official docs' guidance on (7.0) with shift 3.0 doubles the DiT time and is an A/B for the ear. ref: a WAV whose
     timbre the voice takes (--ref-audio; about 3 s to encode): the chosen chorus take, so that verse, chorus and rap
     sound like one singer."""
@@ -211,8 +213,9 @@ def pin(wav, song, label):
     os.makedirs(d, exist_ok=True)
     dst = os.path.join(d, f"{slug(label)}.wav")
     shutil.copyfile(wav, dst)
-    for j in (wav[:-4] + ".json", re.sub(r"_(\d+)\.wav$", r"\1.json", wav)):
-        if j != wav and os.path.exists(j):
+    stem = re.sub(r"_to[\d.]+_[+-]\d+$", "", wav[:-4])      # a finished file: its keeper or draft
+    for j in (stem + ".json", re.sub(r"_(\d+)$", r"\1", stem) + ".json"):
+        if os.path.exists(j):
             shutil.copyfile(j, dst[:-4] + ".json")
             break
     return dst
@@ -225,6 +228,9 @@ def draft_round(caption, lines, bpm, key, chords, bars=16, tag="Chorus", lift=0,
     table. The ear picks; keep() renders the pick in SFT."""
     import fit
     out = out or os.path.join(TAKES, "drafts")
+    if len(lines) * 2 < bars - 1:     # the rehearsal of 19 November: 4 lines in 16 bars sang 8 bars, then nothing
+        print(f"note: {len(lines)} lines for {bars} bars; ACE-Step sings about one line in 2 bars: repeat the "
+              f"chorus ({bars // 2} lines)", file=sys.stderr)
     got = drafts(caption, ace_words(lines, tag), bpm, key, bars, out, name, lang, n, lm_seed, lift)
     if not got:
         return None
@@ -240,8 +246,10 @@ def draft_round(caption, lines, bpm, key, chords, bars=16, tag="Chorus", lift=0,
         where = {0: "", -1: ", one bar early", 1: ", one bar late"}.get(o, "")
         parts += [label(f"Draft {WORDS[b + 1] if b + 1 < len(WORDS) else b + 1}{where}."),
                   master.master(roomy(e.bandpass(mono(fin), 80, 12000), .15), -16.0), gap(.5)]
-    mp3 = listen(parts, os.path.join(out, f"{name} drafts, best first.mp3"), f"{name}: drafts, best first")
-    open(os.path.join(out, f"{name} drafts.txt"), "w").write("\n".join(rows) + "\n")
+    # the LM seed in the names: a second round (another --lm-seed) keeps the first round's table and listen file
+    mp3 = listen(parts, os.path.join(out, f"{name} drafts l{lm_seed}, best first.mp3"),
+                 f"{name}: drafts l{lm_seed}, best first")
+    open(os.path.join(out, f"{name} drafts l{lm_seed}.txt"), "w").write("\n".join(rows) + "\n")
     print("\n".join(rows))
     return mp3, ranked
 
@@ -403,13 +411,19 @@ def main():
     ap.add_argument("--n", type=int, default=4, help="drafts: how many (default 4)")
     ap.add_argument("--lm-seed", type=int, default=1000, help="drafts: the first LM seed (the tunes)")
     ap.add_argument("--name", default="draft", help="drafts: the files' name")
-    ap.add_argument("--keep", metavar="JSON", help="render a picked draft's JSON again with SFT")
+    ap.add_argument("--keep", metavar="JSON", help="render a picked draft's JSON again with SFT (with --chords: its own fit)")
     ap.add_argument("--guidance", type=float, help="keep: the DiT's guidance (SFT preset 1.0; docs 7.0)")
     ap.add_argument("--shift", type=float, help="keep: the schedule shift (SFT preset 1.0; docs 3.0)")
     ap.add_argument("--ref", help="keep: a WAV for the voice's timbre (--ref-audio), e.g. the chosen chorus take")
     a = ap.parse_args()
     if a.keep:
-        print(keep(a.keep, a.guidance, a.shift, a.ref))
+        w = keep(a.keep, a.guidance, a.shift, a.ref)
+        print(w)
+        if w and a.chords:            # the keeper's own fit: SFT can sing the tune in another key than its draft
+            import fit
+            sung = json.load(open(a.keep))["bpm"]
+            r = (w, fit.band_fit(w, a.chords.split(), sung), fit.cut_end(w))
+            print(f"keeper, sung at {sung} BPM: {fit.describe(r)}")
         return
     if a.drafts:
         if not (a.caption and a.lines and a.bpm and a.key and a.chords):
