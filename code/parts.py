@@ -60,7 +60,9 @@ TONIC = {"C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5, "F#
 CONVERTIBLE = {"lem"}          # voicebanks whose renders may be converted into other voices (licences)
 # the produced singer's defaults (the Badge's pick): DS_VOICE, DS_TIMBRE, DS_STACK, DS_HARMONY override them
 LEM = dict(ds_voice="Civet", timbre="qwen_diva", stack="sing_qwen_pop,sing_maya_pop,octave,vocoder",
-           harmony="sing_maya_soul")
+           harmony="sing_maya_soul", pitch="rule", tension="25", vib="1.6", breath="1", dyn="1")
+# pitch rule, vib 1.6, tension 25: the user's pick of three on Can You Tell? (20 November: "C is best, but still far
+# from ideal"); Lem has no pitch model, without them every note is flat ("almost GLaDOS, but more dead inside")
 
 CHOIR = ["en_US-ljspeech-high", "en_US-kristin-medium", "en_GB-cori-high", "en_US-hfc_male-medium",
          "en_GB-alan-medium"]
@@ -304,9 +306,15 @@ class Band:
         if not self.ds or not self.ds_part.notes:
             return
         S = self.S
-        bank, pitch = self.diva_voice.split(":", 1)[1], os.environ.get("DS_PITCH", "0.5")
+        bank = self.diva_voice.split(":", 1)[1]
+        d = LEM if bank == "lem" else {}
+        knob = lambda k, v: os.environ.get("DS_" + k.upper(), d.get(k, v))   # noqa: E731
+        pitch = knob("pitch", "0.5")
+        tension, vib = float(knob("tension", "0")), float(knob("vib", "1"))
+        breaths, dyn = knob("breath", "0") == "1", knob("dyn", "0") == "1"
         sing = lambda part, seed, timbre: part.render(bank=bank, voice=self.ds_voice, pitch=pitch,  # noqa: E731
-                                                      seed=seed, timbre=timbre)
+                                                      seed=seed, timbre=timbre, tension=tension, vib=vib,
+                                                      breaths=breaths, dynamics=dyn)
         y = sing(self.ds_part, int(os.environ.get("DS_SEED", "1")), self.timbre)
 
         def env(spans, n, base=1.0, mul=False):

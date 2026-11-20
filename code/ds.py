@@ -36,7 +36,8 @@ class Part:
     def note(self, t, midi, seconds, word):
         self.notes.append((float(t), int(midi), float(seconds), word))
 
-    def score(self, bank, voice, lang="en", hard=False, expr=None, vibrato="5.6:30:250"):
+    def score(self, bank, voice, lang="en", hard=False, expr=None, vibrato="5.6:30:250", tension=0.0,
+              breaths=False):
         """warble's JSON score: every note at its own tick (480 a beat), so a lyric can be any word (in the text
         format, a word such as "time" is read as a directive)."""
         notes = []                            # [start, midi, seconds, word]; gaps under 30 ms join the note before
@@ -46,6 +47,16 @@ class Part:
                 if t - (p[0] + p[2]) < .03:    # a tiny gap (or an overlap): the earlier note ends where this begins
                     p[2] = max(t - p[0], .01)
             notes.append([t, m, d, w])
+        if breaths:   # a breath ("AP") in the rest before each phrase, up to .3 s, ending where the phrase starts
+            with_ap, end = [], None
+            for t, m, d, w in notes:
+                gap = t - end if end is not None else t
+                if gap >= .3:
+                    a = min(.3, gap - .05)
+                    with_ap.append([t - a, m - 5, a, "AP"])
+                with_ap.append([t, m, d, w])
+                end = t + d
+            notes = with_ap
         tick = self.bpm / 60 * 480
         out = []
         for t, m, d, w in notes:
@@ -57,29 +68,68 @@ class Part:
                     n["controls"]["vib"] = vibrato
             elif expr is not None:   # the pitch model's expressiveness: 1 its own melody, 0 close to the notes
                 n["controls"] = {"expr": float(expr)}
+            if tension:              # DiffSinger tension offset (openutau units): + pressed, powerful; - soft
+                n.setdefault("controls", {})["tenc"] = float(tension)
             out.append(n)
         return {"bpm": self.bpm, "tracks": [{"name": "lead", "bank": find_bank(bank), "lang": lang, "voice": voice,
                                              "notes": out}]}
 
-    def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12, pitch="free", timbre=None):
+    def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12, pitch="free", timbre=None,
+               tension=0.0, vib=1.0, breaths=False, dynamics=False):
         """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing).
         pitch: "free" (the bank's pitch model), "hard" (flat notes, the model off: the voice locks to the synths),
         or a number 0..1, the model's expressiveness (0.5: half its own scoops and overshoots).
         timbre: another singer for the same performance (convert()): a voice.CAST name or voice ("maya_diva",
-        "qwen_diva", ...) or a WAV of the voice. The notes, words and timing stay the score's."""
-        y = self._sing(bank, voice, lang, seed, pitch)
+        "qwen_diva", ...) or a WAV of the voice. The notes, words and timing stay the score's.
+        pitch="rule": warble's rule tuner draws the pitch (scoops, overshoot, vibrato, drift: tuned()), for a bank
+        without a pitch model such as Lem; vib scales its vibrato depth. tension: the DiffSinger tension offset.
+        breaths: a breath before each phrase. dynamics: each phrase louder on its high notes, long notes swell
+        (a bank without an energy model sings every note equally loud)."""
+        y = self._sing(bank, voice, lang, seed, pitch, tension, vib, breaths)
         if timbre:
             y = convert(y, timbre)
+        if dynamics:
+            y = y * self.dynamics(len(y))
         env = np.sqrt(np.convolve(y ** 2, np.ones(2048) / 2048, "same"))
         sung = env > .1 * env.max()
         rms = np.sqrt(np.mean(y[sung] ** 2)) if sung.any() else 1.0
         return y * (level / (rms + 1e-9))
 
-    def _sing(self, bank, voice, lang, seed, pitch):
+    def dynamics(self, n):
+        """A gain curve for the part: within a phrase (notes less than .3 s apart) the highest notes 1.0, the lowest
+        .8; a note longer than half a second swells from .85 to 1.0 by 60 % of its length, then eases to .9."""
+        g = np.ones(n)
+        notes = sorted(self.notes)
+        phrases, cur, end = [], [], None
+        for t, m, d, w in notes:
+            if cur and t - end >= .3:
+                phrases.append(cur)
+                cur = []
+            cur.append((t, m, d))
+            end = t + d
+        if cur:
+            phrases.append(cur)
+        for ph in phrases:
+            lo, hi = min(m for _, m, _ in ph), max(m for _, m, _ in ph)
+            for t, m, d in ph:
+                i, j = int(t * SR), min(n, int((t + d) * SR))
+                if j <= i:
+                    continue
+                a = .8 + .2 * ((m - lo) / (hi - lo) if hi > lo else 1.0)
+                x = np.linspace(0, 1, j - i)
+                swell = np.interp(x, [0, .6, 1], [.85, 1.0, .9]) if d > .5 else np.ones(j - i)
+                g[i:j] = a * swell
+        k = int(.03 * SR)
+        return np.convolve(g, np.ones(k) / k, "same")
+
+    def _sing(self, bank, voice, lang, seed, pitch, tension=0.0, vib=1.0, breaths=False):
         """warble's raw take of the part (cached)."""
         hard = pitch == "hard"
-        expr = None if pitch in ("hard", "free") else float(pitch)
-        text = json.dumps(self.score(bank, voice, lang, hard=hard, expr=expr), ensure_ascii=False)
+        expr = None if pitch in ("hard", "free", "rule") else float(pitch)
+        score = self.score(bank, voice, lang, hard=hard, expr=expr, tension=tension, breaths=breaths)
+        if pitch == "rule":
+            score = tuned(score, vib=vib)
+        text = json.dumps(score, ensure_ascii=False)
         key = hashlib.sha1(f"{text}|{seed}".encode()).hexdigest()[:16]
         path = os.path.join(CACHE, f"ds{key}.npy")
         if os.path.exists(path):
@@ -98,6 +148,37 @@ class Part:
             os.makedirs(CACHE, exist_ok=True)
             np.save(path, y)
         return y
+
+
+def tuned(score, tuner="rule", vib=1.0):
+    """The score with warble's auto-tuner's pitch controls on every note: a bank without a pitch model (Lem: "rule
+    (no dspitch)") otherwise sings flat notes joined by plain bends, "almost GLaDOS but more dead inside" (the user,
+    20 November). The rule tuner: a scoop or a bend with overshoot into each note by its interval, vibrato on the
+    long notes with a late onset and a depth that grows with the length, a slow drift, a small fall at a phrase end.
+    warble tunes only its text format, which reads some words as directives, so the controls are copied back onto
+    the JSON notes in order."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "part.json")
+        with open(path, "w") as fh:
+            json.dump(score, fh, ensure_ascii=False)
+        env = dict(os.environ, WARBLE_BANKS=BANKS)
+        r = subprocess.run([WARBLE, "tune", "auto", path, tuner], env=env, capture_output=True, text=True, cwd=tmp)
+        if r.returncode:
+            raise RuntimeError(f"warble tune failed:\n{r.stderr[-2000:]}\n{r.stdout[-2000:]}")
+        lines = open(path).read().splitlines()
+    notes = [n for n in score["tracks"][0]["notes"]]
+    body = [ln.split() for ln in lines[lines.index(next(x for x in lines if x.startswith("voice "))) + 1:]]
+    ctl = [[kv.split("=", 1) for kv in toks[3:] if "=" in kv] for toks in body if toks and toks[0] != "r"]
+    if len(ctl) != len(notes):
+        raise RuntimeError(f"warble tune: {len(ctl)} tuned notes for {len(notes)}")
+    for n, kvs in zip(notes, ctl):
+        c = dict(kvs)
+        if "vbr" in c and vib != 1.0:     # vbr=length,period,depth,in,out,shift,drift: the depth scaled
+            f = c["vbr"].split(",")
+            f[2] = f"{float(f[2]) * vib:.1f}"
+            c["vbr"] = ",".join(f)
+        n.setdefault("controls", {}).update(c)
+    return score
 
 
 def find_bank(name):
@@ -120,8 +201,23 @@ REF_TEXT = ("Tonight the lights are low, and the music takes me home. I can feel
             "word, every single night.")
 
 
+# sung references (AI-made singers, clean takes): a singing voice as the timbre gives a sung tone, a TTS voice saying
+# REF_TEXT a speaking one. name: (take, from s, to s)
+SUNG = {"sung_oh_diva": ("renders/ace/takes/overclocked_heart/chorus_s2_bm_128.wav", 0.0, 14.0)}  # ACE-Step, the
+#                                                                     Overclocked Heart diva the user approved
+# As the lead's timbre on Can You Tell? it "sounds like it's through a pipe" (20 November): not used.
+
+
 def reference(timbre):
-    """A WAV of the voice: the path itself, or REF_TEXT said by a voice.CAST name or voice (cached)."""
+    """A WAV of the voice: the path itself, a SUNG cut, or REF_TEXT said by a voice.CAST name or voice (cached)."""
+    if timbre in SUNG:
+        src, a, b = SUNG[timbre]
+        path = os.path.join(CACHE, f"ref_{timbre}.wav")
+        if not os.path.exists(path):
+            y = _read(os.path.join(HERE, src))
+            os.makedirs(CACHE, exist_ok=True)
+            _write(path, y[int(a * SR):int(b * SR)] / (np.abs(y).max() + 1e-9) * .8)
+        return path
     if os.path.exists(timbre):
         return timbre
     import voice as V
