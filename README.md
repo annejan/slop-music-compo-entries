@@ -218,8 +218,8 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
   "Lem the Shapeshifter DS 2.5"; https://wik-wav.neocities.org/lem-voicebank-tos) is the source for voice
   conversion: `DIVA=ds:lem DS_VOICE=Civet DS_TIMBRE=qwen_diva`. Its vocoder, `pc_nsf_hifigan_44.1k_hop512_128bin_2025.02`
   (openvpi, CC BY-NC-SA), sits in its `dsvocoder/`. Hanami's terms forbid her renders as a conversion source: no
-  `DS_TIMBRE` with Hanami. A word on a sixteenth is too short for a real singer ("flash" became "fs"): give each sung
-  word an eighth or more (`DS_LINE` in the Badge).
+  `DS_TIMBRE` with Hanami. A short word on a high note needs time: "flash" on an eighth at 134 BPM became "fs" or
+  "fish", on a quarter it says "flash" (`DS_LINE` in the Badge).
 
 ## ACE-Step
 

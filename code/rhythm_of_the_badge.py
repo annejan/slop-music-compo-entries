@@ -311,8 +311,8 @@ def words_on(notes, words):
 DS = DIVA.startswith("ds:")
 DS_GAIN = []                 # (from, to, amp, last word at, its echo) per line
 DS_TEXT = {"into + the ee lek trih sih tee": "into + the electricity + + + +"}
-# Lines rewritten for a real singer: "flash" on a sixteenth (112 ms) left no room for f-l-a-sh ("fs me", 20
-# November); an eighth for each word, the rests given to the words
+# Lines rewritten for a real singer: "flash" on an eighth (224 ms; the line spans 2 bars) came out "fs me" or "fish
+# me"; on a quarter it says "flash" (the user's pick of five, 20 November). The rests are given to the words
 DS_LINE = {"flash me flash me one more time": "E5 - D5 - E5 - D5 - B4 - D5 - E5 - - -"}
 if DS:
     import ds
