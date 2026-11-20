@@ -523,11 +523,11 @@ MUTED = set(filter(None, os.environ.get("MUTE", "").split(",")))
 # the song's render in renders/ (share.py, dj.py and produce.py would take it for the song). The A/B switches of
 # 19 November are here too: a full CROWD=1 render overwrote nothing only by luck (the playbook check).
 AB_VARS = ("PREVIEW", "SOLO", "MUTE", "GAIN", "AIR", "CAST", "CROWD", "CHOPS", "VAMP", "HARM", "SINGER", "NARRATORS",
-           "DIVA_WAV", "DIVA_OFFSET", "DIVA_GAIN",
+           "DIVA_WAV", "DIVA_OFFSET", "DIVA_GAIN", "DS_WAV",
            # the songs' own voice and sound switches (their defaults are the approved renders; DIVA stays out: a
            # template song may pick its diva with it)
            "RAPPER", "SYSTEM", "MOUTH", "CHOIR", "CHORUS_STYLE", "KEYS", "ROOM", "GLITCH", "VOX_HUMAN", "VOXCHAIN",
-           "UNMASK", "DS_VOICE", "DS_PITCH", "DIVA_SEED", "TAKE_SEED", "MC_SEED", "MC_VOICE", "SINGER_SEED",
+           "UNMASK", "DS_VOICE", "DS_PITCH", "DS_SEED", "DS_TIMBRE", "DS_STACK", "DIVA_SEED", "TAKE_SEED", "MC_SEED", "MC_VOICE", "SINGER_SEED",
            "SOUL_VINYL", "SOUL_VOICE", "SOUL_STEM", "SOUL_PIPER", "SOUL_PACE", "SOUL_OURS", "SOUL_ACE")
 
 

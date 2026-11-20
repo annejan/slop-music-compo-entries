@@ -342,7 +342,10 @@ for bar in range(112):
 
 if DS:   # the whole diva part in one take, each line at its own level
     y = DS_PART.render(bank=V.DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
-                       pitch=os.environ.get("DS_PITCH", "0.5"))   # hard | free | 0..1 (see ds.py); 0.5: half her own
+                       pitch=os.environ.get("DS_PITCH", "0.5"),
+                       seed=int(os.environ.get("DS_SEED", "1")), timbre=os.environ.get("DS_TIMBRE"))
+    # DS_PITCH: hard | free | 0..1 (see ds.py), 0.5: half her own scoops; DS_SEED: another take of the same score;
+    # DS_TIMBRE: another singer for the same performance (a voice.CAST name: maya_diva, qwen_diva; ds.convert)
     g = np.ones(len(y))
     for t0, t1, a in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a

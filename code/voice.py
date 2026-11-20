@@ -168,6 +168,23 @@ CAST = {
     # Piper (CPU, instant): the voices of the songs so far, the characters and the Dutch ones
     "piper_ryan": "en_US-ryan-high", "piper_lessac": "en_US-lessac-high", "piper_alan": "en_GB-alan-medium",
     "piper_spike": "en_GB-semaine-medium#spike", "piper_poppy": "en_GB-semaine-medium#poppy",
+    # singers: timbres for ds.convert (DiffSinger sings our notes, SoulX SVC gives it this voice; ds.render(timbre=))
+    "sing_maya_soul": "maya:Realistic female voice in the 30s age with a american accent. Low pitch, warm timbre, slow "
+                      "pacing, passionate tone delivery at high intensity, entertainment domain, singer role, soulful "
+                      "delivery. A soulful gospel diva.#304",
+    "sing_maya_pop": "maya:Realistic female voice in the 20s age with a american accent. High pitch, bright timbre, "
+                     "moderate pacing, joyful tone delivery at medium intensity, entertainment domain, singer role, "
+                     "melodic delivery. A sweet pop singer.#304",
+    "sing_maya_tenor": "maya:Realistic male voice in the 20s age with a american accent. Normal pitch, smooth timbre, "
+                       "moderate pacing, warm tone delivery at medium intensity, entertainment domain, singer role, "
+                       "melodic delivery. A pop tenor.#304",
+    "sing_qwen_soul": "qwen:Female, adult, rich warm deep voice. A soulful gospel diva, powerful chest voice, warm "
+                      "vibrato.#42",
+    "sing_qwen_pop": "qwen:Female, young adult, clear bright voice. A sweet pop singer, airy and light, smooth.#42",
+    "sing_qwen_husky": "qwen:Female, adult, husky smoky alto voice. An intimate late-night singer, breathy and low.#42",
+    "sing_qwen_tenor": "qwen:Male, young adult, clear bright tenor voice. A eurodance lead singer, smooth and "
+                       "strong.#42",
+    "sing_qwen_baritone": "qwen:Male, adult, warm deep baritone voice. A smooth crooner, velvety and rich.#42",
     "piper_pim": "nl_NL-pim-medium", "piper_ronnie": "nl_NL-ronnie-medium", "piper_nathalie": "nl_BE-nathalie-medium",
 }
 ROLES = {"mc": "maya_hype", "narrator": "maya_narrator", "announcer": "maya_announcer", "robot": "maya_machine",

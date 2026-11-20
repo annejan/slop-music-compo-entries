@@ -128,7 +128,8 @@ Optional parts, outside this repository:
 | [dx7.py](code/dx7.py) | a DX7-style FM synthesizer: six operators, the 32 algorithms, feedback, keyboard scaling (ported from an NPU demo in `~/Projects/npu`) |
 | [room.py](code/room.py) | a 3-D wave simulation of the air in a room; its impulse response is a song's reverb (also from the NPU demos) |
 | [voice.py](code/voice.py) | Piper speaks each word, WORLD puts it on our notes (see Voices) |
-| [ds.py](code/ds.py) | a DiffSinger voicebank sings a whole part, through warble |
+| [ds.py](code/ds.py) | a DiffSinger voicebank sings a whole part, through warble; `render(timbre=...)` sings the same performance again in another voice (SoulX-Singer SVC, audio.cpp, about 2x real time on the GPU, cached): our notes and words, a Maya or Qwen voice from `voice.CAST` (`maya_diva`, `qwen_diva`, the `sing_*` cast) |
+| [vfx.py](code/vfx.py) | the vocal rack for a dry sung part: `vocoder()` (the voice's formants on a saw-chord carrier, consonants kept), `autotune()` (fit.snap hard or natural), `harmony()` (Rubber Band stacks, formants kept), `stack()` (doubles: other takes, other singers, panned and a few ms apart) |
 | [parts.py](code/parts.py), [template.py](code/template.py) | ready parts and a whole song to start from, for the surprise themes |
 | [ace.py](code/ace.py) | one command for ACE-Step: render, stems, ACE-Step, mastering, MP3. `ace.gpu()` is the one GPU door for every ACE-Step step (ace.py, takes.py, produce.py, gag.py): a lock (`ACE_LOCK=FILE`, default `renders/.gpu.lock`) so queues take turns, a timeout that kills the whole job, one retry after a VAE crash |
 | [produce.py](code/produce.py) | a song section by section from a project file: an ACE-Step take of the whole song, then per section our own render, the take, or a `repaint` with several seeds of which the ear picks the best; everything cached |
@@ -162,7 +163,8 @@ Render options (environment variables):
 | `AIR=1` | made-up highs above 11 kHz on every voice (voice.air: harmonics of the 5-11 kHz band): all our speech stops at 11-12 kHz (Piper is 22.05 kHz; Kokoro, Qwen3-TTS and Maya1 make 24 kHz) against about 20 kHz for the music. An A/B, off by default |
 | `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
 | `VOX_HUMAN=1` | a sung voice as a singer instead of a tuner (0..1, default 0: hard tuned, the robot diva): scoops into the notes, a slow drift, a vibrato of its own, a swell on long notes, breath at their end (`voice._humanise`) |
-| `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
+| `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`; Lem: `Civet`, `Phascogale`, `Quoll`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
+| `DS_SEED`, `DS_TIMBRE`, `DS_STACK` | another take of the same score; another singer for the same performance (a `voice.CAST` name, e.g. `qwen_diva`); the Badge only: doubles from takes 2 and 3 in two more voices, `DS_STACK=sing_qwen_pop,sing_maya_pop[,octave][,vocoder]` |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
 | `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); on by default (6), `UNMASK=0` for the old mix |
@@ -211,6 +213,13 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
   BY-NC-SA 4.0) sings in her "Fragrance" (power) mode. Her terms forbid
   pitch-shifting finished renders, so DiffSinger sings the key changes itself.
   [TIGER](https://tigermeat.xyz/cast/tiger/) (male, CC BY-NC-ND) is installed as well.
+  **Lem the Shapeshifter DS 2.5** (bank `lem`, English 12.5 h, voice colours Civet, Phascogale, Quoll; realistic
+  range A2-D5; commercial use and use outside singing synthesizers allowed; a release must name it exactly
+  "Lem the Shapeshifter DS 2.5"; https://wik-wav.neocities.org/lem-voicebank-tos) is the source for voice
+  conversion: `DIVA=ds:lem DS_VOICE=Civet DS_TIMBRE=qwen_diva`. Its vocoder, `pc_nsf_hifigan_44.1k_hop512_128bin_2025.02`
+  (openvpi, CC BY-NC-SA), sits in its `dsvocoder/`. Hanami's terms forbid her renders as a conversion source: no
+  `DS_TIMBRE` with Hanami. A word on a sixteenth is too short for a real singer ("flash" became "fs"): give each sung
+  word an eighth or more (`DS_LINE` in the Badge).
 
 ## ACE-Step
 

@@ -311,6 +311,9 @@ def words_on(notes, words):
 DS = DIVA.startswith("ds:")
 DS_GAIN = []                 # (from, to, amp, last word at, its echo) per line
 DS_TEXT = {"into + the ee lek trih sih tee": "into + the electricity + + + +"}
+# Lines rewritten for a real singer: "flash" on a sixteenth (112 ms) left no room for f-l-a-sh ("fs me", 20
+# November); an eighth for each word, the rests given to the words
+DS_LINE = {"flash me flash me one more time": "E5 - D5 - E5 - D5 - B4 - D5 - E5 - - -"}
 if DS:
     import ds
     DS_PART = ds.Part(S.bpm)
@@ -323,7 +326,7 @@ def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo
     key = key_of(bar) if key is None else key
     pairs = words_on(S.notes(bar, line, key, bars), words)
     if DS:
-        ds_pairs = words_on(S.notes(bar, line, key, bars), DS_TEXT.get(words, words))
+        ds_pairs = words_on(S.notes(bar, DS_LINE.get(words, line), key, bars), DS_TEXT.get(words, words))
         for w, ns in ds_pairs:
             for k, (t, m, d) in enumerate(ns):
                 DS_PART.note(t, m, d * .97, w if k == 0 else "+")
@@ -463,12 +466,28 @@ for bar in range(120):
 
 if DS:   # the whole diva part in one take, each line at its own level
     y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
-                       pitch=os.environ.get("DS_PITCH", "0.5"))   # hard | free | 0..1 (see ds.py); 0.5: her own scoops, half
+                       pitch=os.environ.get("DS_PITCH", "0.5"),
+                       seed=int(os.environ.get("DS_SEED", "1")), timbre=os.environ.get("DS_TIMBRE"))
+    # DS_PITCH: hard | free | 0..1 (see ds.py), 0.5: half her own scoops; DS_SEED: another take of the same score;
+    # DS_TIMBRE: another singer for the same performance (a voice.CAST name: maya_diva, qwen_diva; ds.convert)
     g = np.ones(len(y))
     for t0, t1, a, _, _ in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a
     y = y * g
     S.put("vox", 0.0, y, .5, 1.0, wet=.18, echo=.05)
+    if os.environ.get("DS_STACK"):   # a produced stack (a test render): DS_STACK="voiceL,voiceR[,octave,vocoder]"
+        import vfx
+        names = os.environ["DS_STACK"].split(",")
+        bank, mode = DIVA.split(":", 1)[1], os.environ.get("DS_VOICE", "Fragrance")
+        for seed, timbre, pan, delay in ((2, names[0], .12, .012), (3, names[1], .88, .019)):
+            d = DS_PART.render(bank=bank, voice=mode, pitch=os.environ.get("DS_PITCH", "0.5"), seed=seed,
+                               timbre=timbre) * g
+            S.put("vox", delay, d, pan, .55, wet=.22, echo=.05)     # the doubles: other takes, other singers
+        if "octave" in names:
+            S.put("vox", 0.0, vfx.harmony(y, [12], [1.0])[:len(y)] - y, .5, .22, wet=.3, echo=.08)
+        if "vocoder" in names:
+            S.put("vox", 0.0, vfx.vocoder(y, [(chord_of(b), key_of(b)) for b in range(int(len(y) / e.SR / S.bar) + 1)], S.bpm),
+                  .5, .35, wet=.25, echo=.1)
     for t0, t1, a, last, echo_last in DS_GAIN:   # the echo on each line's last word, as the Piper diva has it
         i, j = int((last - .08) * e.SR), min(int(t1 * e.SR), len(y))
         if j > i:            # straight into the echo send (centre: cos 45 degrees on each side)
