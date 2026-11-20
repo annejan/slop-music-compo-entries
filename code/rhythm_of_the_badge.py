@@ -23,8 +23,10 @@ The key change is two semitones up, for the last chorus. The first and last 16 b
         96-103 the hoover riff, the lasers, "feel the rhythm of the badge" twice more
        104-119 outro: drums only
 
-The voices are Piper (TTS) re-pitched with WORLD (voice.py): the diva is en_US-amy-medium, the MC is
-en_GB-alan-medium pitched down, and the chorus stacks other voices around the diva (CHOIR below).
+The diva is sung on our own notes by Lem the Shapeshifter DS 2.5 (DiffSinger, voice Civet), converted into the
+Qwen diva voice (SoulX-Singer SVC), with doubles from two more takes in two more voices, an octave and a vocoder
+(DS_* below; the user's pick, 20 November). The MC is Piper's en_GB-alan-medium pitched down with WORLD (voice.py);
+the chorus stacks Piper voices around the diva (CHOIR below). DIVA=en_US-amy-medium: the old Piper diva.
 The reverb is a simulated big dark club (room.py).
 """
 import functools
@@ -44,7 +46,7 @@ S = e.Song(bpm=134, bars=120)
 STEP = S.step
 B = S.beat
 
-DIVA = os.environ.get("DIVA", "en_US-amy-medium")
+DIVA = os.environ.get("DIVA", "ds:lem")
 RAPPER = os.environ.get("RAPPER", "en_GB-alan-medium")
 # CROWD=1 (19 November, an A/B; research/toolkit-2026-11-19.md): crowd moments. The title in the echo while the riff
 # comes in (the first title came 28 s after the music); the band stops for the bar before the last chorus
@@ -306,14 +308,26 @@ def words_on(notes, words):
     return out
 
 
-# DIVA=ds:hanami: a DiffSinger voicebank sings the diva's part (ds.py) at the written pitch, in one take; the
+# DIVA=ds:lem (DIVA=ds:hanami for Segfault's singer): a DiffSinger voicebank sings the diva's part (ds.py) at the written pitch, in one take; the
 # Piper choir stays below her. The words as written for it (real words; "+" holds a word over the next note)
 DS = DIVA.startswith("ds:")
 DS_GAIN = []                 # (from, to, amp, last word at, its echo) per line
 DS_TEXT = {"into + the ee lek trih sih tee": "into + the electricity + + + +"}
 # Lines rewritten for a real singer: "flash" on an eighth (224 ms; the line spans 2 bars) came out "fs me" or "fish
-# me"; on a quarter it says "flash" (the user's pick of five, 20 November). The rests are given to the words
-DS_LINE = {"flash me flash me one more time": "E5 - D5 - E5 - D5 - B4 - D5 - E5 - - -"}
+# me"; on a quarter it says "flash" (the user's pick of five, 20 November). Even quarters had no punch: the rests
+# after "me" and short "one, more" give it back, with "flash" 4 dB up (DS_ACCENT; the user's pick of four)
+DS_LINE = {"flash me flash me one more time": "E5 - D5 . E5 - D5 . B4 . D5 . E5 - - -"}
+# DS_FLASH (a test switch): another rhythm for that line ("E5 - D5 - E5 - D5 - B4 - D5 - E5 - - -": even quarters)
+if os.environ.get("DS_FLASH"):
+    DS_LINE["flash me flash me one more time"] = os.environ["DS_FLASH"]
+DS_ACCENT = []               # (from, to) of each sung "flash"
+# the production (the user's pick of four, 20 November): Lem's Civet sings, the Qwen diva's voice; doubles from takes
+# 2 and 3 in the Qwen pop and Maya pop voices, a soft octave above, a vocoder on the chords. DS_STACK= (empty): the
+# lead alone; DS_TIMBRE= (empty): Lem's own voice. Only for Lem: Hanami's terms forbid conversion
+LEM = DIVA == "ds:lem"
+DS_VOICE = os.environ.get("DS_VOICE", "Civet" if LEM else "Fragrance")
+DS_TIMBRE = os.environ.get("DS_TIMBRE", "qwen_diva" if LEM else "") or None
+DS_STACK = os.environ.get("DS_STACK", "sing_qwen_pop,sing_maya_pop,octave,vocoder" if LEM else "")
 if DS:
     import ds
     DS_PART = ds.Part(S.bpm)
@@ -330,6 +344,8 @@ def diva(bar, line, words, bars=2, amp=1.0, choir=0.0, big=False, key=None, echo
         for w, ns in ds_pairs:
             for k, (t, m, d) in enumerate(ns):
                 DS_PART.note(t, m, d * .97, w if k == 0 else "+")
+            if w == "flash":
+                DS_ACCENT.append((ns[0][0] - .06, ns[-1][0] + ns[-1][2]))
         DS_GAIN.append((S.at(bar), S.at(bar + bars), amp, ds_pairs[-1][1][0][0], echo_last))
     for i, (w, ns) in enumerate(pairs):
         last = i == len(pairs) - 1
@@ -465,20 +481,22 @@ for bar in range(120):
         diva(bar, *CHORUS[0], amp=.8, choir=.4, echo_last=.6)
 
 if DS:   # the whole diva part in one take, each line at its own level
-    y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=os.environ.get("DS_VOICE", "Fragrance"),
+    y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=DS_VOICE,
                        pitch=os.environ.get("DS_PITCH", "0.5"),
-                       seed=int(os.environ.get("DS_SEED", "1")), timbre=os.environ.get("DS_TIMBRE"))
+                       seed=int(os.environ.get("DS_SEED", "1")), timbre=DS_TIMBRE)
     # DS_PITCH: hard | free | 0..1 (see ds.py), 0.5: half her own scoops; DS_SEED: another take of the same score;
     # DS_TIMBRE: another singer for the same performance (a voice.CAST name: maya_diva, qwen_diva; ds.convert)
     g = np.ones(len(y))
     for t0, t1, a, _, _ in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a
+    for t0, t1 in DS_ACCENT:
+        g[int(t0 * e.SR):int(t1 * e.SR)] *= 10 ** (float(os.environ.get("DS_ACCENT", "4")) / 20)
     y = y * g
     S.put("vox", 0.0, y, .5, 1.0, wet=.18, echo=.05)
-    if os.environ.get("DS_STACK"):   # a produced stack (a test render): DS_STACK="voiceL,voiceR[,octave,vocoder]"
+    if DS_STACK:   # the produced stack: DS_STACK="voiceL,voiceR[,octave][,vocoder]"
         import vfx
-        names = os.environ["DS_STACK"].split(",")
-        bank, mode = DIVA.split(":", 1)[1], os.environ.get("DS_VOICE", "Fragrance")
+        names = DS_STACK.split(",")
+        bank, mode = DIVA.split(":", 1)[1], DS_VOICE
         for seed, timbre, pan, delay in ((2, names[0], .12, .012), (3, names[1], .88, .019)):
             d = DS_PART.render(bank=bank, voice=mode, pitch=os.environ.get("DS_PITCH", "0.5"), seed=seed,
                                timbre=timbre) * g

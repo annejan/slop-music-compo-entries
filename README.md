@@ -161,10 +161,11 @@ Render options (environment variables):
 | `MUTE=vox` | render without these buses; the rest keeps its reverb and echo: stems |
 | `GAIN=keys:0.5` | these buses' gains times these factors (comma separated), for mixing tests without editing the song |
 | `AIR=1` | made-up highs above 11 kHz on every voice (voice.air: harmonics of the 5-11 kHz band): all our speech stops at 11-12 kHz (Piper is 22.05 kHz; Kokoro, Qwen3-TTS and Maya1 make 24 kHz) against about 20 kHz for the music. An A/B, off by default |
-| `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` for DiffSinger (Segfault, the Badge) |
+| `DIVA=<voice>`, `RAPPER=<voice>` | a Piper voice name, or `espeak:`, `flite:`, `festival:` or `mimic3:` plus a voice; `DIVA=ds:hanami` or `ds:lem` for DiffSinger (Segfault: Hanami; the Badge: Lem by default, `DIVA=en_US-amy-medium` for its old Piper diva) |
 | `VOX_HUMAN=1` | a sung voice as a singer instead of a tuner (0..1, default 0: hard tuned, the robot diva): scoops into the notes, a slow drift, a vibrato of its own, a swell on long notes, breath at their end (`voice._humanise`) |
-| `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`; Lem: `Civet`, `Phascogale`, `Quoll`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
-| `DS_SEED`, `DS_TIMBRE`, `DS_STACK` | another take of the same score; another singer for the same performance (a `voice.CAST` name, e.g. `qwen_diva`); the Badge only: doubles from takes 2 and 3 in two more voices, `DS_STACK=sing_qwen_pop,sing_maya_pop[,octave][,vocoder]` |
+| `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`; Lem: `Civet`, the Badge's default, `Phascogale`, `Quoll`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
+| `DS_SEED`, `DS_TIMBRE`, `DS_STACK` | another take of the same score; another singer for the same performance (a `voice.CAST` name, e.g. `qwen_diva`); the Badge only: doubles from takes 2 and 3 in two more voices, `DS_STACK=sing_qwen_pop,sing_maya_pop[,octave][,vocoder]`. The Badge's defaults with Lem: `DS_TIMBRE=qwen_diva`, the whole stack; empty for off |
+| `DS_FLASH`, `DS_ACCENT` | the Badge only: another rhythm for its "flash me" line (notes as in `Song.notes`), and "flash" that many dB up (default 4) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
 | `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); on by default (6), `UNMASK=0` for the old mix |
@@ -219,7 +220,7 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
   conversion: `DIVA=ds:lem DS_VOICE=Civet DS_TIMBRE=qwen_diva`. Its vocoder, `pc_nsf_hifigan_44.1k_hop512_128bin_2025.02`
   (openvpi, CC BY-NC-SA), sits in its `dsvocoder/`. Hanami's terms forbid her renders as a conversion source: no
   `DS_TIMBRE` with Hanami. A short word on a high note needs time: "flash" on an eighth at 134 BPM became "fs" or
-  "fish", on a quarter it says "flash" (`DS_LINE` in the Badge).
+  "fish", on a quarter it says "flash" (`DS_LINE` in the Badge); rests after "me" keep the punch.
 
 ## ACE-Step
 
