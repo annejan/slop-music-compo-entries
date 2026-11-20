@@ -141,19 +141,39 @@ def convert(y, timbre, steps=SVC_STEPS):
     path = os.path.join(CACHE, f"svc{key}.npy")
     if os.path.exists(path):
         return np.load(path)
-    with tempfile.TemporaryDirectory() as tmp:
-        src, out, log = (os.path.join(tmp, n) for n in ("src.wav", "out.wav", "svc.log"))
-        peak = np.abs(y).max() + 1e-9
-        _write(src, y / peak * .8)
-        if not ace.gpu([SVC_CLI, "--task", "svc", "--family", "soulx_singer", "--model", SVC_MODEL, "--backend",
-                        "vulkan", "--device", "0", "--threads", "8", "--audio", src, "--voice-ref", ref,
-                        "--request-option", f"num_steps={steps}", "--out", out], log, 3600):
-            raise RuntimeError(f"SoulX SVC failed:\n{open(log, errors='replace').read()[-2000:]}")
-        z = _read(out)
-    z = np.pad(z, (0, max(0, len(y) - len(z))))[:len(y)] * (peak / .8)
+    peak = np.abs(y).max() + 1e-9
+    z = np.zeros(len(y))
+    for i, j in sung(y):        # only the sung stretches: a song's part is mostly silence, and SVC time is length
+        with tempfile.TemporaryDirectory() as tmp:
+            src, out, log = (os.path.join(tmp, n) for n in ("src.wav", "out.wav", "svc.log"))
+            _write(src, y[i:j] / peak * .8)
+            if not ace.gpu([SVC_CLI, "--task", "svc", "--family", "soulx_singer", "--model", SVC_MODEL, "--backend",
+                            "vulkan", "--device", "0", "--threads", "8", "--audio", src, "--voice-ref", ref,
+                            "--request-option", f"num_steps={steps}", "--out", out], log, 3600):
+                raise RuntimeError(f"SoulX SVC failed:\n{open(log, errors='replace').read()[-2000:]}")
+            seg = _read(out)
+        z[i:j] = np.pad(seg, (0, max(0, j - i - len(seg))))[:j - i]
+    z = z * (peak / .8)
     os.makedirs(CACHE, exist_ok=True)
     np.save(path, z)
     return z
+
+
+def sung(y, gap=2.0, pad=.3):
+    """(from, to) sample ranges where `y` sings: silences longer than `gap` seconds left out, `pad` s kept around."""
+    env = np.sqrt(np.convolve(y ** 2, np.ones(2205) / 2205, "same"))
+    on = np.flatnonzero(env > .01 * (env.max() + 1e-12))
+    if not len(on):
+        return []
+    spans, a, b = [], on[0], on[0]
+    for k in on[1:]:
+        if k - b > gap * SR:
+            spans.append((a, b))
+            a = k
+        b = k
+    spans.append((a, b))
+    p = int(pad * SR)
+    return [(max(0, a - p), min(len(y), b + p)) for a, b in spans]
 
 
 def _write(path, y):

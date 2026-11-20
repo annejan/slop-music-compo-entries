@@ -166,6 +166,7 @@ Render options (environment variables):
 | `DS_VOICE`, `DS_PITCH` | the DiffSinger voice mode (default `Fragrance`; Lem: `Civet`, the Badge's default, `Phascogale`, `Quoll`), and `free`, `hard` or 0..1 for how freely it moves between notes (default 0.5) |
 | `DS_SEED`, `DS_TIMBRE`, `DS_STACK` | another take of the same score; another singer for the same performance (a `voice.CAST` name, e.g. `qwen_diva`); the Badge only: doubles from takes 2 and 3 in two more voices, `DS_STACK=sing_qwen_pop,sing_maya_pop[,octave][,vocoder]`. The Badge's defaults with Lem: `DS_TIMBRE=qwen_diva`, the whole stack; empty for off |
 | `DS_FLASH`, `DS_ACCENT` | the Badge only: another rhythm for its "flash me" line (notes as in `Song.notes`), and "flash" that many dB up (default 4) |
+| `DS_HARMONY` | a template song (`parts.Band`) with `DIVA=ds:lem`: the voice of the real harmony, a third above on lines with choir (default `sing_maya_soul`; it replaces the Piper choir). There `DS_ACCENT=word:dB,...` too, and `DS_TIMBRE`, `DS_STACK` default to the Badge's pick; empty for off (Lem alone: fast, for shaping the melody) |
 | `CHORUS_STYLE`, `CHOIR` | how the Segfault chorus is stacked (default `choir`: five other voices) |
 | `KEYS=fm`, `ROOM=noise` | Warm Boot with the simple FM Rhodes and the noise reverb |
 | `UNMASK=6` | pads, keys and lead make room (up to 6 dB, 250-6000 Hz) only where and in the band where the voice sings (`engine.make_room`); on by default (6), `UNMASK=0` for the old mix |
@@ -221,6 +222,9 @@ eurodance "robot diva". The rap is spoken and fitted to the bar.
   (openvpi, CC BY-NC-SA), sits in its `dsvocoder/`. Hanami's terms forbid her renders as a conversion source: no
   `DS_TIMBRE` with Hanami. A short word on a high note needs time: "flash" on an eighth at 134 BPM became "fs" or
   "fish", on a quarter it says "flash" (`DS_LINE` in the Badge); rests after "me" keep the punch.
+  `parts.Band(diva_voice="ds:lem")` has the whole chain for any template song (`timbre`, `stack`, `harmony`,
+  `accent`); a conversion converts only the sung stretches (`ds.sung`): 8 bars of chorus in four voices take about
+  3 minutes.
 
 ## ACE-Step
 
