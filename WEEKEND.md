@@ -55,7 +55,40 @@ eurodance", 128, "Bm", 112),`. Append it at the END of `share.SONGS` in `code/sh
 inserting it anywhere else gives the later songs the wrong lyric sheets and track numbers). The lyric sheet is
 `../lyrics/14-my_song.txt` (the repository's `lyrics/` folder, not `code/lyrics`), with `[m:ss]` times.
 
-### The diva: a draft round
+### The diva: our notes, a real singer (20 November: the route for songs that need proper vocals)
+
+ACE-Step "does too much": it makes a song, not a clean vocal. For control, write the melody and the words in the
+script and let a DiffSinger singer sing them in a Maya or Qwen voice. The background and every A/B are in
+[research/vocals-2026-11-20.md](research/vocals-2026-11-20.md).
+
+1. `cp template.py <name>.py`, and in it `DIVA = os.environ.get("DIVA", "ds:lem")`. Give `parts.Band(...,
+   diva_voice=DIVA, timbre=..., stack=..., harmony=..., accent={...})`:
+   - eurodance: `timbre="qwen_diva"`, `stack="sing_qwen_pop,sing_maya_pop,octave,vocoder"`,
+     `harmony="sing_maya_soul"` (the defaults);
+   - 90's mellow house: one singer, `timbre="sing_qwen_soul"`, `stack=""`, `harmony=""`. Keep it sparse: an empty
+     groove with one simple vocal on top ("the originals back then were more empty grooving").
+2. Write the lines (`P.diva(bar, "G4 - Bb4 . C5 - - -", "can you tell", bars=1)`):
+   - steady notes around G4-A4, at most D5 (Lem: A2-D5);
+   - stressed and consonant-heavy words on a quarter note at least;
+   - rests and an accent (3-4 dB) on the hook word.
+3. Shape the melody fast with Lem alone, then check the words:
+
+   ```sh
+   DS_TIMBRE= DS_STACK= DS_HARMONY= PREVIEW=48-64 .venv/bin/python <name>.py
+   DS_TIMBRE= DS_STACK= DS_HARMONY= SOLO=vox PREVIEW=48-64 .venv/bin/python <name>.py
+   .venv/bin/python -c 'import asr; print(asr.hear("renders/scratch/<the solo preview>.wav", 0, 30))'
+   ```
+4. Render the whole song with the chain (no switches). Each voice is converted once and then cached; only the sung
+   stretches are converted (8 bars in four voices: about 3 minutes; a whole song: 10-25 minutes).
+5. The singer is alive by default: warble's rule tuner for the pitch (Lem has no pitch model; without it every note
+   is flat, "almost GLaDOS"), vibrato 1.6, tension 25, a breath before each phrase, phrase dynamics
+   (`DS_PITCH`, `DS_VIB`, `DS_TENSION`, `DS_BREATH`, `DS_DYN`).
+6. Check mono for phone speakers (the user listens without headphones): the 300-4000 Hz energy should drop by less
+   than 1.5 dB in mono.
+
+Credit "Lem the Shapeshifter DS 2.5" in the lyric sheet. Do not convert Hanami (her terms).
+
+### The diva: a draft round (ACE-Step; for throwaway songs)
 
 ```sh
 .venv/bin/python takes.py <name> --drafts --name chorus --bars 16 --n 4 \
@@ -245,6 +278,10 @@ render older than its script. It shows the loudness but does not check it. It st
 ## What the ears decided
 
 Keep:
+- Our notes sung by Lem, converted into a Maya or Qwen voice, with the rule-tuned pitch, breaths and dynamics
+  (20 November: "both are vast improvement"); for eurodance the stack with doubles, octave and vocoder.
+- 90's mellow house sparse: an empty groove, one simple vocal.
+- Hooks with rests and an accented word ("flash me . flash me ."), not even quarter notes.
 - ACE-Step diva takes, a cappella (4B LM and SFT DiT), played WHOLE over our band (disco, big beat, Hi-NRG).
 - The 3-semitone lift of an ACE take ("90s eurotrash").
 - Maya and Qwen voices for spoken parts ("Maya wins"); Piper Ryan and Lessac as plain-speech MCs.
@@ -253,6 +290,9 @@ Keep:
 - The kit's own chords under a take.
 
 Avoid (lost by ear):
+- A flat DiffSinger pitch ("almost GLaDOS, but more dead inside"); a sung reference as the timbre ("through a
+  pipe"); WORLD-retuned TTS singing ("flanging robot").
+- A busy mellow house song (organ, strings, shaker, doubles, harmony, crowd calls).
 - A free ACE take laid over our synthesized voices ("improvises like an idiot").
 - ACE cover or re-sing of our vocal stem: a near copy, "very subtle".
 - ACE lego (vocals over our instrumental): noise.
@@ -306,4 +346,6 @@ snapped takes; the house chops; one singer across sections; the lyric tags; air 
 | A spoken line: Piper, Kokoro / Qwen / Maya | about 1 s / about 3 s / about 17 s |
 | A voice audition, 15 voices | about 3 minutes |
 | SoulX voice conversion, 36 s of singing | 1:42 at 16 steps, 4:07 at 32 |
+| A Lem chorus of 8 bars in four voices (lead, two doubles, harmony) | about 3 minutes, cached after |
+| A whole song with the Lem chain | 10-25 minutes (only the sung stretches are converted) |
 | Seed-VC voice conversion, 36 s | about 8.5 minutes |

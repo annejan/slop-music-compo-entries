@@ -36,6 +36,8 @@ SONGS = [
     ("push-it-to-prod_124bpm_Em.wav", "Push It To Prod", "Rehearsal: big beat", 124, "Em", 112),
     ("uptime-fever_120bpm_Am.wav", "Uptime Fever", "Rehearsal: disco", 120, "Am", 112),
     ("rubber-duck_120bpm_Dm.wav", "Rubber Duck", "Rehearsal: disco", 120, "Dm", 112),
+    ("common-ground_120bpm_Cm.wav", "Common Ground", "Saturday: 90's mellow house", 120, "Cm", 112),
+    ("can-you-tell_136bpm_Cm.wav", "Can You Tell?", "Sunday: eurodance", 136, "Cm", 128),
 ]
 
 
