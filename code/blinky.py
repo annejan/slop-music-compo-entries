@@ -3,12 +3,13 @@
 theme of the AI slop music compo.
 
 blinky.py [OUT.wav]   (default renders/blinky_132bpm_D.wav)
+PREVIEW=32-40 blinky.py   only bars 32 to 39 (a test render in renders/scratch/)
+DIVA=piper blinky.py      the old diva (Piper re-pitched, with the Piper choir), for an A/B: to renders/scratch/
 
 Every note and every sound here is written by Claude, in this file: no samples, no loops. 1998 at a children's
 party, but the birthday child is a badge: a bouncy pulse riff, pizzicato strings, a happy piano (a rave piano
-with a DX7 E.Piano under it), a toy glockenspiel, an offbeat bass, LED "blink" bleeps, a slide whistle, a cute
-high diva (en_US-lessac) with a choir of other voices in the chorus, a man who raps "hello world" and a gang of men
-who shout "hey!". In the break the LED blinks B-L-I-N-K-Y in Morse code: 63 sixteenths, so it fits four bars.
+with a DX7 E.Piano under it), a toy glockenspiel, an offbeat bass, LED "blink" bleeps, a slide whistle, a diva
+(singer D, below), a man who raps "hello world" and a gang of men who shout "hey!". In the break the LED blinks B-L-I-N-K-Y in Morse code: 63 sixteenths, so it fits four bars.
 The key change is two semitones up, for the last chorus. The first and last 16 bars are drums only, for the DJ.
 
   bars   0-15  intro: kick, hats, clap (drums only)
@@ -22,6 +23,13 @@ The key change is two semitones up, for the last chorus. The first and last 16 b
         80-87  post-chorus: the riff, the gang, the slide whistle
         88-95  winding down: the LED blinks BLINKY again, "light up the sky" in the echo
         96-111 outro: drums only
+
+The diva is parts.Band's produced singer (diva_voice="ds:lem", "singer D"): Lem the Shapeshifter DS 2.5 sings our
+notes and words, an octave below the written line (Lem's range: the chorus sits A3-A4, B3-B4 after the key change),
+SoulX-Singer SVC turns the take into the Qwen diva's voice; in the chorus doubles from takes 2 and 3 in the Qwen pop
+and Maya pop voices, a soft octave up and a vocoder, and a real harmony a third above (Maya soul; a third below on a
+line where above would pass D5) instead of the Piper choir; "blink" 3 dB louder. Shape the melody with Lem alone:
+DS_TIMBRE= DS_STACK= DS_HARMONY= SOLO=vox PREVIEW=32-40.
 """
 import os
 import sys
@@ -30,6 +38,7 @@ import numpy as np
 
 import engine as e
 import dx7
+import parts
 import room
 import voice as V
 
@@ -38,11 +47,13 @@ S = e.Song(bpm=132, bars=112)
 STEP = S.step
 B = S.beat
 
-DIVA = "en_US-lessac-high"           # segfault has hfc_female; lessac is the roundest of the girls up high
+SINGER = os.environ.get("DIVA", "ds:lem")   # "piper": the old diva below, for an A/B
+PIPER = SINGER == "piper"
+DIVA = "en_US-lessac-high"           # the old diva: segfault has hfc_female; lessac is the roundest of the girls up high
 RAPPER = "en_US-bryce-medium"         # the "hello world" man
 GANG = [("en_US-joe-medium", .2), ("en_US-john-medium", .8), ("en_GB-alan-medium", .35),
         ("en_US-norman-medium", .65)]   # the men who shout "hey!", panned around the room
-# the choir around the diva: left double, right double, a third above; in the last chorus a man an octave down
+# the old diva's choir: left double, right double, a third above; in the last chorus a man an octave down
 CHOIR = ["en_US-amy-medium", "en_GB-jenny_dioco-medium", "en_GB-cori-high", "en_US-hfc_male-medium"]
 
 HOOK = ["D", "A", "Bm", "G"]                       # the intro, the break, the post-chorus
@@ -60,6 +71,20 @@ def chord_of(bar):
     if 32 <= bar < 48 or 64 <= bar < 80:
         return CHORUS_PROG[bar % 8]
     return HOOK[bar % 4]
+
+
+# singer D: Lem sings, the Qwen diva's voice, the eurodance stack (the Badge's and Can You Tell?'s chain). The lead
+# is qwen_diva, not the brighter sing_qwen_pop: the bubblegum is in the band and the toy glockenspiel; the doubles
+# already carry sing_qwen_pop, and the lead in the same voice would blur into them.
+TIMBRE = "qwen_diva"
+STACK = "sing_qwen_pop,sing_maya_pop,octave,vocoder"
+HARMONY = "sing_maya_soul"
+ACCENT = {"blink": 3}
+OCTAVE = -12                  # Lem sings the written line an octave lower: written, the chorus reaches F#5-A5
+if not PIPER:
+    P = parts.Band(S, CHORUS_PROG, scale="major", key_of=key_of, tonic="D", diva_voice=SINGER, timbre=TIMBRE,
+                   stack=STACK, harmony=HARMONY, accent=ACCENT)
+    P.chord = chord_of        # the section's chord, for the vocoder
 
 
 # ---------------------------------------------------------------- our own instruments
@@ -252,23 +277,25 @@ def blinks(bar, steps=(12, 14), m=86, amp=1.0):
 
 
 # ---------------------------------------------------------------- the diva: the melody and its words
-# the verse, a line every two bars, on eighths (the words as the voice should say them, one per note)
+# the verse, a line every two bars, on eighths (the words as the voice should say them, one per note; then the
+# words as DiffSinger reads them, None when the same)
 VERSE = [
-    (". A4 B4 A4 F#4 D5 - D5 - D5 - - - . . .", "I'm a lit tle ell ee dee"),
-    (". A4 B4 A4 F#4 E5 - E5 - C#5 - - - . . .", "on a lit tle pee see bee"),
-    (". F#4 F#4 A4 B4 D5 - - B4 A4 - - - . . .", "when you write a one to me"),
-    (". G4 A4 B4 - . B4 C#5 E5 - - - - - . .", "I light up can't you see"),
+    (". A4 B4 A4 F#4 D5 - D5 - D5 - - - . . .", "I'm a lit tle ell ee dee", "I'm a little + el ee dee"),
+    (". A4 B4 A4 F#4 E5 - E5 - C#5 - - - . . .", "on a lit tle pee see bee", "on a little + pee see bee"),
+    (". F#4 F#4 A4 B4 D5 - - B4 A4 - - - . . .", "when you write a one to me", None),
+    (". G4 A4 B4 - . B4 C#5 E5 - - - - - . .", "I light up can't you see", None),
 ]
 # the chorus, a line a bar, on sixteenths
+BLINKY = "blink blink blinky +"
 CHORUS = [
-    ("A4 - - A4 - - D5 - F#5 - - - - - . .", "blink blink blink kee"),
-    ("E5 - E5 - D5 - C#5 - - - A4 - - - . .", "on and off all night"),
-    ("B4 - - B4 - - D5 - F#5 - - - - - . .", "blink blink blink kee"),
-    ("E5 - D5 - B4 - - A4 B4 - - - - - . .", "red and green and white"),
-    ("F#5 - - E5 - - D5 - E5 - D5 - - - . .", "tog gull me bay bee"),
-    ("E5 - C#5 - D5 - E5 - A5 - - - - - . .", "gee pee eye oh high"),
-    ("B4 - - B4 - - D5 - E5 - - - - - . .", "blink blink blink kee"),
-    ("A4 - - C#5 - - D5 - E5 - - - - - . .", "light up the sky"),
+    ("A4 - - A4 - - D5 - F#5 - - - - - . .", "blink blink blink kee", BLINKY),
+    ("E5 - E5 - D5 - C#5 - - - A4 - - - . .", "on and off all night", None),
+    ("B4 - - B4 - - D5 - F#5 - - - - - . .", "blink blink blink kee", BLINKY),
+    ("E5 - D5 - B4 - - A4 B4 - - - - - . .", "red and green and white", None),
+    ("F#5 - - E5 - - D5 - E5 - D5 - - - . .", "tog gull me bay bee", "toggle + me baby +"),
+    ("E5 - C#5 - D5 - E5 - A5 - - - - - . .", "gee pee eye oh high", None),
+    ("B4 - - B4 - - D5 - E5 - - - - - . .", "blink blink blink kee", BLINKY),
+    ("A4 - - C#5 - - D5 - E5 - - - - - . .", "light up the sky", None),
 ]
 
 
@@ -296,8 +323,39 @@ def words_on(notes, words):
     return out
 
 
-def diva(bar, line, words, bars=1, amp=1.0, choir=0.0, big=False, echo_last=.35):
-    """The diva sings a line: a word on its notes, the consonants before the beat, an echo on the last word.
+def diva(bar, line, words, ds_words=None, bars=1, amp=1.0, choir=0.0, big=False, echo_last=.35):
+    """A line for the diva: singer D (Lem, sing()), or with DIVA=piper the old one (piper_diva())."""
+    if PIPER:
+        piper_diva(bar, line, words, bars, amp, choir, big, echo_last)
+    else:
+        sing(bar, line, words, ds_words, bars, amp, choir * (1.2 if big else 1.0), echo_last)
+
+
+def sing(bar, line, words, ds_words=None, bars=1, amp=1.0, harm=0.0, echo=.35):
+    """Singer D sings a line, an octave below the written notes. harm > 0 (the chorus): the doubles at .55 and a
+    harmony a third above at amp * harm (a third below when above would pass D5); else the doubles at the verse's
+    level. echo: the last word into the delay."""
+    if not S.live(bar, bars):
+        return
+    P.diva(bar, line, words, bars=bars, amp=amp, octave=OCTAVE - 12, ds_words=ds_words)   # Band: +12
+    t0, t1, a, last, _ = P.ds_lines[-1]
+    P.ds_lines[-1] = (t0, t1, a, last, echo)
+    if not harm:
+        return
+    P.ds_double[-1] = (t0, t1, .55)
+    key = key_of(bar)
+    pairs = parts.words_on(S.notes(bar, line, key, bars), ds_words or words)
+    sung = [m + OCTAVE for _, ns in pairs for _, m, _ in ns]
+    up = max(P.step_up(m, 2, key) for m in sung) <= 74          # D5
+    for w, ns in pairs:
+        for k, (t, m, d) in enumerate(ns):
+            m = P.step_up(m + OCTAVE, 2, key) if up else P.step_down(m + OCTAVE, 2, key)
+            P.ds_harm.note(t, m, d * .97, w if k == 0 else "+")
+    P.ds_choir.append((t0, t1, amp * harm))
+
+
+def piper_diva(bar, line, words, bars=1, amp=1.0, choir=0.0, big=False, echo_last=.35):
+    """The old diva sings a line: a word on its notes, the consonants before the beat, an echo on the last word.
     choir: how loud the other voices are (a double left, a double right, a third above in the middle); with
     big=True a man an octave down as well."""
     key = key_of(bar)
@@ -321,8 +379,8 @@ def diva(bar, line, words, bars=1, amp=1.0, choir=0.0, big=False, echo_last=.35)
 
 
 def chorus_line(bar, big=False):
-    line, words = CHORUS[bar % 8]
-    diva(bar, line, words, choir=.42, big=big)
+    line, words, ds_words = CHORUS[bar % 8]
+    diva(bar, line, words, ds_words, choir=.42, big=big)
     # the toy glockenspiel doubles the hook, under the voices
     for t, m, d in S.notes(bar, line, key_of(bar)):
         S.put("lead", t, dx7.note("toy_glock", m, min(d, B), .8, tail=.6), .6, .3, wet=.3, echo=.15)
@@ -444,10 +502,14 @@ def arrange():
 
 def main():
     arrange()
+    if not PIPER:
+        P.finish()            # singer D's whole part: Lem's take, converted, stacked
     cut = [(0, 18000), (S.at(56), 18000), (S.at(56) + .05, 3000), (S.at(60), 3000), (S.at(64) - .02, 12000),
            (S.at(64), 18000), (S.n / e.SR, 18000)]
     here = os.path.dirname(os.path.abspath(__file__))
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "renders", "blinky_132bpm_D.wav")
+    if PIPER and len(sys.argv) < 2:     # the A/B: never in place of the song's render (DIVA is no engine switch)
+        out = os.path.join(here, "renders", "scratch", "blinky_132bpm_D-divapiper.wav")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     S.mixdown(out, {"drums": .95, "perc": .7, "bass": .85, "pads": .85, "keys": .85, "lead": .6, "vox": 1.8,
                     "fx": .6},

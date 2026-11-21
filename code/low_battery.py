@@ -23,9 +23,17 @@ bars are drums only, for the DJ.
         88-103 running down: ten, five, one percent; "shutting down, good night"; the music tape-stops
        104-119 outro: drums only
 
-Voices (Piper, code/voices/): en_GB-jenny_dioco-medium sings the chops, en_US-amy-medium is the laptop's
-system voice (through a small speaker), en_GB-cori-high, en_US-kristin-medium and en_US-ljspeech-high are the
-"ooh" choir. The reverb is a simulated room (room.py): a bedroom, 4.5 x 3.6 x 2.6 m.
+The singer (singer D, 21 November): Lem the Shapeshifter DS 2.5 (DiffSinger) sings the written notes and words
+of the chops (parts.Band, diva_voice="ds:lem"), and SoulX-Singer SVC turns her into a husky, intimate Qwen voice
+(sing_qwen_husky: a lullaby wants a soft late-night voice, not a gospel diva). One singer, no doubles, no harmony,
+no vocoder, no "ooh" choir: sparse, like the records. The sampler tricks stay: the "ch-ch-ch" stutter and the two
+reversed words are cut from her own take. Lines that go above D5 ("charging") are sung an octave lower. Shape her
+fast with Lem alone: DS_TIMBRE= SOLO=vox PREVIEW=48-56 .venv/bin/python low_battery.py.
+SINGER=en_GB-jenny_dioco-medium: the approved version, Piper re-pitched and chopped, with the Piper "ooh" choir.
+
+Voices (Piper, code/voices/): en_US-amy-medium is the laptop's system voice (through a small speaker); with
+SINGER=<a Piper voice> that voice sings the chops and en_GB-cori-high, en_US-kristin-medium and
+en_US-ljspeech-high are the "ooh" choir. The reverb is a simulated room (room.py): a bedroom, 4.5 x 3.6 x 2.6 m.
 """
 import os
 import sys
@@ -34,6 +42,7 @@ import numpy as np
 
 import engine as e
 import dx7
+import parts
 import room
 import voice as V
 
@@ -43,7 +52,8 @@ STEP = S.step
 B = S.beat
 SWING = .16 * STEP          # 58 % shuffle on the sixteenths
 
-SINGER = os.environ.get("SINGER", "en_GB-jenny_dioco-medium")
+SINGER = os.environ.get("SINGER", "ds:lem")    # SINGER=en_GB-jenny_dioco-medium: the approved Piper chops
+LEM = SINGER.startswith("ds:")
 SYSTEM = os.environ.get("SYSTEM", "en_US-amy-medium")
 CHOIR = ["en_GB-cori-high", "en_US-kristin-medium", "en_US-ljspeech-high"]
 
@@ -67,6 +77,17 @@ def sw(k):
     """The time of sixteenth k in a bar, swung."""
     return k * STEP + (SWING if k % 2 else 0)
 
+
+# singer D: Lem sings the chops' notes and words, one Qwen voice, nothing on top (90's mellow house: sparse)
+TIMBRE = "sing_qwen_husky"          # soft, breathy, intimate: a lullaby (sing_qwen_soul: a gospel diva, too big)
+P = parts.Band(S, PROG, diva_voice=SINGER, timbre=TIMBRE, stack="", harmony="", accent={"battery": 2},
+               verse_double=0.0) if LEM else None
+# no breath before her phrases (parts.LEM has one): before "low battery" it came out "hello battery" (Whisper, Lem
+# alone, bars 32-63: "low battery" 4 of 8 without the breath, 2 of 8 with it; "ten percent" 4 of 4 against 3 of 4).
+# DS_BREATH=1 brings it back.
+BREATHS = False
+if LEM:
+    P.ds_gain = 1.7       # a lullaby: a little under Common Ground's 2.0 (her vox bus -11 LUFS, the hook every bar)
 
 # ---------------------------------------------------------------- my own sounds
 # a DX7 patch for the melody: the E.Piano's shape, but the modulators lower and scaled down hard over the keyboard,
@@ -260,8 +281,54 @@ def chop(bar, line, words, amp=1.0, pan=.5, echo=.25, cut=None):
         S.put("vox", t + swing - li, y, pan, amp, wet=.2, echo=echo)
 
 
+# the words as Lem reads them (real English words; "+" holds a word over the next note)
+DS_WORDS = {"ten per cent": "ten percent +",
+            "five per cent": "five percent +", "one per cent": "one percent +", "char jing": "charging +",
+            "full lee charged": "fully + charged", "a hun dred per cent": "a hundred + percent +",
+            "wide a wake": "wide awake +"}
+
+
+# Lem's rhythm where the chop's slurred: "char" on a quarter (on an eighth Whisper heard "touching", "chanting")
+DS_LINES = {". . . . . . F5 - D5 - - - . . . .": ". . . . F5 - - - D5 - - - . . . .",
+            ". . A4 - - . C5 - A4 - . . A4 . A4 .": ". . A4 - - . C5 - A4 - . . A4 - A4 -",   # "low low": eighths
+            ". . D5 - . C5 - - A4 - - - . . . .": ". . D5 - - C5 - - A4 - - - . . . .",   # "ten" longer
+            ". . A4 - - . C5 - D5 - - . . . . .": ". . A4 - - - C5 - D5 - - . . . . ."}   # "fully" legato: one word
+CHAR_AT = 1.0                       # the beat where Lem's "charging" starts (the stutter is cut from it)
+
+
+def vocal(bar, line, words, amp=1.0, echo=.25, cut=None):
+    """A line of the chops: Lem's take (singer D) or the Piper chop. Lem sings at the written pitch, a line that
+    goes above D5 an octave lower (her realistic top)."""
+    if not LEM:
+        chop(bar, line, words, amp, echo=echo, cut=cut)
+        return
+    line = DS_LINES.get(line, line)
+    top = max(e.midi(tok) for tok in line.split() if tok not in "-.")
+    P.diva(bar, line, DS_WORDS.get(words, words), amp=amp, octave=-24 if top > 74 else -12)
+
+
+_lem = {}          # Lem's lead take, as Band.finish rendered it (for the stutter and the reversed words)
+_after = []        # the sampler tricks on her take, done once it exists
+
+
+def lem_cut(t0, t1):
+    """A piece of Lem's take from t0 to t1 seconds, at the level she has in the mix."""
+    y = _lem.get("y")
+    if y is None:
+        return np.zeros(1)
+    i, j = max(int(t0 * e.SR), 0), min(int(t1 * e.SR), len(y))
+    return y[i:j] * float(os.environ.get("DS_GAIN", P.ds_gain)) if j > i else np.zeros(1)
+
+
 def stutter(bar, k, word, m, n=3, amp=1.0):
-    """ch-ch-ch-: the first sixteenth of a word fired n times, then the word."""
+    """ch-ch-ch-: the first sixteenth of a word fired n times, then the word. With Lem: the start of her "charging"
+    (on CHAR_AT) in the same bar."""
+    if LEM:
+        lead = .12            # her "ch" starts about .17 s before the note
+        _after.append(lambda: [S.put("vox", S.at(bar) + sw(k + j) - lead,
+                                     fade(lem_cut(S.at(bar, CHAR_AT) - lead, S.at(bar, CHAR_AT) + .45 * STEP)), .5,
+                                     amp * (.7 + .1 * j), wet=.15, echo=.1) for j in range(n)])
+        return
     li, y = sung(word, [(m, STEP * 2)], SINGER)
     piece = y[:int((li + STEP * .45) * e.SR)].copy()
     piece[-200:] *= np.linspace(1, 0, 200)
@@ -269,8 +336,26 @@ def stutter(bar, k, word, m, n=3, amp=1.0):
         S.put("vox", S.at(bar) + sw(k + j) - li, piece, .5, amp * (.7 + .1 * j), wet=.15, echo=.1)
 
 
-def reverse_chop(bar, word, m, amp=1.0):
-    """A word sung, reversed, swelling into the downbeat of bar."""
+def fade(y, ms=5):
+    """A short fade at both ends (a sampler's click guard)."""
+    y = np.array(y, float)
+    k = min(int(ms / 1000 * e.SR), len(y) // 2)
+    if k:
+        y[:k] *= np.linspace(0, 1, k)
+        y[-k:] *= np.linspace(1, 0, k)
+    return y
+
+
+def reverse_chop(bar, word, m, amp=1.0, src=None):
+    """A word sung, reversed, swelling into the downbeat of bar. With Lem: the word cut from her take, src =
+    (from, to) in seconds."""
+    if LEM:
+        def rev():
+            y = fade(lem_cut(*src))[::-1]
+            y = y * np.linspace(0, 1, len(y)) ** 2
+            S.put("vox", S.at(bar) - len(y) / e.SR, y, .5, amp, wet=.5, echo=.2)
+        _after.append(rev)
+        return
     li, y = sung(word, [(m, B * 2)], SINGER)
     y = y[::-1] * np.linspace(0, 1, len(y)) ** 2
     S.put("vox", S.at(bar) - len(y) / e.SR, y, .5, amp, wet=.5, echo=.2)
@@ -299,7 +384,7 @@ def hook(bar, full=False, amp=1.0):
     line, words = (HOOK_FULL if full else HOOK_LOW)[i]
     if i == 2:
         stutter(bar, 0, "char", 74, 3, amp * .9)
-    chop(bar, line, words, amp)
+    vocal(bar, line, words, amp)
 
 
 # ---------------------------------------------------------------- the laptop
@@ -375,7 +460,7 @@ for bar in range(120):
         rhodes_comp(bar, .8 if brk else 1.0, cut=1400 if brk else None)
     if 32 <= bar < 96:
         pads(bar, 1.3 if brk else (.6 if bar >= 88 else 1.0), cut=1100 if brk else 1500)
-    if 48 <= bar < 88 and (brk or bar % 2 == 0):
+    if 48 <= bar < 88 and (brk or bar % 2 == 0) and not LEM:      # the Piper "ooh" choir: not with singer D
         oohs(bar, 1.3 if brk else 1.0)
     if groove and bar < 88:
         organ_stabs(bar, .8 if bar < 64 else 1.0)
@@ -388,20 +473,20 @@ for bar in range(120):
 
     # the chops
     if 32 <= bar < 48 and bar % 4 == 1:
-        chop(bar, *HOOK_LOW[0], amp=.85, echo=.4)
+        vocal(bar, *HOOK_LOW[0], amp=.85, echo=.4)
     if bar == 43:
-        chop(bar, *HOOK_LOW[1], amp=.8, echo=.4)
+        vocal(bar, *HOOK_LOW[1], amp=.8, echo=.4)
     if 48 <= bar < 64:
         hook(bar)
     if 72 <= bar < 88:
         hook(bar, full=True)
     if brk and bar % 4 == 3:
-        chop(bar, *HOOK_LOW[3], amp=.9, echo=.5, cut=2500)
+        vocal(bar, *HOOK_LOW[3], amp=.9, echo=.5, cut=2500)
     for b, lvl in ((88, "ten"), (92, "five"), (96, "one")):
         if bar == b:
-            chop(bar, *LEVEL[lvl], amp=.9, echo=.4)
+            vocal(bar, *LEVEL[lvl], amp=.9, echo=.4)
         if bar == b + 2:
-            chop(bar, *HOOK_LOW[0], amp=.8, echo=.4)
+            vocal(bar, *HOOK_LOW[0], amp=.8, echo=.4)
 
     # the battery
     if (28 <= bar < 64 or 72 <= bar < 100) and bar % 4 == 3 and not 76 <= bar < 88:
@@ -415,8 +500,9 @@ system(70, "Charging.", 1.0, beat=0)
 system(71, "Battery fully charged.", 1.8, beat=0)
 system(98, "Shutting down.", 1.3, beat=0)
 system(100, "Good night.", 1.2, beat=0)
-reverse_chop(64, "sleep", 69, .8)
-reverse_chop(72, "charged", 74, .8)
+# with Lem the reversed words are hers: "sleep" from bar 67's "sleep mode", "charged" from bar 72's "fully charged"
+reverse_chop(64, "sleep", 69, .8, src=(S.at(67, .5) - .1, S.at(67, 1.5) + .1))
+reverse_chop(72, "charged", 74, .8, src=(S.at(72, 2) - .12, S.at(72, 2.75) + .25))
 chime(70, up=True)
 chime(99, up=False)
 
@@ -430,6 +516,20 @@ S.put("pads", S.at(102), tape_stop(e.pad(e.voicing("Dm9", lo=50), S.bar * 1.5, c
 S.put("fx", 0, e.crackle(S.length), .5, 1.0, wet=0)
 S.put("fx", S.at(69), e.riser(S.bar * 3, .2), .5, wet=.3)
 S.put("fx", S.at(64), e.downlifter(S.bar * 2, .18), .5, wet=.3)
+
+if LEM:
+    _render = P.ds_part.render
+
+    def _keep(**kw):          # Band.finish renders the lead take first: keep it for the sampler tricks
+        if "DS_BREATH" not in os.environ:
+            kw["breaths"] = BREATHS
+        y = _render(**kw)
+        _lem.setdefault("y", y)
+        return y
+    P.ds_part.render = _keep
+    P.finish()                # singer D's one take into the mix, each line at its level, the echo on the last word
+    for f in _after:
+        f()
 
 # sleep mode: the lights go low in the break, and come back up while it charges
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 1500), (S.at(69), 1500), (S.at(72) - .02, 9000),

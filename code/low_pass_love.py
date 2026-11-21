@@ -2,6 +2,7 @@
 """Low Pass Love: 90's mellow house (French touch), 122 BPM, A minor. Saturday's theme of the AI slop music compo.
 
 low_pass_love.py [OUT.wav]   (default renders/low-pass-love_122bpm_Am.wav)
+SINGER=en_US-hfc_male-medium: the old disco man (Piper, re-pitched, with his choir), for an A/B
 
 Every note and every sound here is written by Claude, in this file: no samples, no loops. Paris, 1998, in a
 bedroom studio: a "disco loop" that was never on a record (strings, a funk guitar, a bass guitar, a Rhodes and the
@@ -16,10 +17,10 @@ its place" puts it back. The first and last 16 bars are drums only, for the DJ.
         32-47  hook (talk box): "low pass love / open up the filter / low pass love / let the highs come through";
                the filter opens all the way on "the highs"
         48-55  the full loop, pumping; a Rhodes melody and the funk guitar lick; a slow filter dip
-        56-63  verse (male disco vocal, three different voices): the filter follows the words
+        56-63  verse (the singer, alone): the filter follows the words
         64-71  hook (talk box)
         72-79  break: no kick; "close it, close it" (it closes, only the bass is left), "open it up" (it opens)
-        80-95  hook twice: the talk box and a choir of men (and one disco falsetto)
+        80-95  hook twice: the talk box, the singer an octave under it
         96-111 the loop winds down, the filter closing slowly; the talk box says goodbye
        112-127 outro: drums only
 
@@ -27,6 +28,11 @@ The talk box: a synth (two saws and a pulse, with glide) whose spectrum is shape
 envelope WORLD finds in a Piper voice speaking each word (voice.tts and voice.analyse): the synth "speaks" through
 someone else's mouth. The funk guitar is a Karplus-Strong string, the bass guitar is additive, the Rhodes is the
 DX7 E.Piano (dx7.py) and the reverb is a simulated room (room.py).
+
+The singer ("singer D", 21 November): Lem the Shapeshifter DS 2.5 (DiffSinger) sings the written notes and words,
+SoulX-Singer SVC turns him into a warm Qwen baritone (parts.Band with diva_voice="ds:lem"). One voice, no doubles,
+no harmony, no vocoder: 90's mellow house is sparse. Shape it fast with Lem alone:
+DS_TIMBRE= SOLO=vox PREVIEW=56-64 .venv/bin/python low_pass_love.py
 """
 import functools
 import math
@@ -39,6 +45,7 @@ from scipy.ndimage import uniform_filter1d
 
 import engine as e
 import dx7
+import parts
 import room
 import voice as V
 
@@ -53,9 +60,19 @@ SWING = .06 * STEP          # French house is nearly straight: a hint of shuffle
 PROG = ["Am9", "D9", "Fmaj9", "E7"]
 
 MOUTH = os.environ.get("MOUTH", "en_US-ryan-high")           # whose speech shapes the talk box
-SINGER = os.environ.get("SINGER", "en_US-hfc_male-medium")   # the disco man
-BACKING = ["en_US-joe-medium", "en_GB-alan-medium", "en_US-john-medium"]   # left, right, the third above
-FALSETTO = "en_US-bryce-medium"                              # an octave up, very Saturday night
+SINGER = os.environ.get("SINGER", "ds:lem")                  # singer D; en_US-hfc_male-medium: the old disco man
+BACKING = ["en_US-joe-medium", "en_GB-alan-medium", "en_US-john-medium"]   # left, right, the third above (Piper only)
+FALSETTO = "en_US-bryce-medium"                              # an octave up, very Saturday night (Piper only)
+PIPER = not SINGER.startswith("ds:")
+# singer D: a male voice for a male line (verse A3-E4, hook E3-C4). The baritone crooner, not the tenor: the lines
+# sit low (a baritone's middle), and "velvety" fits a late-night French-house vocal better than a "eurodance lead".
+TIMBRE = "sing_qwen_baritone"
+ACCENT = {"love": 2}
+P = None if PIPER else parts.Band(S, PROG, diva_voice=SINGER, timbre=TIMBRE, stack="", harmony="", accent=ACCENT,
+                                  verse_double=0.0)
+if P:
+    P.ds_gain = 1.3                                          # his level (DS_GAIN overrides it): the vox bus 1-2 dB over
+                                                             # the old disco man with his choir
 
 
 def chord_of(bar):
@@ -280,6 +297,32 @@ VERSE = [
 ]
 CLOSE = (". E4 - D4 - . . . E4 - D4 - . . . .", "close it close it")
 OPEN = (". A4 - G4 - C5 - - - - - - . . . .", "oh pen up")
+# the words as DiffSinger reads them (real English; "+" holds a word over the next note), where Piper's spelling
+# differs. "bass" is "base" for him: the dictionary may read the fish.
+DS_WORDS = {
+    "oh pen up the fill tur": "open + up the filter +",
+    "you cut me off at eigh tee hurts": "you cut me off at eighty + hurts",
+    "now all I hear is bass": "now all I hear is base",
+    "turn the knob a lit tull bay bee": "turn the knob a little + baby +",
+    "put the treb bull in its place": "put the treble + in its place",
+    "oh pen up": "open + up",
+}
+# singer D's own rhythm where the written one slurs (Whisper, 21 November), changed as little as it takes:
+# - "at eighty hertz" in even eighths came out "a lady head" (Lem alone): the line starts on the downbeat, "eigh"
+#   gets a quarter and "hertz" stays on the bar line (spelled "hurts": 2 of 2 takes "at 80 hertz"). The SVC
+#   conversion then blurred the fast stops ("cut me off at": "can be your fatty", in every timbre), so in sixteenths
+#   "cut" and "off" are an eighth with a sixteenth rest after them (baritone: "you get me off at 80 hertz");
+# - "knob" lets go a sixteenth before "a little" ("on it all" before; now "turn the knob a little baby");
+# - "treble" with "-ble" an eighth ("chair button" before);
+# - "open" with "o" a quarter on the downbeat, not an eighth pickup ("help un-up");
+# - in the break, "up" short, not held (held: "how about that?").
+DS_LINES = {
+    "you cut me off at eigh tee hurts": "A3 - C4 - . C4 C4 - . B3 C4 - - D4 - - E4 - - - - - - - . . . . . . . .",
+    "turn the knob a lit tull bay bee": ". . C4 - C4 - D4 - - . E4 - D4 - C4 - D4 - - - E4 - - - - - - - . . . .",
+    "put the treb bull in its place": ". E4 E4 A4 - - G4 E4 D4 - E4 - - - - -",
+    "oh pen up the fill tur": "A4 - G4 - E4 - D4 - E4 - - - D4 - - .",
+    "oh pen up": ". A4 - G4 - C5 - . . . . . . . . .",
+}
 
 
 def talk(bar, line, words, octave=-12, amp=1.0, pan=.5, echo=.08):
@@ -298,8 +341,14 @@ def third_above(m):
 
 
 def disco(bar, line, words, octave=0, amp=1.0, choir=0.0, falsetto=0.0):
-    """The disco man sings a line; choir > 0 adds two other men (left and right) and a third man a third above;
-    falsetto > 0 adds one more an octave up, in the middle, at the back."""
+    """The singer sings a line, `octave` semitones from the written notes. Singer D (the default): Lem, alone, into
+    his one take (choir and falsetto ignored: sparse). The old disco man (SINGER=<a Piper voice>): choir > 0 adds two
+    other men (left and right) and a third man a third above; falsetto > 0 adds one more an octave up, in the
+    middle, at the back."""
+    if P:      # parts.Band sings octave + 12 above its notes: -12 is the written pitch
+        P.diva(bar, DS_LINES.get(words, line), words, bars=2, octave=octave - 12, amp=amp,
+               ds_words=DS_WORDS.get(words))
+        return
     for w, ns in words_on(S.notes(bar, line, bars=2), words):
         t = ns[0][0]
         notes = tuple((m + octave, round(d * .96, 4)) for _, m, d in ns)
@@ -451,7 +500,7 @@ for bar in range(BARS):
         big = bar >= 80
         talk(bar, line, words, amp=1.0)
         if big:
-            disco(bar, line, words, octave=-12, amp=.55, choir=.43, falsetto=.3 if bar >= 88 else 0)
+            disco(bar, line, words, octave=-12, amp=.55 if PIPER else .8, choir=.43, falsetto=.3 if bar >= 88 else 0)
     if 56 <= bar < 64 and bar % 2 == 0:
         disco(bar, *VERSE[(bar - 56) // 2], choir=.25 if bar >= 60 else 0)
     if bar == 72:
@@ -460,6 +509,9 @@ for bar in range(BARS):
         disco(bar, *OPEN, octave=-12, choir=.43)
     if bar in (100, 104):
         talk(bar, *HOOK[0], amp=.8, echo=.3)
+
+if P:
+    P.finish()   # singer D's one take into the vox bus, each line at its own level
 
 # the dust of the record goes in the loop: it is filtered with the rest
 dust = e.crackle(S.at(112) - S.at(16), .6)

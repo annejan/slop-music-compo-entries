@@ -7,15 +7,15 @@ packet_loss.py [OUT.wav]   (default renders/packet-loss_122bpm_Fm.wav)
 Every note and every sound here is written by Claude, in this file: no samples, no loops. Late at night, rain on
 the window, two lovers on a bad connection. He sends his feelings in tiny little parts; she only gets the header.
 A swung garage shuffle, an M1-style organ bass, a DX7 electric piano, warm gospel piano chords in the chorus, a
-saxophone made from a saw wave and a breath, and a duet: a man and a woman (two Piper voices), a choir of five
-other voices that answers "say it once again", and a lot of TCP jokes. In the second chorus the lead vocal
-really does lose packets. The first and last 16 bars are drums only, for the DJ.
+saxophone made from a saw wave and a breath, and a duet: a man and a woman, one voice at a time, and a lot of TCP
+jokes. In the second chorus the lead vocal really does lose packets. The first and last 16 bars are drums only,
+for the DJ.
 
   bars   0-15  intro: kick, shuffled hats, then clap, shaker and congas (drums only; the rain starts)
         16-23  the organ bass; the electric piano behind a door that opens
         24-31  verse 1, him: "I sent you all my feelings in tiny little parts" (she answers "ACK", then "NACK")
         32-39  verse 2, her: "I only got the header" (he answers "ACK")
-        40-55  chorus: "packet loss of love" / the choir: "say it once again"; gospel piano; sonar pings
+        40-55  chorus: her "packet loss of love" / him "say it once again"; gospel piano; sonar pings
         56-63  the saxophone solo, the band behind it
         64-71  break: no kick, no bass, thunder; the sax goes on; "64 bytes from your heart"; a riser
         72-87  chorus again; from bar 80 the lead vocal drops packets
@@ -23,6 +23,13 @@ really does lose packets. The first and last 16 bars are drums only, for the DJ.
        104-119 outro: drums only (the rain stops)
 
 The electric piano is the DX7 E.Piano (dx7.py); the reverb is a small simulated room (room.py), a flat at night.
+
+The singers (singer D, 21 November): Lem the Shapeshifter DS 2.5 (DiffSinger) sings our notes and words at the
+written pitch, alive (warble's rule tuner, vibrato, tension, breaths, phrase dynamics: parts.LEM); SoulX-Singer SVC
+turns her take into a soulful Qwen voice (her) and a second take into a Qwen baritone (him). Sparse, like the 90's
+house records: one voice at a time, no doubles, no harmony, no vocoder, no choir; the answer "say it once again" is
+his now. Shape the tune fast with Lem alone: DS_TIMBRE= SOLO=vox PREVIEW=40-48 .venv/bin/python packet_loss.py.
+DIVA=piper: the old voices (two Piper voices re-pitched, a duet on the hook, a Piper choir on the answer), for A/B.
 """
 import functools
 import os
@@ -48,8 +55,27 @@ CHOIR = ["en_GB-cori-high", "en_US-kristin-medium", "en_US-ljspeech-high", "en_G
          "en_US-john-medium"]
 COMPUTER = "en_US-lessac-high"
 
+# singer D (the default): Lem sings both parts, converted into two voices; DIVA=piper: the Piper duet and choir
+DIVA = os.environ.get("DIVA", "ds:lem")
+LEM = DIVA.startswith("ds:")
+HER_TIMBRE = "sing_qwen_soul"         # her voice (fallback: sing_maya_soul, sing_qwen_husky)
+HIM_TIMBRE = "sing_qwen_tenor"        # his (C3-F4): the baritone blurred more verse words (Whisper)
+ACCENT = {"loss": 2}
+LOSSY = []                            # (from, to) seconds of each line that loses packets (singer D)
+
 VERSE_PROG = ["Fm9", "Dbmaj9", "Bbm9", "Eb9"]
 CHORUS_PROG = ["Dbmaj9", "Eb9", "Cm7", "Fm9", "Dbmaj9", "Eb9", "Bbm9", "C7"]   # C7 pulls home to F minor
+
+if LEM:
+    import parts
+
+    def _singer(timbre):
+        b = parts.Band(S, VERSE_PROG, diva_voice=DIVA, timbre=timbre,
+                       stack="", harmony="", accent=ACCENT, verse_double=0.0)
+        b.ds_gain = 1.45              # the vox bus is 2.0 here (Common Ground: 1.45 x 2.0)
+        return b
+
+    SINGER = {HER: _singer(HER_TIMBRE), HIM: _singer(HIM_TIMBRE)}
 
 
 def chorus_bar(bar):
@@ -289,7 +315,28 @@ ANSWER = [(". . Eb4 - Eb4 - Eb4 - Db4 - Eb4 - F4 - - .", "say it once uh gen +")
 PING_ME = (". . F4 - F4 - Ab4 - Ab4 - Bb4 - Ab4 - - .", "ping me when your red dee")
 WAITING = (". . Eb4 - F4 - G4 - - - F4 - Eb4 - - .", "I'll bee way ting up")
 WAITING_DB = (". . Eb4 - F4 - Ab4 - - - F4 - Eb4 - - .", "I'll bee way ting up")    # over Dbmaj9
+if LEM:   # Lem says a short first word on an eighth after a rest badly ("ping" came out "think", "I'll" "help"):
+    # it starts on the downbeat and lasts a quarter; the rest of the line stays where it was
+    PING_ME = ("F4 - - - F4 - Ab4 - Ab4 - Bb4 - Ab4 - - .", PING_ME[1])
+    WAITING = ("Eb4 - - - F4 - G4 - - - F4 - Eb4 - - .", WAITING[1])
+    WAITING_DB = ("Eb4 - - - F4 - Ab4 - - - F4 - Eb4 - - .", WAITING_DB[1])
 LAST = ("F4 - F4 - Ab4 - - - F4 - Db4 - - - - - C4 - - - - - - - . . . . . . . .", "pack it loss of love +")
+
+# the same words as Lem reads them: real English, one word over its notes ("+" holds it over one more)
+DS_WORDS = {
+    "I sent you all my feel + ings": "I sent you all my feelings + +",
+    "in tie nee lit tull + parts": "in tiny + little + + parts",
+    "but sum of them got lost girl": "but some of them got lost girl",
+    "sum wear bee tween our hearts": "some where between + our hearts",
+    "I on lee got the hed ur +": "I only + got the + header +",
+    "I on lee got your name +": "I only + got your name +",
+    "ree trans mit it bay bee +": "retransmit + + it + baby +",
+    "say it once uh gen +": "say it once again + +",           # the answer; in the verse "a gain +" (below)
+    "pack it loss of love": "pack it loss of love",
+    "pack it loss of love +": "pack it loss of love +",
+    "ping me when your red dee": "ping me when you're ready +",
+    "I'll bee way ting up": "I'll be waiting + up",
+}
 
 
 def words_on(ns, words):
@@ -325,9 +372,20 @@ def scale_third_below(m):
     return m - 3
 
 
-def sing(bar, line, words, who, octave=0, bars=1, amp=1.0, pan=.5, loss=0.0, echo_last=.3, cents=0.0):
+def sing(bar, line, words, who, octave=0, bars=1, amp=1.0, pan=.5, loss=0.0, echo_last=.3, cents=0.0,
+         ds_words=None):
     """One voice sings a line: each word on its notes, the consonants just before the beat, an echo on the last
-    word. loss > 0: some packets of the voice get lost."""
+    word. loss > 0: some packets of the voice get lost. Singer D: the line goes into his or her Lem take (centre,
+    one voice; octave is from the written pitch, as for Piper; ds_words: Lem's words, by default DS_WORDS)."""
+    if LEM:
+        P = SINGER[who]
+        n = len(P.ds_lines)
+        P.diva(bar, line, words, bars=bars, octave=octave - 12, amp=amp, ds_words=ds_words or DS_WORDS.get(words, words))
+        if len(P.ds_lines) > n:           # live in the PREVIEW window: the echo on the last word as asked
+            P.ds_lines[-1] = P.ds_lines[-1][:4] + (echo_last,)
+            if loss:
+                LOSSY.append((S.at(bar), S.at(bar + bars)))
+        return
     pairs = words_on(notes(bar, line, bars), words)
     for i, (w, ns) in enumerate(pairs):
         last = i == len(pairs) - 1
@@ -338,13 +396,19 @@ def sing(bar, line, words, who, octave=0, bars=1, amp=1.0, pan=.5, loss=0.0, ech
 
 
 def duet(bar, line, words, loss=0.0, bars=1, amp=1.0):
-    """Both of them on the hook: her on the tune, him an octave under, a little to each side."""
+    """Both of them on the hook: her on the tune, him an octave under, a little to each side. Singer D: her
+    alone (sparse, one voice at a time)."""
     sing(bar, line, words, HER, 0, bars, amp, .56, loss)
-    sing(bar, line, words, HIM, -12, bars, .8 * amp, .44, loss, cents=-4)
+    if not LEM:
+        sing(bar, line, words, HIM, -12, bars, .8 * amp, .44, loss, cents=-4)
 
 
 def choir(bar, line, words, amp=1.0):
-    """The answer: five other voices, women on the tune and a third under it, men an octave down."""
+    """The answer: five other voices, women on the tune and a third under it, men an octave down. Singer D: him
+    alone, at the written pitch (Ab3-F4), no choir."""
+    if LEM:
+        sing(bar, line, words, HIM, 0, amp=amp)
+        return
     ns = notes(bar, line)
     # the first voice sings the words; the others only the vowels, on its vowel onsets, so the consonants of five
     # different speakers do not smear
@@ -366,6 +430,8 @@ def choir(bar, line, words, amp=1.0):
 def say(bar, beat, text, who, seconds, amp=1.0, pan=.5, phone=False, wet=.2, echo=.25):
     """A spoken line (V.rap fits it to the length). phone=True: thin, like a voice in a terminal, and on the fx
     bus, so the break's closed filter does not muffle it."""
+    if LEM and who in (HER, HIM):        # the acks in the singers' own voices (spoken)
+        who = HER_TIMBRE if who == HER else HIM_TIMBRE
     y = V.rap(text, seconds, voice=who, pitch=1.0)
     if phone:
         y = e.bandpass(y, 350, 3400) * 1.6
@@ -385,6 +451,8 @@ def chorus(bar0, loss=0.0):
 
 # ---------------------------------------------------------------- the arrangement
 for bar in range(120):
+    if not S.live(bar, 2):          # PREVIEW: only the bars that can be heard (a sax line lasts two)
+        continue
     intro, outro = bar < 16, bar >= 104
     brk = 64 <= bar < 72
     cho = chorus_bar(bar)
@@ -422,7 +490,8 @@ for bar in range(120):
 # the verses: him, then her, a line every two bars; the other one acknowledges
 for i in range(4):
     sing(24 + 2 * i, VERSE_TUNE[i], VERSE_HIM[i], HIM, 0, bars=2, pan=.46)
-    sing(32 + 2 * i, VERSE_TUNE[i], VERSE_HER[i], HER, 12, bars=2, pan=.54)
+    sing(32 + 2 * i, VERSE_TUNE[i], VERSE_HER[i], HER, 12, bars=2, pan=.54,
+         ds_words="say it once a gain +" if i == 3 else None)   # "again + +" here: "Sape on soggy" (Whisper)
 say(27, 2.5, "Ack.", HER, .35, .7, pan=.7)
 say(31, 2.5, "Nack!", HER, .4, .8, pan=.7)
 say(33, 2.5, "Ack.", HIM, .35, .7, pan=.3)
@@ -458,6 +527,36 @@ S.put("fx", 0, r * level[:, None], .5, 1.0, wet=0)
 S.put("fx", S.at(64), thunder(8.0, .35), .4, wet=.2)
 S.put("fx", S.at(70), e.riser(S.bar * 2, .2), .5, wet=.3)
 S.put("fx", S.at(56), e.downlifter(S.bar * 2, .12), .5, wet=.3)
+
+def packet_mask(t0, t1, seed, p=.3):
+    """Packet loss for singer D's takes: 30 ms packets from t0 to t1, some never arrive; the packet at the start of
+    each word always does (you hear who it is); 3 ms fades at the edges."""
+    r = np.random.default_rng(seed)
+    pk = int(.03 * e.SR)
+    n = int((t1 - t0) * e.SR)
+    m = np.repeat((r.random(n // pk + 1) > p).astype(float), pk)[:n]
+    for P in SINGER.values():
+        for t, _, _, w in P.ds_part.notes:
+            if w != "+" and t0 <= t < t1:
+                i = int((t - t0) * e.SR)
+                m[max(0, i - pk):i + pk] = 1.0
+    return e.one_pole(m, .003)
+
+
+if LEM:   # both takes into the mix; the lines of the second chorus lose packets (dry, reverb send and echo alike)
+    i0 = int(min((a for a, _ in LOSSY), default=0) * e.SR)
+    i1 = int(max((b for _, b in LOSSY), default=0) * e.SR)
+    before = [x[i0:i1].copy() for x in (S.bus["vox"], S.send, S.echo)]
+    for P in SINGER.values():
+        P.finish()
+    if i1 > i0:
+        mask = np.ones(i1 - i0)
+        for k, (a, b) in enumerate(LOSSY):
+            pm, j = packet_mask(a, b, 8000 + k), int(a * e.SR) - i0
+            pm = pm[:len(mask) - j]
+            mask[j:j + len(pm)] = pm
+        for x, old in zip((S.bus["vox"], S.send, S.echo), before):
+            x[i0:i1] = old + (x[i0:i1] - old) * mask[:, None]
 
 cut = [(0, 18000), (S.at(64), 18000), (S.at(64) + .05, 1500), (S.at(70), 2600), (S.at(72) - .02, 9000),
        (S.at(72), 18000), (S.n / e.SR, 18000)]

@@ -75,7 +75,7 @@ class Part:
                                              "notes": out}]}
 
     def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12, pitch="free", timbre=None,
-               tension=0.0, vib=1.0, breaths=False, dynamics=False):
+               tension=0.0, vib=1.0, breaths=False, dynamics=False, comp=None, comp_seeds=(1, 2, 3, 4)):
         """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing).
         pitch: "free" (the bank's pitch model), "hard" (flat notes, the model off: the voice locks to the synths),
         or a number 0..1, the model's expressiveness (0.5: half its own scoops and overshoots).
@@ -84,8 +84,15 @@ class Part:
         pitch="rule": warble's rule tuner draws the pitch (scoops, overshoot, vibrato, drift: tuned()), for a bank
         without a pitch model such as Lem; vib scales its vibrato depth. tension: the DiffSinger tension offset.
         breaths: a breath before each phrase. dynamics: each phrase louder on its high notes, long notes swell
-        (a bank without an energy model sings every note equally loud)."""
-        y = self._sing(bank, voice, lang, seed, pitch, tension, vib, breaths)
+        (a bank without an energy model sings every note equally loud).
+        comp: [(from, to, words)] per line: the producer's comp. Lem sings the part once per seed in comp_seeds
+        (seed itself is ignored); Whisper hears each line of each take; each line comes from the take that says its
+        words best, spliced in the rests between lines (self.picks: the seed per line)."""
+        if comp:
+            takes = {k: self._sing(bank, voice, lang, k, pitch, tension, vib, breaths) for k in comp_seeds}
+            y = self.comped(takes, comp)
+        else:
+            y = self._sing(bank, voice, lang, seed, pitch, tension, vib, breaths)
         if timbre:
             y = convert(y, timbre)
         if dynamics:
@@ -94,6 +101,47 @@ class Part:
         sung = env > .1 * env.max()
         rms = np.sqrt(np.mean(y[sung] ** 2)) if sung.any() else 1.0
         return y * (level / (rms + 1e-9))
+
+    def comped(self, takes, lines, fade=.04):
+        """One take made of the best line of each: Whisper scores every line of every take against its words (the
+        share heard right); the cut is in the rest before each line (a short crossfade). Cached per take and line."""
+        import difflib
+        import asr
+        import json
+        cache = os.path.join(CACHE, "comp.json")
+        seen = json.load(open(cache)) if os.path.exists(cache) else {}
+        n = min(len(y) for y in takes.values())
+        out = np.array(takes[next(iter(takes))][:n], float)
+        self.picks = []
+        lines = sorted(lines)
+        for i, (t0, t1, words) in enumerate(lines):
+            a = int(max(0.0, t0 - .25) * SR)                     # from the breath before the line
+            b = min(n, int((t1 + .2) * SR))
+            if i + 1 < len(lines):
+                b = min(b, int(max(t1, lines[i + 1][0] - .25) * SR))
+            if b <= a:
+                continue
+            scores = {}
+            for k, y in takes.items():
+                seg = y[a:b]
+                key = hashlib.sha1(seg.tobytes()).hexdigest()[:16]
+                if key not in seen:
+                    with tempfile.TemporaryDirectory() as d:
+                        path = os.path.join(d, "line.wav")
+                        _write(path, seg / (np.abs(seg).max() + 1e-9) * .8)
+                        seen[key] = " ".join(t for _, _, t in asr.hear(path))
+                want = asr.words(words.replace("+", " "))
+                scores[k] = difflib.SequenceMatcher(None, want, asr.words(seen[key])).ratio()
+            best = max(scores, key=lambda k: (scores[k], -list(takes).index(k)))
+            self.picks.append((t0, words, best, round(scores[best], 2)))
+            f = int(fade * SR)
+            w = np.ones(b - a)
+            w[:f] = np.linspace(0, 1, min(f, b - a))
+            w[-f:] = np.minimum(w[-f:], np.linspace(1, 0, f)) if b - a > 2 * f else w[-f:]
+            out[a:b] = out[a:b] * (1 - w) + takes[best][a:b] * w
+        os.makedirs(CACHE, exist_ok=True)
+        json.dump(seen, open(cache, "w"), indent=0)
+        return out
 
     def dynamics(self, n):
         """A gain curve for the part: within a phrase (notes less than .3 s apart) the highest notes 1.0, the lowest

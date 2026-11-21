@@ -49,6 +49,11 @@ B = S.beat
 
 DIVA = os.environ.get("DIVA", "ds:lem")
 RAPPER = os.environ.get("RAPPER", "en_GB-alan-medium")
+# the deep-voiced MC of the song's idea, a Maya voice of our own (RAPPER=maya_mc_deep; maya_hype and qwen_hype are
+# the cast's rave MCs). A Maya or Qwen MC speaks at its own pace and is squeezed only when a line runs long
+V.CAST.setdefault("maya_mc_deep", "maya:Realistic male voice in the 30s age with a american accent. Low pitch, deep "
+                                  "timbre, moderate pacing, excited tone delivery at high intensity, entertainment "
+                                  "domain, event_host role, confident delivery. A deep-voiced eurodance rap MC.#301")
 # CROWD=1 (19 November, an A/B; research/toolkit-2026-11-19.md): crowd moments. The title in the echo while the riff
 # comes in (the first title came 28 s after the music); the band stops for the bar before the last chorus
 # ("Everybody!"); in the second pass of the last chorus the diva leaves the first line to the room ("Sing it!", 16
@@ -395,9 +400,31 @@ def room_shout(bar, text, bars=2, amp=1.0):
         S.put("vox", S.at(bar) + .006 * (i % 5), y, .15 + .7 * i / (len(ROOM) - 1), amp * .3, wet=.25, echo=.05)
 
 
+MC_TAKES = int(os.environ.get("MC_TAKES", "4"))
+MC_PICKS = []                # (bar, line, (seed, score, heard)) of the Maya or Qwen MC's picked takes
+
+
 def mc(bar, text, bars=1, amp=1.0, wet=.06, echo=.04):
-    """A rap line from the downbeat, fitted to the bars (a sixteenth short, to breathe); deep and flat."""
-    y = V.rap(text, bars * S.bar - STEP, voice=RAPPER, pitch=.84)
+    """A rap line from the downbeat, fitted to the bars (a sixteenth short, to breathe); deep and flat. A Maya or
+    Qwen MC (a CAST name) says it at its own pace, in its own words ("U S B" as "USB"), squeezed only when longer."""
+    if not S.live(bar, bars):
+        return
+    if RAPPER.startswith("en_"):           # a Piper voice, pitched down
+        y = V.rap(text, bars * S.bar - STEP, voice=RAPPER, pitch=.84)
+    else:
+        said = text.replace("U S B", "USB").replace("firm ware", "firmware")
+        tag = "<excited> " if V.CAST.get(RAPPER, RAPPER).startswith("maya:") else ""
+        # the producer: three directions (as written; punched, every comma a shout; told to rap on the beat), each
+        # MC_TAKES takes (seeds); the take Whisper hears best that fills the bars without a squeeze, lively
+        punched = said.replace(",", "!").replace(".", "!")
+        directions = [(tag, said, ""), (tag, punched, ""),
+                      (tag, said, "Rapping on the beat, punchy and rhythmic, every word clear and confident.")]
+        y, rows = V.best_take(said, RAPPER, bars * S.bar - STEP, seeds=range(301, 301 + MC_TAKES),
+                              directions=directions)
+        MC_PICKS.append((bar, said, rows[0]))
+        if len(y) > (bars * S.bar - STEP) * e.SR:
+            y = V.rap(said, bars * S.bar - STEP, voice=RAPPER, pitch=1.0)
+        y = y * (.14 / (np.sqrt(np.mean(y ** 2)) + 1e-9))
     S.put("vox", S.at(bar), y, .5, amp, wet=wet, echo=echo)
 
 
@@ -535,3 +562,5 @@ os.makedirs(os.path.dirname(out), exist_ok=True)
 S.mixdown(out, {"drums": .9, "perc": .7, "bass": 1.0, "pads": .8, "keys": 1.35, "lead": 1.0, "vox": 1.9, "fx": .6},
           cut_keys=cut, duck={"pads": .7, "bass": .3, "keys": .3, "lead": .4}, room=.22, echo_mix=.4, lufs=-9.0,
           ir=room.impulse_response((12.0, 9.0, 5.0), rt60=2.4))
+for bar, line, (take, score, heard) in MC_PICKS:     # the producer's picks, for the record
+    print(f"MC bar {bar}: {take}, {score:.2f}: {line!r} heard as {heard!r}")

@@ -401,6 +401,52 @@ def sing(text, notes, voice=DIVA, glide=.03, vibrato=.35, formant=1.0, level=.12
     return pre * FS, y * (level / rms)
 
 
+def liveliness(y, sr=OUT_SR):
+    """How much the voice moves: the spread of its pitch in semitones over the voiced frames (pyworld)."""
+    x = np.ascontiguousarray(np.asarray(y, float)[::2] if sr == 44100 else np.asarray(y, float))
+    f0, _ = pyworld.dio(x, sr // 2 if sr == 44100 else sr, frame_period=10)
+    f0 = f0[f0 > 0]
+    return float(np.std(12 * np.log2(f0 / np.median(f0)))) if len(f0) > 10 else 0.0
+
+
+def best_take(text, voice, seconds=None, seeds=(301, 302, 303, 304), tag="", directions=None):
+    """The producer's pick of many takes of a spoken line. Each direction (tag, text as written, a line added to
+    the voice description) is tried with every seed; Whisper hears each take. Score: the share of the words heard
+    right; minus how far a take runs over `seconds` (it would be squeezed: rushed) and how far it falls short of 70 %
+    of it (lazy, the bar half empty); plus a little for a lively pitch. Returns (audio at the song's rate,
+    [(take name, score, heard)] best first). voice: a CAST name or "maya:..."/"qwen:..." description."""
+    import difflib
+    import json
+    import tempfile
+    import asr
+    import master
+    spec = CAST.get(voice, voice)
+    desc = spec.rsplit("#", 1)[0] if "#" in spec else spec
+    cache = os.path.join(HERE, ".cache", "takes.json")
+    seen = json.load(open(cache)) if os.path.exists(cache) else {}
+    want = asr.words(text)
+    rows = []
+    for k, (dtag, dtext, extra) in enumerate(directions or [(tag, text, "")]):
+        for seed in seeds:
+            v = f"{desc}{(' ' + extra) if extra else ''}#{seed}"
+            y = _finish(tts(dtag + dtext, v))
+            key = hashlib.sha1(f"{v}|{dtag}{dtext}".encode()).hexdigest()[:16]
+            if key not in seen:
+                with tempfile.TemporaryDirectory() as d:
+                    path = os.path.join(d, "take.wav")
+                    master.write(path, np.repeat(y[:, None], 2, axis=1))
+                    seen[key] = [" ".join(t for _, _, t in asr.hear(path)), liveliness(y)]
+            heard, live = seen[key] if isinstance(seen[key], list) else (seen[key], liveliness(y))
+            match = difflib.SequenceMatcher(None, want, asr.words(heard)).ratio()
+            fill = len(y) / OUT_SR / seconds if seconds else .9
+            score = match - .5 * max(0.0, fill - 1.0) - .5 * max(0.0, .7 - fill) + .05 * min(live / 3, 1.0)
+            rows.append((f"direction {k + 1}, seed {seed}", round(score, 3), heard, y))
+    os.makedirs(os.path.dirname(cache), exist_ok=True)
+    json.dump(seen, open(cache, "w"), indent=0)
+    rows.sort(key=lambda r: -r[1])
+    return rows[0][3], [(n, sc, h) for n, sc, h, _ in rows]
+
+
 def rap(text, seconds, voice=RAPPER, pitch=.92, level=.14):
     """A spoken line fitted to a length: Piper's own pace first, then WORLD for the exact fit, the pitch a little
     lower and flatter (more attitude)."""

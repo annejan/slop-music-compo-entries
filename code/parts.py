@@ -107,6 +107,7 @@ class Band:
                                     # words at 1.0, 18 at 1.6, 22 at 2.5 (the Piper diva: 14)
         self.ds_lines = []                          # (from, to, amp, last word at, its echo) per diva line
         self.ds_double = []                         # (from, to, the doubles' level) per diva line
+        self.ds_words = []                          # (first note, last note's end, the words) per diva line
         self.ds_accent = []                         # (from, to, dB) per accented word
         self.ds_choir = []                          # (from, to, amp) per line with a harmony
         self.verse_double = verse_double
@@ -278,6 +279,8 @@ class Band:
                 if w in self.accent:
                     self.ds_accent.append((ns[0][0] - .06, ns[-1][0] + ns[-1][2], self.accent[w]))
             self.ds_lines.append((S.at(bar), S.at(bar + bars), amp, ds_pairs[-1][1][0][0], .35))
+            self.ds_words.append((ds_pairs[0][1][0][0], ds_pairs[-1][1][-1][0] + ds_pairs[-1][1][-1][2],
+                                  " ".join(w for w, _ in ds_pairs)))
             self.ds_double.append((S.at(bar), S.at(bar + bars), .55 if choir else self.verse_double))
             if choir and human:
                 self.ds_choir.append((S.at(bar), S.at(bar + bars), amp * choir))
@@ -315,7 +318,18 @@ class Band:
         sing = lambda part, seed, timbre: part.render(bank=bank, voice=self.ds_voice, pitch=pitch,  # noqa: E731
                                                       seed=seed, timbre=timbre, tension=tension, vib=vib,
                                                       breaths=breaths, dynamics=dyn)
-        y = sing(self.ds_part, int(os.environ.get("DS_SEED", "1")), self.timbre)
+        # DS_COMP=1: the producer's comp: Lem sings the part DS_COMP_TAKES times, each line from the take Whisper
+        # hears best (ds.Part.comped); the doubles then come from takes 5 and 6
+        comp = os.environ.get("DS_COMP", "0") == "1"
+        if comp:
+            k = int(os.environ.get("DS_COMP_TAKES", "4"))
+            y = self.ds_part.render(bank=bank, voice=self.ds_voice, pitch=pitch, timbre=self.timbre, tension=tension,
+                                    vib=vib, breaths=breaths, dynamics=dyn, comp=self.ds_words,
+                                    comp_seeds=tuple(range(1, k + 1)))
+            for t0, words, best, sc in self.ds_part.picks:
+                print(f"comp {t0:7.2f}s take {best} ({sc:.2f}): {words}")
+        else:
+            y = sing(self.ds_part, int(os.environ.get("DS_SEED", "1")), self.timbre)
 
         def env(spans, n, base=1.0, mul=False):
             g = np.full(n, base)
@@ -333,7 +347,8 @@ class Band:
         voices = [v for v in names if v not in ("octave", "vocoder")]
         dbl = env(self.ds_double, len(y), base=0.0)
         if len(voices) >= 2:            # the doubles: other takes in other voices, a few ms late, wide
-            for seed, timbre, pan, delay in ((2, voices[0], .12, .012), (3, voices[1], .88, .019)):
+            s2, s3 = (5, 6) if comp else (2, 3)
+            for seed, timbre, pan, delay in ((s2, voices[0], .12, .012), (s3, voices[1], .88, .019)):
                 d = sing(self.ds_part, seed, timbre)[:len(y)]
                 d = np.pad(d, (0, len(y) - len(d))) * g * dbl * gain
                 S.put("vox", delay, d, pan, 1.0, wet=.22, echo=.05)

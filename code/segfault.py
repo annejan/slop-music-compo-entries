@@ -3,6 +3,8 @@
 the AI slop music compo.
 
 segfault.py [OUT.wav]   (default renders/segfault_132bpm_Am.wav)
+DIVA=en_US-hfc_female-medium segfault.py OUT.wav    the old Piper diva with her Piper choir (the approved render)
+DS_TIMBRE= DS_STACK= DS_HARMONY= SOLO=vox PREVIEW=48-56 segfault.py    shape the melody with Lem alone (fast)
 
 Every note and every sound here is written by Claude, in this file: no samples, no loops. 1994 on a Sunday: a
 supersaw riff, a rave piano, an offbeat bass, orchestra hits, an AI diva (Piper and WORLD, voice.py) with a choir
@@ -18,6 +20,13 @@ bars are drums only, for the DJ.
         72-79  build
         80-95  the last chorus, a tone up
         96-111 outro: drums only
+
+The diva is singer D (DIVA=ds:lem, the default since 21 November): parts.Band's produced singer. Lem the
+Shapeshifter DS 2.5 sings the written melody and words an octave below the Piper diva's written line (the chorus
+A3-G4, B3-A4 after the key change; Lem's realistic range is A2-D5), SoulX-Singer SVC turns the take into the Qwen
+diva's voice. In the chorus and the pre-chorus: doubles from takes 2 and 3 in the Qwen pop and Maya pop voices, a
+soft octave and a vocoder, and a harmony a third above (Maya soul) instead of the Piper choir. The verse is her
+alone. The rapper and the robot's "signal eleven" stay as they were.
 """
 import os
 import sys
@@ -25,6 +34,7 @@ import sys
 import numpy as np
 
 import engine as e
+import parts
 import voice as V
 
 e.seed(1994)
@@ -187,9 +197,12 @@ def words_on(notes, words):
     return out
 
 
+# DIVA=ds:hanami (or the Piper default): the old diva, below. DIVA=ds:lem (the default): singer D (sing(), further down)
+DIVA = os.environ.get("DIVA", "ds:lem")
+SINGER_D = DIVA == "ds:lem"
 # DIVA=ds:hanami: a DiffSinger voicebank sings the diva's part (ds.py), at the written pitch, in one take. The
 # words as written for it (real words, "+" holds a word over the next note; the lines above are spelled for Piper)
-DS = V.DIVA.startswith("ds:")
+DS = not SINGER_D and V.DIVA.startswith("ds:")
 DS_PART = None
 DS_GAIN = []                 # (from, to, amp) per line
 DS_TEXT = {
@@ -250,9 +263,57 @@ def diva(bar, line, words, octave=-12, bars=1, amp=1.0, double=0.0, key=None, st
             S.put("vox", t - li + .006, y, .5, amp * double * .7, wet=.2, echo=.08)
 
 
+# ---------------------------------------------------------------- singer D: Lem, converted and stacked
+TIMBRE = "qwen_diva"                   # the lead's voice (the Badge's)
+STACK = "sing_qwen_pop,sing_maya_pop,octave,vocoder"
+HARMONY = "sing_maya_soul"
+ACCENT = {"seg": 3, "fault": 3}        # the hook word
+D_OCTAVE = -24                         # an octave below the Piper diva's written line: steady notes C4-E4 (D4-F#4
+                                       # after the key change), nothing above A4; the written pitch reached G5-A5
+D_TEXT = dict(DS_TEXT, **{"segfault + in my heart": "seg fault in my heart"})   # the words as DiffSinger reads them
+# singer D's rhythm where the Piper line slurs (Whisper on Lem alone): "seg" on an eighth came out "sick" or "tick",
+# now a dotted eighth; a sixteenth rest after "heart" so "tearing" starts clean (it was "staying"); "there" a quarter
+# and "for" an eighth ("be there forever" was "be the fiver")
+D_LINE = {CHORUS[0][0]: "E5 - - E5 - - D5 - C5 - E5 - - - - .",
+          CHORUS[2][0]: "E5 - - G5 - - E5 - D5 - C5 - - - - .",
+          VERSE[0][0]: ". C5 C5 C5 B4 C5 D5 - E5 D5 C5 - - . . ."}
+P = None
+if SINGER_D:
+    P = parts.Band(S, PROG, scale="minor", key_of=key_of, tonic="A", diva_voice=DIVA, timbre=TIMBRE, stack=STACK,
+                   harmony=HARMONY, accent=ACCENT, verse_double=0.0)
+
+
+def sing(bar, line, words, bars=1, amp=1.0, dbl=0.0, harm=0.0, echo=.35, octave=D_OCTAVE):
+    """Singer D sings a line (Lem's one take, parts.Band). dbl: the doubles' level (0: her alone; octave and vocoder
+    follow it); harm: a harmony a third above at amp * harm (below when above would pass D5); echo: the last word
+    into the delay."""
+    if not S.live(bar, bars):
+        return
+    ds_words = D_TEXT.get(words)
+    line = D_LINE.get(line, line)
+    P.diva(bar, line, words, bars=bars, octave=octave, amp=amp, ds_words=ds_words)
+    t0, t1, a, last, _ = P.ds_lines[-1]
+    P.ds_lines[-1] = (t0, t1, a, last, echo)
+    P.ds_double[-1] = (t0, t1, dbl)
+    if harm:
+        key = key_of(bar)
+        pairs = parts.words_on(S.notes(bar, line, key, bars), ds_words or words)
+        up = max(P.step_up(m, 2, key) for _, ns in pairs for _, m, _ in ns) + octave + 12 <= 74
+        for w, ns in pairs:
+            for k, (t, m, d) in enumerate(ns):
+                h = (P.step_up if up else P.step_down)(m, 2, key) + octave + 12
+                P.ds_harm.note(t, h, d * .97, w if k == 0 else "+")
+        P.ds_choir.append((t0, t1, amp * harm))
+
+
 def chorus_line(bar, lead_amp=1.0):
     line, words = CHORUS[bar % 4]
-    diva(bar, line, words, double=.37, style=CHORUS_STYLE, big=bar >= 80)
+    if SINGER_D:
+        sing(bar, line, words, dbl=.55, harm=.6 if bar >= 80 else .5)
+    else:
+        diva(bar, line, words, double=.37, style=CHORUS_STYLE, big=bar >= 80)
+    if SINGER_D:
+        line = D_LINE.get(line, line)
     for t, m, d in S.notes(bar, line, key_of(bar)):   # the riff synth doubles the hook, under the voice
         S.put("lead", t, e.lead(m, d * .95), amp=.16 * lead_amp, wet=.3, echo=.2)
 
@@ -327,10 +388,16 @@ for bar in range(112):
 
     # the voices: the diva's verse, the rap, the pre-chorus, the chorus; the robot in the break
     if 24 <= bar < 32 and bar % 2 == 0:
-        diva(bar, *VERSE[(bar - 24) // 2], bars=2, amp=.9)
+        if SINGER_D:
+            sing(bar, *VERSE[(bar - 24) // 2], bars=2, amp=.9)
+        else:
+            diva(bar, *VERSE[(bar - 24) // 2], bars=2, amp=.9)
     if 32 <= bar < 40:
         rapper(bar, RAP[bar - 32])
-    if bar in (42, 46):
+    if bar in (42, 46) and SINGER_D:
+        sing(bar, *PRE[0], dbl=.55, harm=.5)
+        sing(bar + 1, *PRE[1], dbl=.55, harm=.5)
+    elif bar in (42, 46):
         diva(bar, *PRE[0], octave=-12, double=.27, style=CHORUS_STYLE)
         diva(bar + 1, *PRE[1], octave=-12, double=.2, style=CHORUS_STYLE)
     if chorus:
@@ -350,6 +417,9 @@ if DS:   # the whole diva part in one take, each line at its own level
     for t0, t1, a in DS_GAIN:
         g[int(t0 * e.SR):int(t1 * e.SR)] = a
     S.put("vox", 0.0, y * g, .5, 1.0, wet=.12, echo=.12)
+
+if SINGER_D:
+    P.finish()          # singer D's whole part: Lem's take, converted, stacked
 
 snare_roll(44, 4)
 snare_roll(76, 4, 1.1)
