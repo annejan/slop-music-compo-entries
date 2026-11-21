@@ -60,7 +60,10 @@ TONIC = {"C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5, "F#
 CONVERTIBLE = {"lem"}          # voicebanks whose renders may be converted into other voices (licences)
 # the produced singer's defaults (the Badge's pick): DS_VOICE, DS_TIMBRE, DS_STACK, DS_HARMONY override them
 LEM = dict(ds_voice="Civet", timbre="qwen_diva", stack="sing_qwen_pop,sing_maya_pop,octave,vocoder",
-           harmony="sing_maya_soul", pitch="rule", tension="25", vib="1.6", breath="1", dyn="1")
+           harmony="sing_maya_soul", pitch="rule", tension="25", vib="1.6", breath="1", dyn="1", cons="0",
+           comp="1")
+# comp: the producer's comp of four takes (the user: "more takes is no shame when you make a jewel"); cons 0: Lem's
+# consonants under the converted voice did not help Whisper (0.75 / 0.69 / 0.76 at 0 / 0.5 / 1.0, Common Ground)
 # pitch rule, vib 1.6, tension 25: the user's pick of three on Can You Tell? (20 November: "C is best, but still far
 # from ideal"); Lem has no pitch model, without them every note is flat ("almost GLaDOS, but more dead inside")
 
@@ -315,16 +318,17 @@ class Band:
         pitch = knob("pitch", "0.5")
         tension, vib = float(knob("tension", "0")), float(knob("vib", "1"))
         breaths, dyn = knob("breath", "0") == "1", knob("dyn", "0") == "1"
+        cons = float(knob("cons", "0"))      # DS_CONS: Lem's consonants (above 4 kHz) under the converted voice
         sing = lambda part, seed, timbre: part.render(bank=bank, voice=self.ds_voice, pitch=pitch,  # noqa: E731
                                                       seed=seed, timbre=timbre, tension=tension, vib=vib,
-                                                      breaths=breaths, dynamics=dyn)
+                                                      breaths=breaths, dynamics=dyn, consonants=cons)
         # DS_COMP=1: the producer's comp: Lem sings the part DS_COMP_TAKES times, each line from the take Whisper
         # hears best (ds.Part.comped); the doubles then come from takes 5 and 6
-        comp = os.environ.get("DS_COMP", "0") == "1"
+        comp = knob("comp", "0") == "1"
         if comp:
-            k = int(os.environ.get("DS_COMP_TAKES", "4"))
+            k = int(knob("comp_takes", "4"))
             y = self.ds_part.render(bank=bank, voice=self.ds_voice, pitch=pitch, timbre=self.timbre, tension=tension,
-                                    vib=vib, breaths=breaths, dynamics=dyn, comp=self.ds_words,
+                                    vib=vib, breaths=breaths, dynamics=dyn, consonants=cons, comp=self.ds_words,
                                     comp_seeds=tuple(range(1, k + 1)))
             for t0, words, best, sc in self.ds_part.picks:
                 print(f"comp {t0:7.2f}s take {best} ({sc:.2f}): {words}")

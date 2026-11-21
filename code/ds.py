@@ -51,7 +51,9 @@ class Part:
             with_ap, end = [], None
             for t, m, d, w in notes:
                 gap = t - end if end is not None else t
-                if gap >= .3:
+                # not before a word that starts with a vowel, h or l: the breath turns into an "h" ("hello
+                # battery", "highlight")
+                if gap >= .3 and w[:1].lower() not in "aeiouhly":
                     a = min(.3, gap - .05)
                     with_ap.append([t - a, m - 5, a, "AP"])
                 with_ap.append([t, m, d, w])
@@ -75,7 +77,8 @@ class Part:
                                              "notes": out}]}
 
     def render(self, bank="hanami", voice="Fragrance", lang="en", seed=1, level=.12, pitch="free", timbre=None,
-               tension=0.0, vib=1.0, breaths=False, dynamics=False, comp=None, comp_seeds=(1, 2, 3, 4)):
+               tension=0.0, vib=1.0, breaths=False, dynamics=False, comp=None, comp_seeds=(1, 2, 3, 4),
+               consonants=0.0):
         """The part as mono audio from second 0, the sung parts at about `level` RMS (like voice.sing).
         pitch: "free" (the bank's pitch model), "hard" (flat notes, the model off: the voice locks to the synths),
         or a number 0..1, the model's expressiveness (0.5: half its own scoops and overshoots).
@@ -94,7 +97,12 @@ class Part:
         else:
             y = self._sing(bank, voice, lang, seed, pitch, tension, vib, breaths)
         if timbre:
+            raw = y
             y = convert(y, timbre)
+            if consonants:   # Lem's own consonants back under the converted voice: the conversion blurs them
+                from scipy import signal
+                hp = signal.sosfilt(signal.butter(4, 4000, "high", fs=SR, output="sos"), raw)
+                y = y + consonants * hp[:len(y)]
         if dynamics:
             y = y * self.dynamics(len(y))
         env = np.sqrt(np.convolve(y ** 2, np.ones(2048) / 2048, "same"))
