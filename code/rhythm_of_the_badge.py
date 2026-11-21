@@ -36,6 +36,7 @@ import sys
 import numpy as np
 
 import engine as e
+import parts
 import dx7
 import room
 import voice as V
@@ -481,10 +482,17 @@ for bar in range(120):
         diva(bar, *CHORUS[0], amp=.8, choir=.4, echo_last=.6)
 
 if DS:   # the whole diva part in one take, each line at its own level
+    # the singer made alive (parts.LEM, the user's picks on Can You Tell?, 20 November; "ja, overzetten" for the
+    # Badge): Lem's pitch drawn by warble's rule tuner, vibrato 1.6, tension 25, breaths, phrase dynamics. Each
+    # switch (DS_PITCH=0.5 DS_VIB=1 DS_TENSION=0 DS_BREATH=0 DS_DYN=0: the earlier flat singer) is a test render
+    knob = (lambda k: os.environ.get("DS_" + k.upper(), parts.LEM[k])) if LEM else \
+        (lambda k: os.environ.get("DS_" + k.upper(), {"pitch": "0.5", "tension": "0", "vib": "1", "breath": "0",
+                                                      "dyn": "0"}[k]))
+    ALIVE = dict(pitch=knob("pitch"), tension=float(knob("tension")), vib=float(knob("vib")),
+                 breaths=knob("breath") == "1", dynamics=knob("dyn") == "1")
     y = DS_PART.render(bank=DIVA.split(":", 1)[1], voice=DS_VOICE,
-                       pitch=os.environ.get("DS_PITCH", "0.5"),
-                       seed=int(os.environ.get("DS_SEED", "1")), timbre=DS_TIMBRE)
-    # DS_PITCH: hard | free | 0..1 (see ds.py), 0.5: half her own scoops; DS_SEED: another take of the same score;
+                       seed=int(os.environ.get("DS_SEED", "1")), timbre=DS_TIMBRE, **ALIVE)
+    # DS_PITCH: rule | hard | free | 0..1 (see ds.py); DS_SEED: another take of the same score;
     # DS_TIMBRE: another singer for the same performance (a voice.CAST name: maya_diva, qwen_diva; ds.convert)
     g = np.ones(len(y))
     for t0, t1, a, _, _ in DS_GAIN:
@@ -498,8 +506,7 @@ if DS:   # the whole diva part in one take, each line at its own level
         names = DS_STACK.split(",")
         bank, mode = DIVA.split(":", 1)[1], DS_VOICE
         for seed, timbre, pan, delay in ((2, names[0], .12, .012), (3, names[1], .88, .019)):
-            d = DS_PART.render(bank=bank, voice=mode, pitch=os.environ.get("DS_PITCH", "0.5"), seed=seed,
-                               timbre=timbre) * g
+            d = DS_PART.render(bank=bank, voice=mode, seed=seed, timbre=timbre, **ALIVE) * g
             S.put("vox", delay, d, pan, .55, wet=.22, echo=.05)     # the doubles: other takes, other singers
         if "octave" in names:
             S.put("vox", 0.0, vfx.harmony(y, [12], [1.0])[:len(y)] - y, .5, .22, wet=.3, echo=.08)
